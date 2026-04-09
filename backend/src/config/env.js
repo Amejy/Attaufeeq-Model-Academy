@@ -105,7 +105,9 @@ export const env = {
   dbUser: parsedDatabaseUrl.user || process.env.DB_USER || 'postgres',
   dbPassword: parsedDatabaseUrl.password || process.env.DB_PASSWORD || '',
   dbName: parsedDatabaseUrl.database || process.env.DB_NAME || 'attaufiqschools',
-  dbSsl: parsedDatabaseUrl.host ? parsedDatabaseUrl.ssl : parseBoolean(process.env.DB_SSL, false),
+  dbSsl: parsedDatabaseUrl.host
+    ? (parsedDatabaseUrl.ssl || parseBoolean(process.env.DB_SSL, false))
+    : parseBoolean(process.env.DB_SSL, false),
   dbPoolMax: parseInteger(process.env.DB_POOL_MAX, 20, { min: 4, max: 100 }),
   dbIdleTimeoutMs: parseInteger(process.env.DB_IDLE_TIMEOUT_MS, 30_000, { min: 1_000, max: 300_000 }),
   dbConnectionTimeoutMs: parseInteger(process.env.DB_CONNECTION_TIMEOUT_MS, 10_000, { min: 1_000, max: 60_000 }),
