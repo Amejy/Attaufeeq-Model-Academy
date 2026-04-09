@@ -1,0 +1,277 @@
+import { useEffect, useState } from 'react';
+import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
+import { useSiteContent } from '../context/SiteContentContext';
+import { apiJson } from '../utils/publicApi';
+
+const ROLE_LABELS = { student: 'Student', teacher: 'Teacher', parent: 'Parent', admin: 'Admin', admissions: 'Admissions' };
+const LOGIN_VARIANTS = {
+  family: {
+    title: 'Family Portal',
+    subtitle: 'Secure access for students and parents with a calm, direct sign-in flow.',
+    allowedRoles: ['student', 'parent'],
+    heroLabel: 'Family Access URL',
+    heroNote: 'This public login surface is reserved for students and parents.',
+    primaryRoute: '/login',
+    alternateRoute: '/staff-access'
+  },
+  staff: {
+    title: 'Staff Operations Access',
+    subtitle: 'Dedicated internal access for admin, teachers, and admissions operations.',
+    allowedRoles: ['admin', 'teacher', 'admissions'],
+    heroLabel: 'Internal Access URL',
+    heroNote: 'This internal login surface is reserved for school operations staff.',
+    primaryRoute: '/staff-access',
+    alternateRoute: '/login'
+  }
+};
+
+function Login({ variant = 'family', defaultRole = '' }) {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const variantConfig = LOGIN_VARIANTS[variant] || LOGIN_VARIANTS.family;
+  const queryRole = searchParams.get('role') || '';
+  const routeRole = defaultRole || '';
+  const isGenericPortalRoute = location.pathname === variantConfig.primaryRoute;
+  const preferredRole = isGenericPortalRoute
+    ? queryRole || routeRole
+    : routeRole || queryRole;
+  const roleHint = variantConfig.allowedRoles.includes(preferredRole) ? preferredRole : variantConfig.allowedRoles[0];
+
+  const { isAuthenticated, login, user } = useAuth();
+  const { siteContent } = useSiteContent();
+  const branding = siteContent.branding || {};
+  const schoolName = branding.name || 'School';
+  const [form, setForm] = useState({ email: '', password: '' });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [sessionMessage, setSessionMessage] = useState('');
+  const canSubmit = Boolean(String(form.email || '').trim() && String(form.password || '').trim());
+
+  useEffect(() => {
+    const expiredFlag = location.state?.sessionExpired || false;
+    const storedFlag = (() => {
+      try {
+        return sessionStorage.getItem('session-expired') === '1';
+      } catch {
+        return false;
+      }
+    })();
+    if (expiredFlag || storedFlag) {
+      setSessionMessage('Your session expired. Please log in again.');
+      try {
+        sessionStorage.removeItem('session-expired');
+      } catch {
+        // ignore storage failures
+      }
+    }
+  }, [location.state]);
+
+  if (isAuthenticated) {
+    return <Navigate to={user?.mustChangePassword ? '/portal/change-password' : '/portal'} replace />;
+  }
+
+  const onChange = (event) => {
+    const { name, value } = event.target;
+    setForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const onSubmit = async (event) => {
+    event.preventDefault();
+    setLoading(true);
+    setError('');
+    setSessionMessage('');
+
+    try {
+      const data = await apiJson('/auth/login', {
+        method: 'POST',
+        credentials: 'include',
+        body: {
+          email: String(form.email || '').trim(),
+          password: form.password
+        }
+      });
+
+      const authenticatedRole = data.user?.role || '';
+      if (!variantConfig.allowedRoles.includes(authenticatedRole)) {
+        const correctPortal = LOGIN_VARIANTS.family.allowedRoles.includes(authenticatedRole)
+          ? '/login'
+          : '/staff-access';
+        try {
+          await apiJson('/auth/logout', {
+            method: 'POST',
+            credentials: 'include'
+          });
+        } catch {
+          // Best-effort cleanup. The portal mismatch message is still the primary signal.
+        }
+        throw new Error(
+          `This account belongs to the ${correctPortal === '/login' ? 'family portal' : 'staff operations portal'}. Use ${correctPortal} instead.`
+        );
+      }
+
+      login(data);
+      navigate(data.user?.mustChangePassword ? '/portal/change-password' : `/portal/${data.user?.role || 'student'}`, { replace: true });
+    } catch (err) {
+      const message = String(err?.message || '');
+      if (message.includes('Failed to fetch') || message.includes('NetworkError')) {
+        setError('Cannot reach backend API. Ensure backend is running on http://127.0.0.1:4000 and frontend is restarted.');
+      } else {
+        setError(err.message || 'Unable to login.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <main className="section-wrap py-10 sm:py-16">
+      <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[1.05fr,0.95fr]">
+        <section className="glass-panel overflow-hidden p-5 sm:p-9">
+          <div className="login-logo-row">
+            <img
+              src="/images/logo.png"
+              alt={`${branding.name || 'School'} logo`}
+              className="login-logo"
+              onError={(event) => {
+                event.currentTarget.style.display = 'none';
+              }}
+            />
+            <div>
+              <p className="login-logo__label">{schoolName}</p>
+              <p className="login-logo__motto">{branding.motto}</p>
+            </div>
+          </div>
+          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">{variantConfig.heroLabel}</p>
+          <h1 className="mt-3 font-heading text-3xl text-primary sm:mt-4 sm:text-5xl">{variantConfig.title}</h1>
+          <p className="mt-3 max-w-xl text-sm leading-6 text-slate-700 sm:mt-4 sm:leading-8">{variantConfig.subtitle}</p>
+
+          <div className="mt-6 rounded-[24px] border border-white/60 bg-white/65 p-4 sm:mt-8 sm:rounded-[28px] sm:p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Current URL</p>
+            <p className="mt-2 break-all text-base font-semibold text-slate-900 sm:mt-3 sm:text-lg">{location.pathname}</p>
+            <p className="mt-2 text-sm leading-6 text-slate-600 sm:leading-7">{variantConfig.heroNote}</p>
+          </div>
+
+          <div className="mt-6 grid gap-3 sm:mt-8 sm:gap-4 sm:grid-cols-2">
+            {variantConfig.allowedRoles.map((role) => (
+              <Link
+                key={role}
+                to={`${variantConfig.primaryRoute}/${role}`}
+                className={`rounded-[20px] border px-4 py-3 text-left transition sm:rounded-[24px] sm:px-5 sm:py-4 ${
+                  roleHint === role
+                    ? 'border-transparent bg-primary text-white shadow-[0_18px_36px_rgba(15,81,50,0.22)]'
+                    : 'border-white/60 bg-white/68 text-slate-700 hover:bg-white'
+                }`}
+              >
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] opacity-80">Access Role</p>
+                <p className="mt-2 text-base font-semibold sm:text-lg">{ROLE_LABELS[role]}</p>
+              </Link>
+            ))}
+          </div>
+
+          <div className="mt-6 rounded-[24px] bg-[linear-gradient(135deg,rgba(15,81,50,0.92),rgba(217,179,84,0.85))] p-4 text-white sm:mt-8 sm:rounded-[28px] sm:p-5">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/70">Portal Routing</p>
+            <p className="mt-2 text-sm leading-6 text-white/90 sm:mt-3 sm:leading-7">
+              Family accounts use `/login`. Admin, teacher, and admissions accounts use `/staff-access`. If an account signs in on the wrong portal, the screen blocks it and points to the correct URL.
+            </p>
+          </div>
+        </section>
+
+        <section className="glass-card p-5 sm:p-8">
+          {sessionMessage && (
+            <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              {sessionMessage}
+            </div>
+          )}
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Sign In</p>
+          <h2 className="mt-2 font-heading text-2xl text-primary sm:mt-3 sm:text-3xl">
+            {ROLE_LABELS[roleHint]} Access
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600 sm:leading-7">
+            Enter your credentials to continue into the {ROLE_LABELS[roleHint].toLowerCase()} workspace.
+          </p>
+
+          <form className="mt-6 space-y-4" onSubmit={onSubmit}>
+          <label className="block text-sm">
+            <span className="mb-1 block font-medium text-slate-700">Email</span>
+            <input
+              name="email"
+              type="email"
+              required
+              value={form.email}
+              onChange={onChange}
+              className="w-full rounded-md border border-slate-300 px-3 py-2"
+              placeholder="you@example.com"
+            />
+          </label>
+          <label className="block text-sm">
+            <span className="mb-1 block font-medium text-slate-700">Password</span>
+            <input
+              name="password"
+              type="password"
+              required
+              value={form.password}
+              onChange={onChange}
+              className="w-full rounded-md border border-slate-300 px-3 py-2"
+              placeholder="Enter password"
+            />
+          </label>
+
+          {error && <p className="text-sm text-red-600">{error}</p>}
+
+          <button
+            type="submit"
+            disabled={loading || !canSubmit}
+            className="w-full rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-70 sm:py-3"
+          >
+            {loading ? 'Signing in...' : 'Sign In'}
+          </button>
+          </form>
+
+          <p className="mt-6 text-center text-sm text-slate-600">
+            Forgot your password?{' '}
+            <Link
+              to={`/forgot-password?variant=${encodeURIComponent(variant)}&role=${encodeURIComponent(roleHint)}`}
+              className="font-semibold text-primary hover:underline"
+            >
+              Reset it here
+            </Link>
+          </p>
+
+          <div className="mt-4 rounded-[24px] border border-slate-200 bg-white/70 p-4 text-xs leading-6 text-slate-600">
+            Use school-issued credentials for this portal. Family and staff accounts are separated intentionally.
+            {variant === 'staff' && (
+              <p className="mt-2">
+                Internal roles are intentionally separated from the public family login surface.
+              </p>
+            )}
+          </div>
+
+          <div className="mt-5 text-sm text-slate-600">
+            {variant === 'family' ? (
+              <>
+                Internal school operations account?{' '}
+                <Link to="/staff-access" className="font-semibold text-primary hover:underline">
+                  Open staff access
+                </Link>
+                <p className="mt-2">
+                  Parent accounts are created during admission registration and should use the issued login details.
+                </p>
+              </>
+            ) : (
+              <>
+                Student or parent account?{' '}
+                <Link to="/login" className="font-semibold text-primary hover:underline">
+                  Open family login
+                </Link>
+              </>
+            )}
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
+
+export default Login;

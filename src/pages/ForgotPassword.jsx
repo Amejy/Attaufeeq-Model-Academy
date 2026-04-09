@@ -1,0 +1,252 @@
+import { useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { useSiteContent } from '../context/SiteContentContext';
+import { apiJson } from '../utils/publicApi';
+
+function isValidEmail(email) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email || '').trim());
+}
+
+function ForgotPassword() {
+  const [searchParams] = useSearchParams();
+  const { siteContent } = useSiteContent();
+  const branding = siteContent.branding || {};
+  const schoolName = branding.name || 'School';
+  const variant = searchParams.get('variant') === 'staff' ? 'staff' : 'family';
+  const roleParam = String(searchParams.get('role') || '').trim().toLowerCase();
+  const validFamilyRoles = new Set(['student', 'parent']);
+  const validStaffRoles = new Set(['admin', 'teacher', 'admissions']);
+  const defaultRole = variant === 'staff' ? 'admin' : 'student';
+  const role = (
+    (variant === 'staff' && validStaffRoles.has(roleParam)) ||
+    (variant === 'family' && validFamilyRoles.has(roleParam))
+  ) ? roleParam : defaultRole;
+  const loginHref = variant === 'staff' ? `/staff-access/${role}` : `/login/${role}`;
+  const [email, setEmail] = useState('');
+  const [requesting, setRequesting] = useState(false);
+  const [requestMessage, setRequestMessage] = useState('');
+  const [requestError, setRequestError] = useState('');
+  const [resetCode, setResetCode] = useState('');
+
+  const [resetForm, setResetForm] = useState({
+    email: '',
+    code: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [resetting, setResetting] = useState(false);
+  const [resetMessage, setResetMessage] = useState('');
+  const [resetError, setResetError] = useState('');
+  const canRequestReset = isValidEmail(email);
+  const canSubmitReset =
+    isValidEmail(resetForm.email) &&
+    String(resetForm.code || '').trim() &&
+    String(resetForm.newPassword || '').length >= 10 &&
+    resetForm.newPassword === resetForm.confirmPassword;
+
+  const onResetChange = (event) => {
+    const { name, value } = event.target;
+    setResetForm((prev) => ({ ...prev, [name]: value }));
+  };
+
+  async function requestReset(event) {
+    event.preventDefault();
+    if (!canRequestReset) return;
+    const normalizedEmail = String(email || '').trim();
+    setRequesting(true);
+    setRequestMessage('');
+    setRequestError('');
+    setResetMessage('');
+    setResetError('');
+
+    try {
+      const data = await apiJson('/auth/forgot-password', {
+        method: 'POST',
+        body: { email: normalizedEmail }
+      });
+
+      setRequestMessage(data.message || 'Reset code sent if the account exists.');
+      setResetCode(data.resetCode || '');
+      setResetForm((prev) => ({
+        ...prev,
+        email: normalizedEmail
+      }));
+    } catch (err) {
+      setRequestError(err.message || 'Unable to request reset.');
+    } finally {
+      setRequesting(false);
+    }
+  }
+
+  async function submitReset(event) {
+    event.preventDefault();
+    if (!canSubmitReset) return;
+    const payload = {
+      ...resetForm,
+      email: String(resetForm.email || '').trim(),
+      code: String(resetForm.code || '').trim()
+    };
+    setResetting(true);
+    setResetMessage('');
+    setResetError('');
+
+    try {
+      const data = await apiJson('/auth/reset-password', {
+        method: 'POST',
+        body: payload
+      });
+
+      setResetMessage(data.message || 'Password reset successfully. You can log in now.');
+      setResetForm({
+        email: payload.email,
+        code: '',
+        newPassword: '',
+        confirmPassword: ''
+      });
+    } catch (err) {
+      setResetError(err.message || 'Unable to reset password.');
+    } finally {
+      setResetting(false);
+    }
+  }
+
+  return (
+    <main className="section-wrap py-16">
+      <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[1.1fr,0.9fr]">
+        <section className="glass-panel overflow-hidden p-7 sm:p-9">
+          <div className="login-logo-row">
+            <img
+              src="/images/logo.png"
+              alt={`${branding.name || 'School'} logo`}
+              className="login-logo"
+              onError={(event) => {
+                event.currentTarget.style.display = 'none';
+              }}
+            />
+            <div>
+              <p className="login-logo__label">{schoolName}</p>
+              <p className="login-logo__motto">{branding.motto}</p>
+            </div>
+          </div>
+          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Account Recovery</p>
+          <h1 className="mt-4 font-heading text-4xl text-primary sm:text-5xl">Forgot Password</h1>
+          <p className="mt-4 max-w-xl text-sm leading-8 text-slate-700">
+            Enter the email address linked to your portal account. We will send a short reset code that allows you to set a new password.
+          </p>
+
+          <div className="mt-8 rounded-[28px] bg-[linear-gradient(135deg,rgba(15,81,50,0.92),rgba(217,179,84,0.85))] p-5 text-white">
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/70">Need help?</p>
+            <p className="mt-3 text-sm leading-7 text-white/90">
+              If you no longer have access to your email, contact school administration to reset the account from the staff portal.
+            </p>
+          </div>
+        </section>
+
+        <section className="glass-card p-7 sm:p-8">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Step 1</p>
+          <h2 className="mt-3 font-heading text-3xl text-primary">Request reset code</h2>
+          <form className="mt-5 space-y-4" onSubmit={requestReset}>
+            <label className="block text-sm">
+              <span className="mb-1 block font-medium text-slate-700">Email</span>
+              <input
+                name="email"
+                type="email"
+                required
+                value={email}
+                onChange={(event) => setEmail(event.target.value)}
+                className="w-full rounded-md border border-slate-300 px-3 py-2"
+                placeholder="you@example.com"
+              />
+            </label>
+            {requestError && <p className="text-sm text-red-600">{requestError}</p>}
+            {requestMessage && <p className="text-sm text-emerald-700">{requestMessage}</p>}
+            {resetCode && (
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                Reset code: <span className="font-semibold">{resetCode}</span>
+              </div>
+            )}
+            <button
+              type="submit"
+              disabled={requesting || !canRequestReset}
+              className="w-full rounded-full bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {requesting ? 'Sending...' : 'Send reset code'}
+            </button>
+          </form>
+
+          <div className="my-8 h-px bg-slate-200" />
+
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Step 2</p>
+          <h2 className="mt-3 font-heading text-3xl text-primary">Set a new password</h2>
+          <form className="mt-5 space-y-4" onSubmit={submitReset}>
+            <label className="block text-sm">
+              <span className="mb-1 block font-medium text-slate-700">Email</span>
+              <input
+                name="email"
+                type="email"
+                required
+                value={resetForm.email}
+                onChange={onResetChange}
+                className="w-full rounded-md border border-slate-300 px-3 py-2"
+                placeholder="you@example.com"
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="mb-1 block font-medium text-slate-700">Reset Code</span>
+              <input
+                name="code"
+                required
+                value={resetForm.code}
+                onChange={onResetChange}
+                className="w-full rounded-md border border-slate-300 px-3 py-2"
+                placeholder="Enter the 6-digit code"
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="mb-1 block font-medium text-slate-700">New Password</span>
+              <input
+                name="newPassword"
+                type="password"
+                required
+                value={resetForm.newPassword}
+                onChange={onResetChange}
+                className="w-full rounded-md border border-slate-300 px-3 py-2"
+                placeholder="Minimum 10 characters"
+              />
+            </label>
+            <label className="block text-sm">
+              <span className="mb-1 block font-medium text-slate-700">Confirm Password</span>
+              <input
+                name="confirmPassword"
+                type="password"
+                required
+                value={resetForm.confirmPassword}
+                onChange={onResetChange}
+                className="w-full rounded-md border border-slate-300 px-3 py-2"
+                placeholder="Re-enter password"
+              />
+            </label>
+            {resetError && <p className="text-sm text-red-600">{resetError}</p>}
+            {resetMessage && <p className="text-sm text-emerald-700">{resetMessage}</p>}
+            <button
+              type="submit"
+              disabled={resetting || !canSubmitReset}
+              className="w-full rounded-full bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              {resetting ? 'Updating...' : 'Update password'}
+            </button>
+          </form>
+
+          <div className="mt-6 text-sm text-slate-600">
+            Back to login?{' '}
+            <Link to={loginHref} className="font-semibold text-primary hover:underline">
+              Sign in here
+            </Link>
+          </div>
+        </section>
+      </div>
+    </main>
+  );
+}
+
+export default ForgotPassword;
