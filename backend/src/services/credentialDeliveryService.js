@@ -162,7 +162,7 @@ export async function queuePasswordResetCodeDelivery({
     return { status: 'disabled', reason: 'MAIL_ENABLED is false.' };
   }
 
-  if (!env.useDatabase || options.forceInlineDelivery) {
+  if (!env.useDatabase || options.forceInlineDelivery || env.mailProvider === 'sendgrid') {
     return sendResetCodeEmail({
       recipientName,
       recipientEmail,
