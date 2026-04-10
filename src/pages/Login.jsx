@@ -116,7 +116,7 @@ function Login({ variant = 'family', defaultRole = '' }) {
     } catch (err) {
       const message = String(err?.message || '');
       if (message.includes('Failed to fetch') || message.includes('NetworkError')) {
-        setError('Cannot reach backend API. Ensure backend is running on http://127.0.0.1:4000 and frontend is restarted.');
+        setError('Cannot reach backend API. Check VITE_API_BASE_URL (or VITE_API_URL) in your frontend env and confirm the backend is running.');
       } else {
         setError(err.message || 'Unable to login.');
       }

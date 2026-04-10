@@ -1,10 +1,23 @@
-import writeXlsxFile from 'write-excel-file/node';
+import ExcelJS from 'exceljs';
 import fs from 'node:fs';
 import path from 'node:path';
+
+const columns = [
+  { header: 'fullName', key: 'fullName', width: 24 },
+  { header: 'classId', key: 'classId', width: 18 },
+  { header: 'studentEmail', key: 'studentEmail', width: 32 },
+  { header: 'guardianName', key: 'guardianName', width: 24 },
+  { header: 'guardianPhone', key: 'guardianPhone', width: 18 },
+  { header: 'guardianEmail', key: 'guardianEmail', width: 32 },
+  { header: 'className', key: 'className', width: 14 },
+  { header: 'arm', key: 'arm', width: 8 },
+  { header: 'institution', key: 'institution', width: 30 }
+];
 
 const rows = [
   {
     fullName: 'Yunusa Ahmad',
+    classId: '',
     studentEmail: 'yunusaahmad738@gmail.com',
     guardianName: 'Ahmad Yunusa',
     guardianPhone: '+2348010000001',
@@ -15,6 +28,7 @@ const rows = [
   },
   {
     fullName: 'Umar Harun',
+    classId: '',
     studentEmail: 'umarharun781@gmail.com',
     guardianName: 'Harun Umar',
     guardianPhone: '+2348010000002',
@@ -25,6 +39,7 @@ const rows = [
   },
   {
     fullName: 'Harun Amina',
+    classId: '',
     studentEmail: 'harunamina489@gmail.com',
     guardianName: 'Amina Harun',
     guardianPhone: '+2348010000003',
@@ -35,6 +50,7 @@ const rows = [
   },
   {
     fullName: 'Sultan Mdm',
+    classId: '',
     studentEmail: 'sultanmdm729@gmail.com',
     guardianName: 'Mdm Sultan',
     guardianPhone: '+2348010000004',
@@ -45,6 +61,7 @@ const rows = [
   },
   {
     fullName: 'Babab Ade',
+    classId: '',
     studentEmail: 'babab19012@gmail.com',
     guardianName: 'Ade Babab',
     guardianPhone: '+2348010000005',
@@ -55,6 +72,7 @@ const rows = [
   },
   {
     fullName: 'Daud Ayarima',
+    classId: '',
     studentEmail: 'daudayarima585@gmail.com',
     guardianName: 'Ayarima Daud',
     guardianPhone: '+2348010000006',
@@ -65,23 +83,12 @@ const rows = [
   }
 ];
 
-const schema = [
-  { column: 'fullName', type: String, value: (row) => row.fullName },
-  { column: 'classId', type: String, value: () => '' },
-  { column: 'studentEmail', type: String, value: (row) => row.studentEmail },
-  { column: 'guardianName', type: String, value: (row) => row.guardianName },
-  { column: 'guardianPhone', type: String, value: (row) => row.guardianPhone },
-  { column: 'guardianEmail', type: String, value: (row) => row.guardianEmail },
-  { column: 'className', type: String, value: (row) => row.className },
-  { column: 'arm', type: String, value: (row) => row.arm },
-  { column: 'institution', type: String, value: (row) => row.institution }
-];
-
 const outputPath = path.resolve('scripts', 'bulk_students_test.xlsx');
-await writeXlsxFile(rows, {
-  schema,
-  filePath: outputPath
-});
+const workbook = new ExcelJS.Workbook();
+const worksheet = workbook.addWorksheet('Students');
+worksheet.columns = columns;
+worksheet.addRows(rows);
+await workbook.xlsx.writeFile(outputPath);
 
 if (!fs.existsSync(outputPath)) {
   throw new Error('Failed to create Excel file.');

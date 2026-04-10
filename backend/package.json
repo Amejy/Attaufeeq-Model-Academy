@@ -12,7 +12,8 @@
     "db:cleanup:legacy-users": "node src/db/cleanupLegacyDemoUsers.js",
     "db:replace:legacy-admin": "node src/db/replaceLegacyAdmin.js",
     "db:validate-bootstrap": "node src/db/validateBootstrap.js",
-    "jobs:mail-outbox": "node src/jobs/processMailOutbox.js"
+    "jobs:mail-outbox": "node src/jobs/processMailOutbox.js",
+    "reset:admin": "node scripts/reset_admin_password.mjs"
   },
   "dependencies": {
     "cors": "^2.8.5",
