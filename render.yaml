@@ -44,9 +44,11 @@ services:
         sync: false
       - key: AUTH_COOKIE_SECURE
         sync: false
-      - key: MAIL_PROVIDER
+      - key: MAIL_ENABLED
         sync: false
-      - key: SENDGRID_API_KEY
+      - key: MAIL_FROM
+        sync: false
+      - key: MAIL_FROM_NAME
         sync: false
       - key: RESEND_API_KEY
         sync: false

@@ -165,7 +165,7 @@ authRouter.post('/forgot-password', async (req, res) => {
       recipientEmail: user.email,
       resetCode: code,
       institution: user.institution || ''
-    });
+    }, { forceInlineDelivery: true });
 
     addActivityLog({
       action: 'auth.password.reset.requested',

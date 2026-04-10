@@ -139,18 +139,9 @@ export const env = {
   startupRedisRetryBaseMs: Math.max(100, Number(process.env.STARTUP_REDIS_RETRY_BASE_MS || 500)),
   healthTimeoutMs: parseInteger(process.env.HEALTH_TIMEOUT_MS, 3_000, { min: 500, max: 30_000 }),
   mailEnabled: String(process.env.MAIL_ENABLED || 'false').toLowerCase() === 'true',
-  mailHost: process.env.MAIL_HOST || '',
-  mailPort: Number(process.env.MAIL_PORT || 587),
-  mailSecure: String(process.env.MAIL_SECURE || 'false').toLowerCase() === 'true',
-  mailService: process.env.MAIL_SERVICE || '',
-  mailProvider: optionalEnv('MAIL_PROVIDER', '').trim().toLowerCase(),
-  sendgridApiKey: optionalEnv('SENDGRID_API_KEY', '').trim(),
   resendApiKey: optionalEnv('RESEND_API_KEY', '').trim(),
-  mailFamily: Number(process.env.MAIL_FAMILY || 4),
-  mailUser: process.env.MAIL_USER || '',
-  mailPassword: process.env.MAIL_PASSWORD || '',
-  mailFrom: process.env.MAIL_FROM || '',
-  mailFromName: process.env.MAIL_FROM_NAME || 'ATTAUFEEQ Model Academy Portal',
+  mailFrom: process.env.MAIL_FROM || process.env.EMAIL_FROM || '',
+  mailFromName: process.env.MAIL_FROM_NAME || process.env.EMAIL_FROM_NAME || 'ATTAUFEEQ Model Academy Portal',
   defaultInstitution: optionalEnv('DEFAULT_INSTITUTION', 'ATTAUFEEQ Model Academy').trim() || 'ATTAUFEEQ Model Academy',
   studentEmailDomain: optionalEnv('STUDENT_EMAIL_DOMAIN', 'attaufiqschools.com').trim() || 'attaufiqschools.com',
   defaultPasswordMode: optionalEnv('DEFAULT_PASSWORD_MODE', 'random').trim().toLowerCase() || 'random',
@@ -194,5 +185,14 @@ export function validateRuntimeConfig() {
 
   if (env.cacheStore === 'redis' && !env.redisConfigured) {
     throw new Error('Redis-backed caching requires REDIS_URL or REDIS_HOST to be configured.');
+  }
+
+  if (env.mailEnabled) {
+    if (!env.resendApiKey) {
+      throw new Error('RESEND_API_KEY must be configured when MAIL_ENABLED is true.');
+    }
+    if (!env.mailFrom) {
+      throw new Error('MAIL_FROM must be configured when MAIL_ENABLED is true.');
+    }
   }
 }

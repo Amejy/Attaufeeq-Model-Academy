@@ -1,10 +1,6 @@
 import { env } from '../config/env.js';
-import { lookup } from 'node:dns/promises';
-import sendgridMail from '@sendgrid/mail';
 import { Resend } from 'resend';
 
-let transporterPromise = null;
-let sendgridReady = false;
 let resendClient = null;
 
 function ensureMailConfig() {
@@ -14,120 +10,15 @@ function ensureMailConfig() {
     throw new Error('MAIL_FROM is required when MAIL_ENABLED=true.');
   }
 
-  if (env.mailProvider === 'sendgrid') {
-    if (!env.sendgridApiKey) {
-      throw new Error('SENDGRID_API_KEY is required when MAIL_PROVIDER=sendgrid.');
-    }
-    return;
+  if (!env.resendApiKey) {
+    throw new Error('RESEND_API_KEY is required when MAIL_ENABLED=true.');
   }
-
-  if (env.mailProvider === 'resend') {
-    if (!env.resendApiKey) {
-      throw new Error('RESEND_API_KEY is required when MAIL_PROVIDER=resend.');
-    }
-    return;
-  }
-
-  if (env.mailService) {
-    if (!env.mailUser || !env.mailPassword) {
-      throw new Error('MAIL_USER and MAIL_PASSWORD are required when MAIL_SERVICE is used.');
-    }
-    return;
-  }
-
-  if (!env.mailHost || !env.mailUser || !env.mailPassword) {
-    throw new Error('MAIL_HOST, MAIL_USER, and MAIL_PASSWORD are required when MAIL_ENABLED=true.');
-  }
-}
-
-async function getTransporter() {
-  if (!env.mailEnabled) return null;
-  if (env.mailProvider === 'sendgrid' || env.mailProvider === 'resend') return null;
-  if (transporterPromise) return transporterPromise;
-
-  transporterPromise = (async () => {
-    const nodemailerModule = await import('nodemailer');
-    const nodemailer = nodemailerModule.default;
-
-    let transportConfig;
-
-    if (env.mailHost) {
-      const family = Number(env.mailFamily || 0);
-      const resolvedHost = family > 0
-        ? await lookup(env.mailHost, { family })
-        : await lookup(env.mailHost);
-
-      transportConfig = {
-        host: resolvedHost.address,
-        port: env.mailPort,
-        secure: env.mailSecure,
-        servername: env.mailHost,
-        connectionTimeout: 15_000,
-        greetingTimeout: 15_000,
-        socketTimeout: 20_000,
-        auth: {
-          user: env.mailUser,
-          pass: env.mailPassword
-        }
-      };
-    } else if (env.mailService) {
-      transportConfig = {
-        service: env.mailService,
-        connectionTimeout: 15_000,
-        greetingTimeout: 15_000,
-        socketTimeout: 20_000,
-        auth: {
-          user: env.mailUser,
-          pass: env.mailPassword
-        }
-      };
-    } else {
-      throw new Error('MAIL_HOST or MAIL_SERVICE is required when MAIL_ENABLED=true.');
-    }
-
-    return nodemailer.createTransport(transportConfig);
-  })().catch((error) => {
-    transporterPromise = null;
-    throw new Error(`SMTP connection failed: ${error.message || error}`);
-  });
-
-  return transporterPromise;
 }
 
 function resolveFromAddress() {
   return env.mailFromName
     ? `"${env.mailFromName}" <${env.mailFrom}>`
     : env.mailFrom;
-}
-
-function ensureSendgridReady() {
-  if (sendgridReady) return;
-  sendgridMail.setApiKey(env.sendgridApiKey);
-  sendgridReady = true;
-}
-
-async function sendWithSendgrid({ recipientEmail, subject, text, html }) {
-  ensureSendgridReady();
-  const from = resolveFromAddress();
-
-  try {
-    const [response] = await sendgridMail.send({
-      to: recipientEmail,
-      from,
-      subject,
-      text,
-      html
-    });
-
-    return {
-      status: 'sent',
-      messageId: response?.headers?.['x-message-id'] || ''
-    };
-  } catch (error) {
-    const details = error?.response?.body?.errors?.map((item) => item.message).join('; ');
-    const message = details || error?.message || 'SendGrid send failed.';
-    throw new Error(`SendGrid error: ${message}`);
-  }
 }
 
 function ensureResendReady() {
@@ -147,6 +38,10 @@ async function sendWithResend({ recipientEmail, subject, text, html }) {
       text,
       html
     });
+
+    if (response?.id) {
+      console.info('Resend email sent', { recipientEmail, messageId: response.id });
+    }
 
     return {
       status: 'sent',
@@ -168,28 +63,7 @@ async function sendEmail({ recipientEmail, subject, text, html }) {
   }
 
   ensureMailConfig();
-  if (env.mailProvider === 'sendgrid') {
-    return sendWithSendgrid({ recipientEmail, subject, text, html });
-  }
-  if (env.mailProvider === 'resend') {
-    return sendWithResend({ recipientEmail, subject, text, html });
-  }
-
-  const transporter = await getTransporter();
-  const from = resolveFromAddress();
-
-  const info = await transporter.sendMail({
-    from,
-    to: recipientEmail,
-    subject,
-    text,
-    html
-  });
-
-  return {
-    status: 'sent',
-    messageId: info.messageId || ''
-  };
+  return sendWithResend({ recipientEmail, subject, text, html });
 }
 
 export async function sendProvisioningEmail({
