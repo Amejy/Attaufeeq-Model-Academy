@@ -1,8 +1,9 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { resolveApiBaseUrl } from '../utils/apiBase';
 
 const AuthContext = createContext(null);
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '/api';
+const API_BASE_URL = resolveApiBaseUrl();
 
 function decodeTokenPayload(token) {
   try {

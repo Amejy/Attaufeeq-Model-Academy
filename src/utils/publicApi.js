@@ -1,4 +1,6 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_API_URL || '/api';
+import { resolveApiBaseUrl } from './apiBase';
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 async function parseJsonSafely(response) {
   const raw = await response.text();
