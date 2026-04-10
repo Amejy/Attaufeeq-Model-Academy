@@ -143,6 +143,8 @@ export const env = {
   mailPort: Number(process.env.MAIL_PORT || 587),
   mailSecure: String(process.env.MAIL_SECURE || 'false').toLowerCase() === 'true',
   mailService: process.env.MAIL_SERVICE || '',
+  mailProvider: optionalEnv('MAIL_PROVIDER', '').trim().toLowerCase(),
+  sendgridApiKey: optionalEnv('SENDGRID_API_KEY', '').trim(),
   mailFamily: Number(process.env.MAIL_FAMILY || 4),
   mailUser: process.env.MAIL_USER || '',
   mailPassword: process.env.MAIL_PASSWORD || '',

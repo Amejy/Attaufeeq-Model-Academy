@@ -10,6 +10,13 @@ function ensureMailConfig() {
     throw new Error('MAIL_FROM is required when MAIL_ENABLED=true.');
   }
 
+  if (env.mailProvider === 'sendgrid') {
+    if (!env.sendgridApiKey) {
+      throw new Error('SENDGRID_API_KEY is required when MAIL_PROVIDER=sendgrid.');
+    }
+    return;
+  }
+
   if (env.mailService) {
     if (!env.mailUser || !env.mailPassword) {
       throw new Error('MAIL_USER and MAIL_PASSWORD are required when MAIL_SERVICE is used.');
@@ -31,6 +38,16 @@ async function getTransporter() {
     const nodemailer = nodemailerModule.default;
 
     let transportConfig;
+
+    if (env.mailProvider === 'sendgrid') {
+      return nodemailer.createTransport({
+        service: 'SendGrid',
+        auth: {
+          user: 'apikey',
+          pass: env.sendgridApiKey
+        }
+      });
+    }
 
     if (env.mailHost) {
       const family = Number(env.mailFamily || 0);

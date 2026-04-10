@@ -46,6 +46,10 @@ services:
         sync: false
       - key: MAIL_TEST_SECRET
         sync: false
+      - key: MAIL_PROVIDER
+        sync: false
+      - key: SENDGRID_API_KEY
+        sync: false
   - type: static
     name: attaufiqschools-web
     rootDir: .
