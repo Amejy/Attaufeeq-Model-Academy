@@ -57,7 +57,7 @@ const user = userResult.rows[0];
 const passwordHash = await hashPassword(adminPassword);
 
 await client.query(
-  'UPDATE users SET password_hash = $1, must_change_password = true, updated_at = NOW() WHERE id = $2',
+  'UPDATE users SET password_hash = $1, must_change_password = true WHERE id = $2',
   [passwordHash, user.id]
 );
 
