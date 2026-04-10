@@ -145,6 +145,7 @@ export const env = {
   mailService: process.env.MAIL_SERVICE || '',
   mailProvider: optionalEnv('MAIL_PROVIDER', '').trim().toLowerCase(),
   sendgridApiKey: optionalEnv('SENDGRID_API_KEY', '').trim(),
+  resendApiKey: optionalEnv('RESEND_API_KEY', '').trim(),
   mailFamily: Number(process.env.MAIL_FAMILY || 4),
   mailUser: process.env.MAIL_USER || '',
   mailPassword: process.env.MAIL_PASSWORD || '',
