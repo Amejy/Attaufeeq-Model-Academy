@@ -23,7 +23,6 @@ import { hashPassword, verifyPassword } from '../utils/passwords.js';
 import { createAccessToken, createRefreshToken, verifyRefreshToken } from '../utils/tokens.js';
 
 const authRouter = Router();
-const RESET_CODE_TTL_MS = 15 * 60 * 1000;
 
 function parseCookies(req) {
   const header = String(req.headers.cookie || '');
@@ -150,7 +149,7 @@ authRouter.post('/forgot-password', async (req, res) => {
 
     const code = generateResetCode();
     const codeHash = hashResetCode(code);
-    const expiresAt = new Date(Date.now() + RESET_CODE_TTL_MS).toISOString();
+    const expiresAt = new Date(Date.now() + env.resetCodeTtlMs).toISOString();
 
     await upsertPasswordResetRequest({
       email: normalizedEmail,
@@ -214,7 +213,9 @@ authRouter.post('/reset-password', async (req, res) => {
     const request = await findPasswordResetRequest(normalizedEmail, hashResetCode(normalizedCode));
 
     if (!request) {
-      return res.status(400).json({ message: 'Reset code is invalid or has expired.' });
+      return res.status(400).json({
+        message: 'Reset code is invalid or has expired. Note: the reset code is different from your temporary password.'
+      });
     }
 
     const user = await findUserByEmail(normalizedEmail);

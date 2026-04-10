@@ -142,6 +142,16 @@ export const env = {
   resendApiKey: optionalEnv('RESEND_API_KEY', '').trim(),
   mailFrom: process.env.MAIL_FROM || process.env.EMAIL_FROM || '',
   mailFromName: process.env.MAIL_FROM_NAME || process.env.EMAIL_FROM_NAME || 'ATTAUFEEQ Model Academy Portal',
+  resetCodeTtlHours: (() => {
+    const ttlDays = Number(process.env.RESET_CODE_TTL_DAYS || 0);
+    if (Number.isFinite(ttlDays) && ttlDays > 0) {
+      return Math.max(1, Math.min(720, ttlDays * 24));
+    }
+    return parseInteger(process.env.RESET_CODE_TTL_HOURS, 168, { min: 1, max: 720 });
+  })(),
+  get resetCodeTtlMs() {
+    return this.resetCodeTtlHours * 60 * 60 * 1000;
+  },
   defaultInstitution: optionalEnv('DEFAULT_INSTITUTION', 'ATTAUFEEQ Model Academy').trim() || 'ATTAUFEEQ Model Academy',
   studentEmailDomain: optionalEnv('STUDENT_EMAIL_DOMAIN', 'attaufiqschools.com').trim() || 'attaufiqschools.com',
   defaultPasswordMode: optionalEnv('DEFAULT_PASSWORD_MODE', 'random').trim().toLowerCase() || 'random',

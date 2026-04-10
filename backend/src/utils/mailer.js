@@ -21,6 +21,18 @@ function resolveFromAddress() {
     : env.mailFrom;
 }
 
+function formatResetCodeTtl() {
+  const hours = env.resetCodeTtlHours || 0;
+  if (hours >= 48 && hours % 24 === 0) {
+    const days = Math.round(hours / 24);
+    return `${days} day${days === 1 ? '' : 's'}`;
+  }
+  if (hours >= 1) {
+    return `${hours} hour${hours === 1 ? '' : 's'}`;
+  }
+  return 'a short time';
+}
+
 function ensureResendReady() {
   if (resendClient) return;
   resendClient = new Resend(env.resendApiKey);
@@ -134,6 +146,7 @@ export async function sendResetCodeEmail({
 
   const schoolName = institution || 'ATTAUFEEQ Model Academy';
   const subject = `${schoolName} Password Reset Code`;
+  const ttlLabel = formatResetCodeTtl();
 
   const text = [
     `Hello ${recipientName || 'User'},`,
@@ -141,7 +154,7 @@ export async function sendResetCodeEmail({
     `Use the following reset code to set a new password for your ${schoolName} portal account:`,
     resetCode,
     '',
-    'This code expires in 15 minutes.',
+    `This code expires in ${ttlLabel}.`,
     '',
     'If you did not request a password reset, ignore this message.'
   ].join('\n');
@@ -160,7 +173,7 @@ export async function sendResetCodeEmail({
             <p style="margin:0;font-size:12px;text-transform:uppercase;letter-spacing:0.16em;color:#64748b;">Reset code</p>
             <p style="margin:12px 0 0;font-size:26px;font-weight:700;letter-spacing:0.2em;">${resetCode}</p>
           </div>
-          <p style="margin:20px 0 0;color:#475569;">This code expires in 15 minutes.</p>
+          <p style="margin:20px 0 0;color:#475569;">This code expires in ${ttlLabel}.</p>
         </div>
       </div>
     </div>
