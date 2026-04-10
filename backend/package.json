@@ -13,7 +13,8 @@
     "db:replace:legacy-admin": "node src/db/replaceLegacyAdmin.js",
     "db:validate-bootstrap": "node src/db/validateBootstrap.js",
     "jobs:mail-outbox": "node src/jobs/processMailOutbox.js",
-    "reset:admin": "node scripts/reset_admin_password.mjs"
+    "reset:admin": "node scripts/reset_admin_password.mjs",
+    "create:admin": "node scripts/create_admin_user.mjs"
   },
   "dependencies": {
     "@sendgrid/mail": "^8.1.6",
