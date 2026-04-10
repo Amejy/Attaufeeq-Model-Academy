@@ -1,7 +1,9 @@
 import { env } from '../config/env.js';
 import { lookup } from 'node:dns/promises';
+import sendgridMail from '@sendgrid/mail';
 
 let transporterPromise = null;
+let sendgridReady = false;
 
 function ensureMailConfig() {
   if (!env.mailEnabled) return;
@@ -31,6 +33,7 @@ function ensureMailConfig() {
 
 async function getTransporter() {
   if (!env.mailEnabled) return null;
+  if (env.mailProvider === 'sendgrid') return null;
   if (transporterPromise) return transporterPromise;
 
   transporterPromise = (async () => {
@@ -38,16 +41,6 @@ async function getTransporter() {
     const nodemailer = nodemailerModule.default;
 
     let transportConfig;
-
-    if (env.mailProvider === 'sendgrid') {
-      return nodemailer.createTransport({
-        service: 'SendGrid',
-        auth: {
-          user: 'apikey',
-          pass: env.sendgridApiKey
-        }
-      });
-    }
 
     if (env.mailHost) {
       const family = Number(env.mailFamily || 0);
@@ -98,6 +91,36 @@ function resolveFromAddress() {
     : env.mailFrom;
 }
 
+function ensureSendgridReady() {
+  if (sendgridReady) return;
+  sendgridMail.setApiKey(env.sendgridApiKey);
+  sendgridReady = true;
+}
+
+async function sendWithSendgrid({ recipientEmail, subject, text, html }) {
+  ensureSendgridReady();
+  const from = resolveFromAddress();
+
+  try {
+    const [response] = await sendgridMail.send({
+      to: recipientEmail,
+      from,
+      subject,
+      text,
+      html
+    });
+
+    return {
+      status: 'sent',
+      messageId: response?.headers?.['x-message-id'] || ''
+    };
+  } catch (error) {
+    const details = error?.response?.body?.errors?.map((item) => item.message).join('; ');
+    const message = details || error?.message || 'SendGrid send failed.';
+    throw new Error(`SendGrid error: ${message}`);
+  }
+}
+
 async function sendEmail({ recipientEmail, subject, text, html }) {
   if (!env.mailEnabled) {
     return { status: 'disabled' };
@@ -108,6 +131,10 @@ async function sendEmail({ recipientEmail, subject, text, html }) {
   }
 
   ensureMailConfig();
+  if (env.mailProvider === 'sendgrid') {
+    return sendWithSendgrid({ recipientEmail, subject, text, html });
+  }
+
   const transporter = await getTransporter();
   const from = resolveFromAddress();
 
