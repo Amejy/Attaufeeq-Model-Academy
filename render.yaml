@@ -44,6 +44,8 @@ services:
         sync: false
       - key: AUTH_COOKIE_SECURE
         sync: false
+      - key: MAIL_TEST_SECRET
+        sync: false
   - type: static
     name: attaufiqschools-web
     rootDir: .

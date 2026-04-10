@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { env } from './config/env.js';
 import { findFileUploadById } from './repositories/fileUploadRepository.js';
+import { sendAdminNotificationEmail } from './utils/mailer.js';
 
 import { serializeAdminStoreWrites } from './middleware/adminStoreWriteLock.js';
 import { attachUserIfPresent, requireAuth, requireRole } from './middleware/auth.js';
@@ -43,7 +44,7 @@ app.use(
       return callback(new Error('CORS blocked for this origin.'));
     },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-    allowedHeaders: ['Authorization', 'Content-Type'],
+    allowedHeaders: ['Authorization', 'Content-Type', 'X-Mail-Test-Secret'],
     credentials: true
   })
 );
@@ -150,6 +151,35 @@ app.get('/api/uploads/private/:id', requireAuth, requireRole('admin', 'admission
   res.setHeader('Content-Disposition', `inline; filename="${upload.originalName}"`);
   return res.send(upload.data);
 });
+
+app.post('/api/system/test-email', async (req, res) => {
+  if (!env.mailTestSecret) {
+    return res.status(403).json({ message: 'MAIL_TEST_SECRET is not configured.' });
+  }
+
+  const provided = String(req.get('x-mail-test-secret') || '').trim();
+  if (!provided || provided !== env.mailTestSecret) {
+    return res.status(403).json({ message: 'Invalid mail test secret.' });
+  }
+
+  const recipientEmail = String(req.body?.email || env.mailUser || '').trim().toLowerCase();
+  if (!recipientEmail) {
+    return res.status(400).json({ message: 'Recipient email is required.' });
+  }
+
+  try {
+    const delivery = await sendAdminNotificationEmail({
+      recipientEmail,
+      title: 'Mail delivery test',
+      message: 'This is a test message from the ATTAUFEEQ Model Academy portal. If you see this, email delivery is working.',
+      roleLabel: 'Admin'
+    });
+    return res.json({ message: 'Test email sent (or queued).', delivery });
+  } catch (error) {
+    return res.status(500).json({ message: error.message || 'Unable to send test email.' });
+  }
+});
+
 app.use('/api', apiRouter);
 app.use(notFoundHandler);
 app.use(errorHandler);
