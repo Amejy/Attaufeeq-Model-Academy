@@ -2995,6 +2995,30 @@ adminRouter.post('/system/refresh', async (_req, res) => {
   return res.json({ message: 'Portal state refreshed from PostgreSQL.' });
 });
 
+adminRouter.post('/system/test-email', async (req, res) => {
+  const recipientEmail = String(req.body?.email || env.bootstrapAdminEmail || '').trim().toLowerCase();
+
+  if (!recipientEmail) {
+    return res.status(400).json({ message: 'Recipient email is required to send a test email.' });
+  }
+
+  try {
+    const delivery = await sendAdminNotificationEmail({
+      recipientEmail,
+      title: 'Mail delivery test',
+      message: 'This is a test message from the ATTAUFEEQ Model Academy portal. If you see this, email delivery is working.',
+      roleLabel: 'Admin'
+    });
+
+    return res.json({
+      message: 'Test email sent (or queued).',
+      delivery
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message || 'Unable to send test email.' });
+  }
+});
+
 adminRouter.post('/system/reconcile-students', async (req, res) => {
   const dryRun = Boolean(req.body?.dryRun);
   const forceInlineDelivery = Boolean(req.body?.forceInlineDelivery);
