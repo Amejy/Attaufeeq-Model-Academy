@@ -150,7 +150,6 @@ export const env = {
   mailPassword: process.env.MAIL_PASSWORD || '',
   mailFrom: process.env.MAIL_FROM || '',
   mailFromName: process.env.MAIL_FROM_NAME || 'ATTAUFEEQ Model Academy Portal',
-  mailTestSecret: optionalEnv('MAIL_TEST_SECRET', '').trim(),
   defaultInstitution: optionalEnv('DEFAULT_INSTITUTION', 'ATTAUFEEQ Model Academy').trim() || 'ATTAUFEEQ Model Academy',
   studentEmailDomain: optionalEnv('STUDENT_EMAIL_DOMAIN', 'attaufiqschools.com').trim() || 'attaufiqschools.com',
   defaultPasswordMode: optionalEnv('DEFAULT_PASSWORD_MODE', 'random').trim().toLowerCase() || 'random',

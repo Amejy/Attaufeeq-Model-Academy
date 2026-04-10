@@ -44,8 +44,6 @@ services:
         sync: false
       - key: AUTH_COOKIE_SECURE
         sync: false
-      - key: MAIL_TEST_SECRET
-        sync: false
       - key: MAIL_PROVIDER
         sync: false
       - key: SENDGRID_API_KEY
