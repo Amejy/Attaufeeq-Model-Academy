@@ -43,6 +43,14 @@ let stopMailWorker = () => {};
 let stopUptimePinger = () => {};
 let shuttingDown = false;
 
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught exception:', error);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled rejection:', reason);
+});
+
 async function shutdown(signal = 'shutdown', exitCode = 0) {
   if (shuttingDown) return;
   shuttingDown = true;
@@ -148,38 +156,42 @@ async function start() {
 
   startServer();
 
-  await retryWithBackoff('Database migrations', () => runMigrations({ logger: console }), {
-    attempts: env.startupDbRetryAttempts,
-    baseMs: env.startupDbRetryBaseMs
-  });
+  try {
+    await retryWithBackoff('Database migrations', () => runMigrations({ logger: console }), {
+      attempts: env.startupDbRetryAttempts,
+      baseMs: env.startupDbRetryBaseMs
+    });
 
-  const connection = await retryWithBackoff('Database connection', () => testDbConnection(), {
-    attempts: env.startupDbRetryAttempts,
-    baseMs: env.startupDbRetryBaseMs
-  });
+    const connection = await retryWithBackoff('Database connection', () => testDbConnection(), {
+      attempts: env.startupDbRetryAttempts,
+      baseMs: env.startupDbRetryBaseMs
+    });
 
-  await verifyRequiredAuthTables();
-  await initializeAdminStore();
-  await normalizeAndPersistSiteContent().catch((error) => {
-    console.error('Site content normalization error:', error.message || error);
-  });
-  await ensureBootstrapAdmin();
-  await verifyLegacyDemoUsers();
-  await syncCoreAcademicStore();
+    await verifyRequiredAuthTables();
+    await initializeAdminStore();
+    await normalizeAndPersistSiteContent().catch((error) => {
+      console.error('Site content normalization error:', error.message || error);
+    });
+    await ensureBootstrapAdmin();
+    await verifyLegacyDemoUsers();
+    await syncCoreAcademicStore();
 
-  const redis = await retryWithBackoff('Redis connection', () => testRedisConnection(), {
-    attempts: env.startupRedisRetryAttempts,
-    baseMs: env.startupRedisRetryBaseMs
-  });
+    const redis = await retryWithBackoff('Redis connection', () => testRedisConnection(), {
+      attempts: env.startupRedisRetryAttempts,
+      baseMs: env.startupRedisRetryBaseMs
+    });
 
-  stopMailWorker = startMailOutboxWorker();
-  stopUptimePinger = startUptimePinger();
+    stopMailWorker = startMailOutboxWorker();
+    stopUptimePinger = startUptimePinger();
 
-  console.log(`PostgreSQL connected at ${connection.host}:${connection.port}/${connection.database}`);
-  if (redis.enabled) {
-    console.log('Redis-backed rate limiting enabled.');
-  } else {
-    console.warn('Redis-backed rate limiting is disabled for this environment.');
+    console.log(`PostgreSQL connected at ${connection.host}:${connection.port}/${connection.database}`);
+    if (redis.enabled) {
+      console.log('Redis-backed rate limiting enabled.');
+    } else {
+      console.warn('Redis-backed rate limiting is disabled for this environment.');
+    }
+  } catch (error) {
+    console.error('Startup initialization failed:', error.message || error);
   }
 
   process.on('SIGINT', () => {
