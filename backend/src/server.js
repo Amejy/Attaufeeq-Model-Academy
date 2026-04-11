@@ -138,10 +138,11 @@ async function start() {
   let currentPort = env.port;
   let retryCount = 0;
   const maxRetries = 5;
+  const bindHost = env.isProduction ? '0.0.0.0' : env.host;
 
   const startServer = () => {
-    server = app.listen(currentPort, env.host, () => {
-      console.log(`ATTAUFEEQ backend running on http://${env.host}:${currentPort}`);
+    server = app.listen(currentPort, bindHost, () => {
+      console.log(`ATTAUFEEQ backend running on http://${bindHost}:${currentPort}`);
       if (currentPort !== env.port) {
         console.warn(`Auto-selected port ${currentPort} (requested ${env.port} was busy).`);
       }
@@ -150,7 +151,7 @@ async function start() {
     server.on('error', (error) => {
       if (error.code === 'EADDRINUSE') {
         console.error(
-          `Backend port ${currentPort} is already in use on ${env.host}. Stop the old process or change PORT in backend/.env.`
+          `Backend port ${currentPort} is already in use on ${bindHost}. Stop the old process or change PORT in backend/.env.`
         );
         console.error(
           `Find the process with: lsof -nP -iTCP:${currentPort} -sTCP:LISTEN`
