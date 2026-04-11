@@ -126,6 +126,7 @@ export const env = {
   authCookieSecure: isProd || parseBoolean(process.env.AUTH_COOKIE_SECURE, false),
   rateLimitStore,
   cacheStore,
+  rateLimitFailOpen: parseBoolean(process.env.RATE_LIMIT_FAIL_OPEN, false),
   cacheDefaultTtlSeconds: parseInteger(process.env.CACHE_DEFAULT_TTL_SECONDS, 60, { min: 5, max: 3600 }),
   cacheMemoryMaxEntries: parseInteger(process.env.CACHE_MEMORY_MAX_ENTRIES, 1_000, { min: 100, max: 50_000 }),
   redisUrl,

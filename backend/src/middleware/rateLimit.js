@@ -59,11 +59,13 @@ export function createRateLimiter({ name, windowMs, maxRequests, keyFromReq }) {
 
       return next();
     } catch (error) {
-      if (!env.isProduction) {
-        console.warn(`Rate limiter bypassed: ${error.message || error}`);
+      console.error(`Rate limiter error: ${error.message || error}`);
+      if (env.rateLimitFailOpen) {
         return next();
       }
-
+      if (!env.isProduction) {
+        return next();
+      }
       return res.status(503).json({ message: 'Service temporarily unavailable.' });
     }
   };
