@@ -33,6 +33,20 @@ export async function findPasswordResetRequest(email, codeHash) {
   return result.rows[0] || null;
 }
 
+export async function findActivePasswordResetRequestByEmail(email) {
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  const result = await query(
+    `SELECT *
+     FROM password_reset_requests
+     WHERE email = $1
+       AND expires_at > NOW()
+     LIMIT 1`,
+    [normalizedEmail]
+  );
+
+  return result.rows[0] || null;
+}
+
 export async function deletePasswordResetRequest(email) {
   const normalizedEmail = String(email || '').trim().toLowerCase();
   await query('DELETE FROM password_reset_requests WHERE email = $1', [normalizedEmail]);

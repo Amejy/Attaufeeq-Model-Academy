@@ -6,6 +6,7 @@ import { findUserByEmail, findUserById, updateUserPassword } from '../repositori
 import {
   deleteExpiredPasswordResetRequests,
   deletePasswordResetRequest,
+  findActivePasswordResetRequestByEmail,
   findPasswordResetRequest,
   upsertPasswordResetRequest
 } from '../repositories/passwordResetRepository.js';
@@ -141,6 +142,13 @@ authRouter.post('/forgot-password', async (req, res) => {
     }
 
     await deleteExpiredPasswordResetRequests();
+    const existingRequest = await findActivePasswordResetRequestByEmail(normalizedEmail);
+    if (existingRequest) {
+      return res.json({
+        message: 'A reset code was already sent recently. Please use the latest email or wait before requesting a new one.',
+        expiresAt: new Date(existingRequest.expires_at).toISOString()
+      });
+    }
     const user = await findUserByEmail(normalizedEmail);
 
     if (!user) {
