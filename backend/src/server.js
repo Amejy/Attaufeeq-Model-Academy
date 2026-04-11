@@ -101,40 +101,6 @@ async function shutdown(signal = 'shutdown', exitCode = 0) {
 async function start() {
   validateRuntimeConfig();
 
-  await retryWithBackoff('Database migrations', () => runMigrations({ logger: console }), {
-    attempts: env.startupDbRetryAttempts,
-    baseMs: env.startupDbRetryBaseMs
-  });
-
-  const connection = await retryWithBackoff('Database connection', () => testDbConnection(), {
-    attempts: env.startupDbRetryAttempts,
-    baseMs: env.startupDbRetryBaseMs
-  });
-
-  await verifyRequiredAuthTables();
-  await initializeAdminStore();
-  await normalizeAndPersistSiteContent().catch((error) => {
-    console.error('Site content normalization error:', error.message || error);
-  });
-  await ensureBootstrapAdmin();
-  await verifyLegacyDemoUsers();
-  await syncCoreAcademicStore();
-
-  const redis = await retryWithBackoff('Redis connection', () => testRedisConnection(), {
-    attempts: env.startupRedisRetryAttempts,
-    baseMs: env.startupRedisRetryBaseMs
-  });
-
-  stopMailWorker = startMailOutboxWorker();
-  stopUptimePinger = startUptimePinger();
-
-  console.log(`PostgreSQL connected at ${connection.host}:${connection.port}/${connection.database}`);
-  if (redis.enabled) {
-    console.log('Redis-backed rate limiting enabled.');
-  } else {
-    console.warn('Redis-backed rate limiting is disabled for this environment.');
-  }
-
   let currentPort = env.port;
   let retryCount = 0;
   const maxRetries = 5;
@@ -181,6 +147,40 @@ async function start() {
   };
 
   startServer();
+
+  await retryWithBackoff('Database migrations', () => runMigrations({ logger: console }), {
+    attempts: env.startupDbRetryAttempts,
+    baseMs: env.startupDbRetryBaseMs
+  });
+
+  const connection = await retryWithBackoff('Database connection', () => testDbConnection(), {
+    attempts: env.startupDbRetryAttempts,
+    baseMs: env.startupDbRetryBaseMs
+  });
+
+  await verifyRequiredAuthTables();
+  await initializeAdminStore();
+  await normalizeAndPersistSiteContent().catch((error) => {
+    console.error('Site content normalization error:', error.message || error);
+  });
+  await ensureBootstrapAdmin();
+  await verifyLegacyDemoUsers();
+  await syncCoreAcademicStore();
+
+  const redis = await retryWithBackoff('Redis connection', () => testRedisConnection(), {
+    attempts: env.startupRedisRetryAttempts,
+    baseMs: env.startupRedisRetryBaseMs
+  });
+
+  stopMailWorker = startMailOutboxWorker();
+  stopUptimePinger = startUptimePinger();
+
+  console.log(`PostgreSQL connected at ${connection.host}:${connection.port}/${connection.database}`);
+  if (redis.enabled) {
+    console.log('Redis-backed rate limiting enabled.');
+  } else {
+    console.warn('Redis-backed rate limiting is disabled for this environment.');
+  }
 
   process.on('SIGINT', () => {
     void shutdown('SIGINT', 0);
