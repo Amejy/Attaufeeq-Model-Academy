@@ -53,6 +53,10 @@ app.use(morgan('dev'));
 app.use(express.json({ limit: '1mb' }));
 app.use(attachUserIfPresent);
 
+app.get('/health', (_req, res) => {
+  res.json({ status: 'OK' });
+});
+
 function requestIp(req) {
   return req.ip || req.socket?.remoteAddress || 'unknown';
 }
