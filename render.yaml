@@ -52,6 +52,10 @@ services:
         sync: false
       - key: RESEND_API_KEY
         sync: false
+      - key: MAIL_PROVIDER
+        sync: false
+      - key: SENDGRID_API_KEY
+        sync: false
   - type: static
     name: attaufiqschools-web
     rootDir: .

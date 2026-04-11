@@ -1,13 +1,22 @@
 import { env } from '../config/env.js';
+import sendgridMail from '@sendgrid/mail';
 import { Resend } from 'resend';
 
 let resendClient = null;
+let sendgridReady = false;
 
 function ensureMailConfig() {
   if (!env.mailEnabled) return;
 
   if (!env.mailFrom) {
     throw new Error('MAIL_FROM is required when MAIL_ENABLED=true.');
+  }
+
+  if (env.mailProvider === 'sendgrid') {
+    if (!env.sendgridApiKey) {
+      throw new Error('SENDGRID_API_KEY is required when MAIL_PROVIDER=sendgrid.');
+    }
+    return;
   }
 
   if (!env.resendApiKey) {
@@ -36,6 +45,36 @@ function formatResetCodeTtl() {
 function ensureResendReady() {
   if (resendClient) return;
   resendClient = new Resend(env.resendApiKey);
+}
+
+function ensureSendgridReady() {
+  if (sendgridReady) return;
+  sendgridMail.setApiKey(env.sendgridApiKey);
+  sendgridReady = true;
+}
+
+async function sendWithSendgrid({ recipientEmail, subject, text, html }) {
+  ensureSendgridReady();
+  const from = resolveFromAddress();
+
+  try {
+    const [response] = await sendgridMail.send({
+      to: recipientEmail,
+      from,
+      subject,
+      text,
+      html
+    });
+
+    return {
+      status: 'sent',
+      messageId: response?.headers?.['x-message-id'] || ''
+    };
+  } catch (error) {
+    const details = error?.response?.body?.errors?.map((item) => item.message).join('; ');
+    const message = details || error?.message || 'SendGrid send failed.';
+    throw new Error(`SendGrid error: ${message}`);
+  }
 }
 
 async function sendWithResend({ recipientEmail, subject, text, html }) {
@@ -75,6 +114,10 @@ async function sendEmail({ recipientEmail, subject, text, html }) {
   }
 
   ensureMailConfig();
+  if (env.mailProvider === 'sendgrid') {
+    return sendWithSendgrid({ recipientEmail, subject, text, html });
+  }
+
   return sendWithResend({ recipientEmail, subject, text, html });
 }
 

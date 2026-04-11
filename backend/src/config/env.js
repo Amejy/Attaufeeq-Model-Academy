@@ -139,7 +139,9 @@ export const env = {
   startupRedisRetryBaseMs: Math.max(100, Number(process.env.STARTUP_REDIS_RETRY_BASE_MS || 500)),
   healthTimeoutMs: parseInteger(process.env.HEALTH_TIMEOUT_MS, 3_000, { min: 500, max: 30_000 }),
   mailEnabled: String(process.env.MAIL_ENABLED || 'false').toLowerCase() === 'true',
+  mailProvider: optionalEnv('MAIL_PROVIDER', '').trim().toLowerCase(),
   resendApiKey: optionalEnv('RESEND_API_KEY', '').trim(),
+  sendgridApiKey: optionalEnv('SENDGRID_API_KEY', '').trim(),
   mailFrom: process.env.MAIL_FROM || process.env.EMAIL_FROM || '',
   mailFromName: process.env.MAIL_FROM_NAME || process.env.EMAIL_FROM_NAME || 'ATTAUFEEQ Model Academy Portal',
   resetCodeTtlHours: (() => {
@@ -198,11 +200,18 @@ export function validateRuntimeConfig() {
   }
 
   if (env.mailEnabled) {
-    if (!env.resendApiKey) {
-      throw new Error('RESEND_API_KEY must be configured when MAIL_ENABLED is true.');
-    }
     if (!env.mailFrom) {
       throw new Error('MAIL_FROM must be configured when MAIL_ENABLED is true.');
+    }
+
+    if (env.mailProvider === 'sendgrid') {
+      if (!env.sendgridApiKey) {
+        throw new Error('SENDGRID_API_KEY must be configured when MAIL_PROVIDER=sendgrid.');
+      }
+    } else {
+      if (!env.resendApiKey) {
+        throw new Error('RESEND_API_KEY must be configured when MAIL_ENABLED is true.');
+      }
     }
   }
 }
