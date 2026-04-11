@@ -138,7 +138,7 @@ async function start() {
   let currentPort = env.port;
   let retryCount = 0;
   const maxRetries = 5;
-  const bindHost = env.isProduction ? '0.0.0.0' : env.host;
+  const bindHost = '0.0.0.0';
 
   const startServer = () => {
     server = app.listen(currentPort, bindHost, () => {
