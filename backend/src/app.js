@@ -29,8 +29,10 @@ app.use(
       // Allow same-origin and non-browser requests (curl/postman).
       if (!origin) return callback(null, true);
 
+      const vercelPreviewRegex = /^https:\/\/attaufeeq-model-academy(-[a-z0-9-]+)?\.vercel\.app$/i;
       const allowed =
         env.corsOrigins.includes(origin) ||
+        vercelPreviewRegex.test(origin) ||
         (
           env.isDevelopment &&
           (
