@@ -28,6 +28,9 @@ export function createRateLimiter({ name, windowMs, maxRequests, keyFromReq }) {
 
   return async (req, res, next) => {
     try {
+      if (req.path === '/health' || req.path.startsWith('/health/')) {
+        return next();
+      }
       if (env.rateLimitStore !== 'redis') {
         return next();
       }

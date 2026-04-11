@@ -100,11 +100,20 @@ class SimpleRedisClient {
         ? tls.connect(options)
         : net.createConnection(options);
 
+      const timeoutMs = Number(env.redisConnectTimeoutMs || 0);
+      let timeoutId = null;
+      if (timeoutMs > 0) {
+        timeoutId = setTimeout(() => {
+          fail(new Error(`Redis connection timed out after ${timeoutMs}ms.`));
+        }, timeoutMs);
+      }
+
       let settled = false;
 
       const fail = (error) => {
         if (!settled) {
           settled = true;
+          if (timeoutId) clearTimeout(timeoutId);
           reject(error);
         }
         this.handleDisconnect(error);
@@ -116,6 +125,7 @@ class SimpleRedisClient {
 
       socket.on(this.config.tls ? 'secureConnect' : 'connect', async () => {
         try {
+          if (timeoutId) clearTimeout(timeoutId);
           this.socket = socket;
           if (this.config.password) {
             await this.sendCommandInternal(['AUTH', this.config.password]);

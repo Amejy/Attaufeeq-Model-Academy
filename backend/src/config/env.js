@@ -134,6 +134,7 @@ export const env = {
   redisPassword: parsedRedisUrl.password || optionalEnv('REDIS_PASSWORD', ''),
   redisDb: Number.isFinite(parsedRedisUrl.db) ? parsedRedisUrl.db : Number(process.env.REDIS_DB || 0),
   redisTls: parsedRedisUrl.host ? parsedRedisUrl.tls : parseBoolean(process.env.REDIS_TLS, false),
+  redisConnectTimeoutMs: parseInteger(process.env.REDIS_CONNECT_TIMEOUT_MS, 3_000, { min: 500, max: 30_000 }),
   redisKeyPrefix: optionalEnv('REDIS_KEY_PREFIX', 'attaufiqschools').trim() || 'attaufiqschools',
   startupRedisRetryAttempts: Math.max(1, Number(process.env.STARTUP_REDIS_RETRY_ATTEMPTS || 5)),
   startupRedisRetryBaseMs: Math.max(100, Number(process.env.STARTUP_REDIS_RETRY_BASE_MS || 500)),
