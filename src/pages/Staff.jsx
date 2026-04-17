@@ -1,3 +1,4 @@
+import SmartImage from '../components/SmartImage';
 import { useSiteContent } from '../context/SiteContentContext';
 
 function Staff() {
@@ -16,7 +17,13 @@ function Staff() {
           {featuredStaff.map((person) => (
             <article key={`${person.name}-${person.role}`} className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
               {person.image && (
-                <img src={person.image} alt={person.name} className="h-48 w-full rounded-xl object-cover" />
+                <SmartImage
+                  src={person.image}
+                  fallbackSrc="/images/campus.jpg"
+                  alt={person.name}
+                  className="h-48 w-full rounded-xl object-cover"
+                  loading="lazy"
+                />
               )}
               <h2 className="mt-4 font-heading text-2xl text-primary">{person.name}</h2>
               <p className="mt-1 text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">{person.role}</p>

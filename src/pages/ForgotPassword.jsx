@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import PasswordField from '../components/PasswordField';
+import SmartImage from '../components/SmartImage';
 import { useSiteContent } from '../context/SiteContentContext';
 import { apiJson } from '../utils/publicApi';
 
@@ -11,6 +13,7 @@ function ForgotPassword() {
   const [searchParams] = useSearchParams();
   const { siteContent } = useSiteContent();
   const branding = siteContent.branding || {};
+  const brandLogo = branding.logoUrl || '/images/logo.png';
   const schoolName = branding.name || 'School';
   const variant = searchParams.get('variant') === 'staff' ? 'staff' : 'family';
   const roleParam = String(searchParams.get('role') || '').trim().toLowerCase();
@@ -37,6 +40,8 @@ function ForgotPassword() {
   const [resetting, setResetting] = useState(false);
   const [resetMessage, setResetMessage] = useState('');
   const [resetError, setResetError] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const canRequestReset = isValidEmail(email);
   const canSubmitReset =
     isValidEmail(resetForm.email) &&
@@ -115,13 +120,11 @@ function ForgotPassword() {
       <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[1.1fr,0.9fr]">
         <section className="glass-panel overflow-hidden p-7 sm:p-9">
           <div className="login-logo-row">
-            <img
-              src="/images/logo.png"
+            <SmartImage
+              src={brandLogo}
+              fallbackSrc="/images/logo.png"
               alt={`${branding.name || 'School'} logo`}
               className="login-logo"
-              onError={(event) => {
-                event.currentTarget.style.display = 'none';
-              }}
             />
             <div>
               <p className="login-logo__label">{schoolName}</p>
@@ -202,30 +205,30 @@ function ForgotPassword() {
                 placeholder="Enter the 6-digit code"
               />
             </label>
-            <label className="block text-sm">
-              <span className="mb-1 block font-medium text-slate-700">New Password</span>
-              <input
-                name="newPassword"
-                type="password"
-                required
-                value={resetForm.newPassword}
-                onChange={onResetChange}
-                className="w-full rounded-md border border-slate-300 px-3 py-2"
-                placeholder="Minimum 10 characters"
-              />
-            </label>
-            <label className="block text-sm">
-              <span className="mb-1 block font-medium text-slate-700">Confirm Password</span>
-              <input
-                name="confirmPassword"
-                type="password"
-                required
-                value={resetForm.confirmPassword}
-                onChange={onResetChange}
-                className="w-full rounded-md border border-slate-300 px-3 py-2"
-                placeholder="Re-enter password"
-              />
-            </label>
+            <PasswordField
+              label="New Password"
+              name="newPassword"
+              required
+              value={resetForm.newPassword}
+              onChange={onResetChange}
+              placeholder="Minimum 10 characters"
+              showPassword={showNewPassword}
+              onToggleVisibility={() => setShowNewPassword((prev) => !prev)}
+              autoComplete="new-password"
+              className="w-full rounded-md border border-slate-300 px-3 py-2 pr-20"
+            />
+            <PasswordField
+              label="Confirm Password"
+              name="confirmPassword"
+              required
+              value={resetForm.confirmPassword}
+              onChange={onResetChange}
+              placeholder="Re-enter password"
+              showPassword={showConfirmPassword}
+              onToggleVisibility={() => setShowConfirmPassword((prev) => !prev)}
+              autoComplete="new-password"
+              className="w-full rounded-md border border-slate-300 px-3 py-2 pr-20"
+            />
             {resetError && <p className="text-sm text-red-600">{resetError}</p>}
             {resetMessage && <p className="text-sm text-emerald-700">{resetMessage}</p>}
             <button

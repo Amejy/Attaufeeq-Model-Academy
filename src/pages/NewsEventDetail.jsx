@@ -1,5 +1,6 @@
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import SmartImage from '../components/SmartImage';
 import { SkeletonBlock } from '../components/Skeleton';
 import { apiJson } from '../utils/publicApi';
 
@@ -71,7 +72,13 @@ function NewsEventDetail() {
             <div className="mt-6 grid gap-3 md:grid-cols-2">
               {item.images.map((url, index) => (
                 <a key={`${url}-${index}`} href={url} target="_blank" rel="noreferrer" className="overflow-hidden rounded-2xl border border-slate-200">
-                  <img src={url} alt={`${item.title} ${index + 1}`} className="h-64 w-full object-cover" />
+                  <SmartImage
+                    src={url}
+                    fallbackSrc="/images/campus.jpg"
+                    alt={`${item.title} ${index + 1}`}
+                    className="h-64 w-full object-cover"
+                    loading="lazy"
+                  />
                 </a>
               ))}
             </div>

@@ -1,3 +1,4 @@
+import SmartImage from '../components/SmartImage';
 import { useSiteContent } from '../context/SiteContentContext';
 
 function Academics() {
@@ -18,7 +19,13 @@ function Academics() {
             {(academics.levels || []).map((level) => <li key={level}>{level}</li>)}
           </ul>
         </div>
-        <img src={academics.image || '/images/students.jpg'} alt="Students in class" className="h-72 w-full rounded-xl object-cover" />
+        <SmartImage
+          src={academics.image || '/images/students.jpg'}
+          fallbackSrc="/images/students.jpg"
+          alt="Students in class"
+          className="h-72 w-full rounded-xl object-cover"
+          loading="lazy"
+        />
       </section>
 
       <section className="mt-10 grid gap-6 md:grid-cols-2">

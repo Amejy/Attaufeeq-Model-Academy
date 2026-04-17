@@ -1,3 +1,4 @@
+import SmartImage from '../components/SmartImage';
 import { useSiteContent } from '../context/SiteContentContext';
 
 function Gallery() {
@@ -11,7 +12,14 @@ function Gallery() {
       <p className="mt-4 text-sm text-slate-700">{gallery.description}</p>
       <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {photos.map((photo) => (
-          <img key={photo.url} src={photo.url} alt={photo.alt || 'School gallery'} className="h-56 w-full rounded-lg object-cover" />
+          <SmartImage
+            key={photo.url}
+            src={photo.url}
+            fallbackSrc="/images/campus.jpg"
+            alt={photo.alt || 'School gallery'}
+            className="h-56 w-full rounded-lg object-cover"
+            loading="lazy"
+          />
         ))}
       </div>
     </main>

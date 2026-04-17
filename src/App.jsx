@@ -4,6 +4,7 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ParticleField from './components/ParticleField';
 import PageTransition from './components/PageTransition';
+import BackToTopButton from './components/BackToTopButton';
 import ProtectedRoute from './components/ProtectedRoute';
 import useAdmissionPeriod from './hooks/useAdmissionPeriod';
 
@@ -97,7 +98,7 @@ function App() {
 
   useEffect(() => {
     if (!isPortalRoute) {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      window.scrollTo({ top: 0, behavior: 'auto' });
     }
   }, [location.pathname, location.search, isPortalRoute]);
 
@@ -641,6 +642,7 @@ function App() {
           </Routes>
         </PageTransition>
       </Suspense>
+      {!isPortalRoute && <BackToTopButton />}
       {!isPortalRoute && <Footer />}
     </div>
   );

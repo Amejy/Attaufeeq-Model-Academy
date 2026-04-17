@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import PortalLayout from '../../components/PortalLayout';
+import SmartImage from '../../components/SmartImage';
 import { useAuth } from '../../context/AuthContext';
 import { useSiteContent } from '../../context/SiteContentContext';
 import { buildStudentCode } from '../../utils/studentCode';
@@ -275,7 +276,12 @@ function AdmissionsResultTokens() {
           <div className="mt-4 space-y-3">
             <div ref={tokenCardRef} className="token-card rounded-[20px] border border-slate-200 bg-slate-50 px-4 py-4">
               <div className="token-card__header flex items-center gap-3">
-                <img src={logoSrc} alt="ATTAUFEEQ logo" className="token-card__logo h-12 w-12 rounded-2xl border border-slate-200 bg-white object-cover" />
+                <SmartImage
+                  src={logoSrc}
+                  fallbackSrc="/images/logo.png"
+                  alt="ATTAUFEEQ logo"
+                  className="token-card__logo h-12 w-12 rounded-2xl border border-slate-200 bg-white object-cover"
+                />
                 <div className="token-card__brand">
                   <h3>ATTAUFEEQ Result Token</h3>
                   <p>{branding.name || 'ATTAUFEEQ Model Academy'}</p>

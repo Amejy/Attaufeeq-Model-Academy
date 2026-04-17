@@ -14,6 +14,10 @@ const particles = [
 ];
 
 function ParticleField({ variant = 'public' }) {
+  if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+    return null;
+  }
+
   return (
     <div className={`particle-field particle-field--${variant}`} aria-hidden="true">
       {particles.map((particle, index) => (

@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import SmartImage from './SmartImage';
 import { useSiteContent } from '../context/SiteContentContext';
 
 function initials(name = '') {
@@ -38,7 +39,12 @@ function ResultCard({ reportCard }) {
     <div className="result-card" id="result-card-print">
       <header className="result-card__header">
         <div className="result-card__brand">
-          <img src={logoSrc} alt={`${schoolName} logo`} className="result-card__logo" />
+          <SmartImage
+            src={logoSrc}
+            fallbackSrc="/images/logo.png"
+            alt={`${schoolName} logo`}
+            className="result-card__logo"
+          />
           <div>
             <p className="result-card__school">{schoolName}</p>
             <p className="result-card__tag">Academic Result Card</p>
@@ -54,7 +60,11 @@ function ResultCard({ reportCard }) {
       <section className="result-card__student">
         <div className="result-card__photo">
           {resolveStudentPhoto(student) ? (
-            <img src={resolveStudentPhoto(student)} alt={student.fullName || 'Student'} />
+            <SmartImage
+              src={resolveStudentPhoto(student)}
+              fallbackSrc="/images/logo.png"
+              alt={student.fullName || 'Student'}
+            />
           ) : (
             <span>{initials(student.fullName || '')}</span>
           )}
@@ -133,7 +143,11 @@ function ResultCard({ reportCard }) {
         <div>
           <p>{signLabel}</p>
           {signature ? (
-            <img src={signature} alt="Signature" />
+            <SmartImage
+              src={signature}
+              fallbackSrc="/images/logo.png"
+              alt="Signature"
+            />
           ) : (
             <div className="result-card__signature-line" />
           )}

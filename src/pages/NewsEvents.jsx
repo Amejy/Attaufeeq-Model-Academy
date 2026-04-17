@@ -1,5 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
+import SmartImage from '../components/SmartImage';
 import { NewsCardSkeleton } from '../components/Skeleton';
 import { apiJson } from '../utils/publicApi';
 const CATEGORY_ICONS = {
@@ -116,8 +117,9 @@ function NewsEvents() {
                   <div className="relative">
                     <div className="news-card__media">
                       {Array.isArray(item.images) && item.images.length > 0 ? (
-                        <img
+                        <SmartImage
                           src={item.images[0]}
+                          fallbackSrc="/images/campus.jpg"
                           alt={item.title}
                           className="news-card__image"
                           loading="lazy"
@@ -193,8 +195,9 @@ function NewsEvents() {
                   <div className="relative">
                     <div className="news-card__media">
                       {Array.isArray(item.images) && item.images.length > 0 ? (
-                        <img
+                        <SmartImage
                           src={item.images[0]}
+                          fallbackSrc="/images/campus.jpg"
                           alt={item.title}
                           className="news-card__image"
                           loading="lazy"

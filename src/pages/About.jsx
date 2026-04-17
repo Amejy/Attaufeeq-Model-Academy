@@ -1,3 +1,4 @@
+import SmartImage from '../components/SmartImage';
 import { useSiteContent } from '../context/SiteContentContext';
 
 function About() {
@@ -35,10 +36,12 @@ function About() {
                 <section className="rounded-xl border border-slate-200 bg-white p-5">
                   {about.signLabel && <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">{about.signLabel}</p>}
                   {about.signatureImage && (
-                    <img
+                    <SmartImage
                       src={about.signatureImage}
+                      fallbackSrc="/images/logo.png"
                       alt="Administrator signature"
                       className="mt-3 h-auto w-full max-w-[240px] object-contain"
+                      loading="lazy"
                     />
                   )}
                 </section>
@@ -50,7 +53,13 @@ function About() {
             </p>
           )}
         </div>
-        <img src={about.image || '/images/campus.jpg'} alt="ATTAUFEEQ campus" className="h-72 w-full rounded-xl object-cover lg:sticky lg:top-24" />
+        <SmartImage
+          src={about.image || '/images/campus.jpg'}
+          fallbackSrc="/images/campus.jpg"
+          alt="ATTAUFEEQ campus"
+          className="h-72 w-full rounded-xl object-cover lg:sticky lg:top-24"
+          loading="lazy"
+        />
       </div>
 
       <div className="mt-10 grid gap-6 md:grid-cols-2">

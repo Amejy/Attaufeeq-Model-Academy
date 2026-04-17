@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import SmartImage from './SmartImage';
 import ThemeToggle from './ThemeToggle';
 
 const roleNav = {
@@ -107,7 +108,7 @@ function PortalLayout({ role, title, subtitle, children, actions = null }) {
             <div className="flex min-w-0 flex-1 items-center gap-3 rounded-[26px] border border-white/12 bg-white/10 p-4 backdrop-blur-md">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/18 text-sm font-bold">
                 {avatarUrl ? (
-                  <img src={avatarUrl} alt="Profile avatar" className="h-full w-full object-cover" />
+                  <SmartImage src={avatarUrl} alt="Profile avatar" className="h-full w-full object-cover" />
                 ) : (
                   initials(user?.fullName || 'U')
                 )}
@@ -159,7 +160,7 @@ function PortalLayout({ role, title, subtitle, children, actions = null }) {
             <div className="flex items-center gap-2">
               <div className="h-10 w-10 overflow-hidden rounded-full border border-slate-200 bg-white/80">
                 {avatarUrl ? (
-                  <img src={avatarUrl} alt="Profile avatar" className="h-full w-full object-cover" />
+                  <SmartImage src={avatarUrl} alt="Profile avatar" className="h-full w-full object-cover" />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-xs font-semibold text-slate-600">
                     {initials(user?.fullName || 'U')}

@@ -1,3 +1,4 @@
+import SmartImage from './SmartImage';
 import { useSiteContent } from '../context/SiteContentContext';
 import { buildStudentCode } from '../utils/studentCode';
 
@@ -25,8 +26,9 @@ function SchoolReportMark({ institution }) {
   return (
     <div className="flex items-center gap-4">
       {logoSrc ? (
-        <img
+        <SmartImage
           src={logoSrc}
+          fallbackSrc="/images/logo.png"
           alt={`${branding.name || 'ATTAUFEEQ'} logo`}
           className="h-16 w-16 rounded-2xl border border-slate-200 object-cover"
         />
@@ -113,7 +115,12 @@ function ReportCardSheet({ reportCard }) {
               <td style={{ width: '15%', textAlign: 'right', verticalAlign: 'top' }}>
                 <div style={{ border: '1px solid #d1d5db', width: '70px', height: '80px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
                   {studentPhoto ? (
-                    <img src={studentPhoto} alt={student.fullName || 'Student'} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    <SmartImage
+                      src={studentPhoto}
+                      fallbackSrc="/images/logo.png"
+                      alt={student.fullName || 'Student'}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
                   ) : (
                     <span style={{ fontSize: '14px', fontWeight: 700 }}>{initials(student.fullName || '')}</span>
                   )}
@@ -162,8 +169,9 @@ function ReportCardSheet({ reportCard }) {
               <th>Signature / Stamp</th>
               <td>
                 {signatureImage ? (
-                  <img
+                  <SmartImage
                     src={signatureImage}
+                    fallbackSrc="/images/logo.png"
                     alt="Administrator signature"
                     style={{ height: '32px', maxWidth: '160px', objectFit: 'contain' }}
                   />

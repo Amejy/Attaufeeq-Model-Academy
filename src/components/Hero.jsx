@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useSiteContent } from '../context/SiteContentContext';
 import AnimatedCounter from './AnimatedCounter';
+import SmartImage from './SmartImage';
 import useAdmissionPeriod from '../hooks/useAdmissionPeriod';
 
 function Hero() {
@@ -8,6 +9,7 @@ function Hero() {
   const { siteContent } = useSiteContent();
   const admissionsAvailable = !isLoading && periodOpen;
   const branding = siteContent.branding || {};
+  const brandLogo = branding.logoUrl || '/images/logo.png';
   const home = siteContent.home || {};
   const heroImages = home.heroImages || [];
   const heroStats = home.heroStats || [];
@@ -23,13 +25,12 @@ function Hero() {
         <div className="relative grid items-center gap-10 lg:grid-cols-[1.05fr,0.95fr]">
           <div>
             <div className="hero-logo-badge">
-              <img
-                src="/images/logo.png"
+              <SmartImage
+                src={brandLogo}
+                fallbackSrc="/images/logo.png"
                 alt={`${branding.name || 'School'} logo`}
                 className="hero-logo-badge__img"
-                onError={(event) => {
-                  event.currentTarget.style.display = 'none';
-                }}
+                loading="eager"
               />
               <div>
                 <p className="hero-logo-badge__label">Official Crest</p>
@@ -74,13 +75,26 @@ function Hero() {
           <div className="relative">
             <div className="hero-stack">
               <div className="hero-stack__card hero-stack__card--main">
-                <img src={heroImages[0]?.url || '/images/hero-school.jpg'} alt={heroImages[0]?.alt || 'School environment'} />
+                <SmartImage
+                  src={heroImages[0]?.url || '/images/hero-school.jpg'}
+                  fallbackSrc="/images/hero-school.jpg"
+                  alt={heroImages[0]?.alt || 'School environment'}
+                  loading="eager"
+                />
               </div>
               <div className="hero-stack__card hero-stack__card--top">
-                <img src={heroImages[1]?.url || '/images/students.jpg'} alt={heroImages[1]?.alt || 'Students learning in class'} loading="lazy" />
+                <SmartImage
+                  src={heroImages[1]?.url || '/images/students.jpg'}
+                  fallbackSrc="/images/students.jpg"
+                  alt={heroImages[1]?.alt || 'Students learning in class'}
+                />
               </div>
               <div className="hero-stack__card hero-stack__card--bottom">
-                <img src={heroImages[2]?.url || '/images/campus.jpg'} alt={heroImages[2]?.alt || 'School campus and facilities'} loading="lazy" />
+                <SmartImage
+                  src={heroImages[2]?.url || '/images/campus.jpg'}
+                  fallbackSrc="/images/campus.jpg"
+                  alt={heroImages[2]?.alt || 'School campus and facilities'}
+                />
               </div>
 
               <div className="hero-stack__stats">

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSiteContent } from '../context/SiteContentContext';
 import useAdmissionPeriod from '../hooks/useAdmissionPeriod';
+import SmartImage from './SmartImage';
 import ThemeToggle from './ThemeToggle';
 
 const primaryLinks = [
@@ -113,6 +114,7 @@ function HeaderLink({ to, label, compact = false, onClick }) {
 }
 
 function Navbar() {
+  const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [megaOpen, setMegaOpen] = useState(false);
@@ -123,6 +125,7 @@ function Navbar() {
   const { siteContent } = useSiteContent();
   const { isLoading, periodOpen } = useAdmissionPeriod();
   const branding = siteContent.branding || {};
+  const brandLogo = branding.logoUrl || '/images/logo.png';
   const phoneNumbers = useMemo(() => splitPhoneNumbers(branding.phone), [branding.phone]);
   const admissionsAvailable = !isLoading && periodOpen;
   const primaryLinksForDisplay = admissionsAvailable
@@ -177,6 +180,13 @@ function Navbar() {
     };
   }, [isOpen]);
 
+  useEffect(() => {
+    setIsOpen(false);
+    setMegaOpen(false);
+    setMadrasaMegaOpen(false);
+    setProfileOpen(false);
+  }, [location.pathname, location.search]);
+
   return (
     <header className="sticky top-0 z-40 px-3 py-0.5 sm:px-4">
       <div className={`section-wrap nav-super-shell transition-all duration-300 ${scrolled ? 'nav-super-shell--scrolled' : ''}`}>
@@ -215,13 +225,11 @@ function Navbar() {
         <div className="nav-command-row">
           <div className="nav-brand-block">
             <div className="nav-brand-mark">
-              <img
-                src="/images/logo.png"
+              <SmartImage
+                src={brandLogo}
+                fallbackSrc="/images/logo.png"
                 alt={`${branding.name || 'School'} logo`}
                 className="nav-brand-logo"
-                onError={(event) => {
-                  event.currentTarget.style.display = 'none';
-                }}
               />
               <span className="nav-brand-initials">AT</span>
             </div>
@@ -382,7 +390,7 @@ function Navbar() {
                 <button type="button" onClick={() => setProfileOpen((prev) => !prev)} className="nav-profile-trigger">
                   <div className="nav-profile-avatar">
                     {avatarUrl ? (
-                      <img src={avatarUrl} alt="Profile avatar" />
+                      <SmartImage src={avatarUrl} alt="Profile avatar" />
                     ) : (
                       initials(user?.fullName || user?.email || 'U')
                     )}

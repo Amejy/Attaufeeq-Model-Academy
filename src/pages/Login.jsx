@@ -3,6 +3,8 @@ import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react
 import { useAuth } from '../context/AuthContext';
 import { useSiteContent } from '../context/SiteContentContext';
 import { apiJson } from '../utils/publicApi';
+import PasswordField from '../components/PasswordField';
+import SmartImage from '../components/SmartImage';
 
 const ROLE_LABELS = { student: 'Student', teacher: 'Teacher', parent: 'Parent', admin: 'Admin', admissions: 'Admissions' };
 const LOGIN_VARIANTS = {
@@ -42,11 +44,13 @@ function Login({ variant = 'family', defaultRole = '' }) {
   const { isAuthenticated, login, user } = useAuth();
   const { siteContent } = useSiteContent();
   const branding = siteContent.branding || {};
+  const brandLogo = branding.logoUrl || '/images/logo.png';
   const schoolName = branding.name || 'School';
   const [form, setForm] = useState({ email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [sessionMessage, setSessionMessage] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const canSubmit = Boolean(String(form.email || '').trim() && String(form.password || '').trim());
 
   useEffect(() => {
@@ -130,13 +134,11 @@ function Login({ variant = 'family', defaultRole = '' }) {
       <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[1.05fr,0.95fr]">
         <section className="glass-panel overflow-hidden p-5 sm:p-9">
           <div className="login-logo-row">
-            <img
-              src="/images/logo.png"
+            <SmartImage
+              src={brandLogo}
+              fallbackSrc="/images/logo.png"
               alt={`${branding.name || 'School'} logo`}
               className="login-logo"
-              onError={(event) => {
-                event.currentTarget.style.display = 'none';
-              }}
             />
             <div>
               <p className="login-logo__label">{schoolName}</p>
@@ -205,18 +207,18 @@ function Login({ variant = 'family', defaultRole = '' }) {
               placeholder="you@example.com"
             />
           </label>
-          <label className="block text-sm">
-            <span className="mb-1 block font-medium text-slate-700">Password</span>
-            <input
-              name="password"
-              type="password"
-              required
-              value={form.password}
-              onChange={onChange}
-              className="w-full rounded-md border border-slate-300 px-3 py-2"
-              placeholder="Enter password"
-            />
-          </label>
+          <PasswordField
+            label="Password"
+            name="password"
+            required
+            value={form.password}
+            onChange={onChange}
+            placeholder="Enter password"
+            showPassword={showPassword}
+            onToggleVisibility={() => setShowPassword((prev) => !prev)}
+            autoComplete="current-password"
+            className="w-full rounded-md border border-slate-300 px-3 py-2 pr-20"
+          />
 
           {error && <p className="text-sm text-red-600">{error}</p>}
 

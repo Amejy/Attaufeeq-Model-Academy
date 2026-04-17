@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import PasswordField from '../components/PasswordField';
 import PortalLayout from '../components/PortalLayout';
 import { useAuth } from '../context/AuthContext';
 
@@ -15,6 +16,11 @@ function ChangePassword() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [showPasswords, setShowPasswords] = useState({
+    currentPassword: false,
+    newPassword: false,
+    confirmPassword: false
+  });
   const currentPasswordValue = String(form.currentPassword || '');
   const newPasswordValue = String(form.newPassword || '');
   const confirmPasswordValue = String(form.confirmPassword || '');
@@ -68,53 +74,53 @@ function ChangePassword() {
           </p>
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-            <label className="block text-sm">
-              <span className="mb-1 block font-medium text-slate-700">Temporary password</span>
-              <input
-                type="password"
-                value={form.currentPassword}
-                onChange={(event) => setForm((prev) => ({ ...prev, currentPassword: event.target.value }))}
-                onBlur={() => setTouched((prev) => ({ ...prev, currentPassword: true }))}
-                className="w-full rounded-2xl border border-slate-300 px-4 py-3"
-                required
-              />
-              {touched.currentPassword && !currentPasswordValue && (
-                <p className="mt-1 text-xs text-red-600">Temporary password is required.</p>
-              )}
-            </label>
+            <PasswordField
+              label="Temporary password"
+              name="currentPassword"
+              required
+              value={form.currentPassword}
+              onChange={(event) => setForm((prev) => ({ ...prev, currentPassword: event.target.value }))}
+              onBlur={() => setTouched((prev) => ({ ...prev, currentPassword: true }))}
+              showPassword={showPasswords.currentPassword}
+              onToggleVisibility={() => setShowPasswords((prev) => ({ ...prev, currentPassword: !prev.currentPassword }))}
+              autoComplete="current-password"
+              className="w-full rounded-2xl border border-slate-300 px-4 py-3 pr-20"
+              error={touched.currentPassword && !currentPasswordValue ? 'Temporary password is required.' : ''}
+            />
 
-            <label className="block text-sm">
-              <span className="mb-1 block font-medium text-slate-700">New password</span>
-              <input
-                type="password"
-                value={form.newPassword}
-                onChange={(event) => setForm((prev) => ({ ...prev, newPassword: event.target.value }))}
-                onBlur={() => setTouched((prev) => ({ ...prev, newPassword: true }))}
-                className="w-full rounded-2xl border border-slate-300 px-4 py-3"
-                required
-              />
-              {touched.newPassword && newPasswordTooShort && (
-                <p className="mt-1 text-xs text-red-600">Password must be at least 10 characters.</p>
-              )}
-              {touched.newPassword && newPasswordMatchesCurrent && (
-                <p className="mt-1 text-xs text-red-600">New password must be different from the current one.</p>
-              )}
-            </label>
+            <PasswordField
+              label="New password"
+              name="newPassword"
+              required
+              value={form.newPassword}
+              onChange={(event) => setForm((prev) => ({ ...prev, newPassword: event.target.value }))}
+              onBlur={() => setTouched((prev) => ({ ...prev, newPassword: true }))}
+              showPassword={showPasswords.newPassword}
+              onToggleVisibility={() => setShowPasswords((prev) => ({ ...prev, newPassword: !prev.newPassword }))}
+              autoComplete="new-password"
+              className="w-full rounded-2xl border border-slate-300 px-4 py-3 pr-20"
+              error={
+                touched.newPassword && newPasswordTooShort
+                  ? 'Password must be at least 10 characters.'
+                  : touched.newPassword && newPasswordMatchesCurrent
+                    ? 'New password must be different from the current one.'
+                    : ''
+              }
+            />
 
-            <label className="block text-sm">
-              <span className="mb-1 block font-medium text-slate-700">Confirm new password</span>
-              <input
-                type="password"
-                value={form.confirmPassword}
-                onChange={(event) => setForm((prev) => ({ ...prev, confirmPassword: event.target.value }))}
-                onBlur={() => setTouched((prev) => ({ ...prev, confirmPassword: true }))}
-                className="w-full rounded-2xl border border-slate-300 px-4 py-3"
-                required
-              />
-              {touched.confirmPassword && confirmMismatch && (
-                <p className="mt-1 text-xs text-red-600">Passwords do not match.</p>
-              )}
-            </label>
+            <PasswordField
+              label="Confirm new password"
+              name="confirmPassword"
+              required
+              value={form.confirmPassword}
+              onChange={(event) => setForm((prev) => ({ ...prev, confirmPassword: event.target.value }))}
+              onBlur={() => setTouched((prev) => ({ ...prev, confirmPassword: true }))}
+              showPassword={showPasswords.confirmPassword}
+              onToggleVisibility={() => setShowPasswords((prev) => ({ ...prev, confirmPassword: !prev.confirmPassword }))}
+              autoComplete="new-password"
+              className="w-full rounded-2xl border border-slate-300 px-4 py-3 pr-20"
+              error={touched.confirmPassword && confirmMismatch ? 'Passwords do not match.' : ''}
+            />
 
             {error && <p className="text-sm text-red-600">{error}</p>}
             {success && <p className="text-sm text-emerald-700">{success}</p>}

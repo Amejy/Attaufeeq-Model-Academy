@@ -1,4 +1,6 @@
 import { useRef, useState } from 'react';
+import PasswordField from '../components/PasswordField';
+import SmartImage from '../components/SmartImage';
 import PortalLayout from '../components/PortalLayout';
 import { useAuth } from '../context/AuthContext';
 
@@ -155,7 +157,7 @@ function Settings() {
           <div className="mt-5 flex flex-wrap items-center gap-5">
             <div className="h-24 w-24 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100">
               {avatarUrl ? (
-                <img src={avatarUrl} alt="Profile avatar" className="h-full w-full object-cover" />
+                <SmartImage src={avatarUrl} alt="Profile avatar" className="h-full w-full object-cover" />
               ) : (
                 <div className="flex h-full w-full items-center justify-center text-sm font-semibold text-slate-500">
                   {user?.fullName?.split(' ').slice(0, 2).map((part) => part[0]).join('') || 'U'}
@@ -195,8 +197,7 @@ function Settings() {
           <form className="mt-5 space-y-3" onSubmit={handlePasswordChange}>
             <label className="text-sm">
               <span className="mb-1 block font-medium text-slate-700">Current password</span>
-              <input
-                type="password"
+              <PasswordField
                 value={form.currentPassword}
                 onChange={(event) => setForm((prev) => ({ ...prev, currentPassword: event.target.value }))}
                 onBlur={() => setTouched((prev) => ({ ...prev, currentPassword: true }))}
@@ -210,8 +211,7 @@ function Settings() {
             </label>
             <label className="text-sm">
               <span className="mb-1 block font-medium text-slate-700">New password</span>
-              <input
-                type="password"
+              <PasswordField
                 value={form.newPassword}
                 onChange={(event) => setForm((prev) => ({ ...prev, newPassword: event.target.value }))}
                 onBlur={() => setTouched((prev) => ({ ...prev, newPassword: true }))}
@@ -228,8 +228,7 @@ function Settings() {
             </label>
             <label className="text-sm">
               <span className="mb-1 block font-medium text-slate-700">Confirm new password</span>
-              <input
-                type="password"
+              <PasswordField
                 value={form.confirmPassword}
                 onChange={(event) => setForm((prev) => ({ ...prev, confirmPassword: event.target.value }))}
                 onBlur={() => setTouched((prev) => ({ ...prev, confirmPassword: true }))}

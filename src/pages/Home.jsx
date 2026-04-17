@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import Hero from '../components/Hero';
 import FeatureCard from '../components/FeatureCard';
+import SmartImage from '../components/SmartImage';
 import { useSiteContent } from '../context/SiteContentContext';
 import useAdmissionPeriod from '../hooks/useAdmissionPeriod';
 
@@ -53,7 +54,13 @@ function Home() {
 
           <div className="relative min-h-[340px]">
             <div className="absolute inset-0 rounded-[34px] bg-gradient-to-br from-emerald-100 via-white to-amber-100" />
-            <img src={home.storyImage || '/images/campus.jpg'} alt="School campus" className="relative h-full min-h-[340px] w-full rounded-[34px] object-cover shadow-[0_25px_60px_rgba(8,37,26,0.16)]" />
+            <SmartImage
+              src={home.storyImage || '/images/campus.jpg'}
+              fallbackSrc="/images/campus.jpg"
+              alt="School campus"
+              className="relative h-full min-h-[340px] w-full rounded-[34px] object-cover shadow-[0_25px_60px_rgba(8,37,26,0.16)]"
+              loading="lazy"
+            />
           </div>
         </div>
       </section>
@@ -69,7 +76,13 @@ function Home() {
         <div className="grid gap-6 lg:grid-cols-2">
           {academicPrograms.map((program) => (
             <article key={program.title} className="glass-card floating-card p-5 sm:p-6">
-              <img src={program.image} alt={program.title} className="h-56 w-full rounded-[26px] object-cover" />
+              <SmartImage
+                src={program.image}
+                fallbackSrc="/images/students.jpg"
+                alt={program.title}
+                className="h-56 w-full rounded-[26px] object-cover"
+                loading="lazy"
+              />
               <h3 className="mt-5 font-heading text-3xl text-primary">{program.title}</h3>
               <p className="mt-3 text-sm leading-7 text-slate-700">{program.description}</p>
               <div className="mt-5 flex flex-wrap gap-2">

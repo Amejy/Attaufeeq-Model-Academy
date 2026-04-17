@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import PortalLayout from '../../components/PortalLayout';
+import SmartImage from '../../components/SmartImage';
 import { ADMIN_INSTITUTIONS } from '../../utils/adminInstitution';
 
 const DEFAULT_INSTITUTION = ADMIN_INSTITUTIONS[0];
@@ -276,7 +277,12 @@ function ManageNewsEvents() {
               <div className="mt-2 flex flex-wrap gap-2">
                 {(form.images || []).map((url, i) => (
                   <div key={`img-${i}`} className="relative inline-block">
-                    <img src={url} alt="News image preview" className="h-20 w-20 object-cover rounded border" />
+                    <SmartImage
+                      src={url}
+                      fallbackSrc="/images/campus.jpg"
+                      alt="News image preview"
+                      className="h-20 w-20 rounded border object-cover"
+                    />
                     <button type="button" onClick={() => removeMedia('image', i)} className="absolute -top-1 -right-1 rounded-full bg-red-500 text-white text-xs w-5 h-5">×</button>
                   </div>
                 ))}
