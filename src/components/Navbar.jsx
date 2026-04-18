@@ -17,14 +17,12 @@ const primaryLinks = [
 
 const secondaryLinks = [
   { to: '/about', label: 'About' },
-  { to: '/staff', label: 'Staff' },
   { to: '/madrastul-attaufiq', label: 'Madrasa' },
   { to: '/modern-academy', label: 'ATTAUFEEQ Model Academy' }
 ];
 
 const familyRoles = [
-  { label: 'Student Portal', to: '/login/student' },
-  { label: 'Parent Portal', to: '/login/parent' }
+  { label: 'Parent/Student', to: '/login' }
 ];
 
 const megaSections = [
@@ -38,17 +36,13 @@ const megaSections = [
   {
     title: 'Academics',
     links: [
-      { label: 'Check Result', to: '/result-checker', description: 'Secure result access for families.' },
-      { label: 'Prospectus', to: '/admissions', description: 'Program details and admissions guide.' }
+      { label: 'Check Result', to: '/result-checker', description: 'Secure result access for families.' }
     ]
   },
   {
     title: 'Academy Updates',
     links: [
-      { label: 'Academy News', to: '/news?institution=ATTAUFEEQ%20Model%20Academy', description: 'Latest ATTAUFEEQ Model Academy updates.' },
-      { label: 'Academy Events', to: '/news?institution=Model%20Academy&category=event', description: 'Upcoming events and ceremonies.' },
-      { label: 'School Announcements', to: '/news?institution=Model%20Academy&category=announcement', description: 'Important school announcements.' },
-      { label: 'Academic Updates', to: '/news?institution=Model%20Academy&category=academic', description: 'Academic timelines and updates.' }
+      { label: 'School Announcements', to: '/news', description: 'Important school announcements, news, and events in one place.' }
     ]
   }
 ];
@@ -57,8 +51,7 @@ const madrasaMegaSections = [
   {
     title: 'Digital Campus',
     links: [
-      { label: 'Madrasa Website', to: '/madrastul-attaufiq', description: 'Explore the Madrastul ATTAUFEEQ experience.' },
-      { label: 'Madrasa Overview', to: '/madrastul-attaufiq', description: 'Programs, learning focus, and campus direction.' }
+      { label: 'Madrasa Website', to: '/madrastul-attaufiq', description: 'Explore the Madrastul ATTAUFEEQ experience.' }
     ]
   },
   {
@@ -419,7 +412,10 @@ function Navbar() {
             ) : (
               <div className="hidden items-center gap-2 lg:flex">
                 <NavLink to="/login" className="nav-ghost-action">
-                  Family Login
+                  Parent/Student
+                </NavLink>
+                <NavLink to="/staff-access" className="nav-ghost-action">
+                  Staff
                 </NavLink>
                 {admissionsAvailable ? (
                   <NavLink to="/admissions" className="nav-primary-action">
@@ -565,7 +561,10 @@ function Navbar() {
                   ) : (
                     <>
                       <NavLink to="/login" className="nav-ghost-action" onClick={() => setIsOpen(false)}>
-                        Family Login
+                        Parent/Student
+                      </NavLink>
+                      <NavLink to="/staff-access" className="nav-ghost-action" onClick={() => setIsOpen(false)}>
+                        Staff
                       </NavLink>
                       {admissionsAvailable ? (
                         <NavLink to="/admissions" className="nav-primary-action" onClick={() => setIsOpen(false)}>

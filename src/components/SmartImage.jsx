@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 function SmartImage({
   src,
@@ -10,6 +10,11 @@ function SmartImage({
 }) {
   const [currentSrc, setCurrentSrc] = useState(src || fallbackSrc || '');
   const [hidden, setHidden] = useState(false);
+
+  useEffect(() => {
+    setCurrentSrc(src || fallbackSrc || '');
+    setHidden(false);
+  }, [src, fallbackSrc]);
 
   if (!currentSrc || hidden) {
     return null;

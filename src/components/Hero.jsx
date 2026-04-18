@@ -59,7 +59,10 @@ function Hero() {
                 </span>
               )}
               <Link to="/login" className="rounded-full border border-white/50 bg-white/10 px-6 py-3 text-sm font-semibold text-white hover:bg-white/15">
-                Login Portal
+                Parent/Student
+              </Link>
+              <Link to="/staff-access" className="rounded-full border border-white/50 bg-white/10 px-6 py-3 text-sm font-semibold text-white hover:bg-white/15">
+                Staff
               </Link>
               <Link to="/contact" className="rounded-full border border-white/50 bg-white/10 px-6 py-3 text-sm font-semibold text-white hover:bg-white/15">
                 Contact Us
