@@ -75,14 +75,14 @@ function Landing() {
 
             <div className="relative min-h-[440px] sm:min-h-[420px] lg:min-h-[360px]">
               <div className="gradient-shell soft-grid absolute inset-0 rounded-[36px] p-5 shadow-[0_30px_80px_rgba(8,37,26,0.22)] sm:p-6">
-                <div className="glass-card flex h-full flex-col justify-between p-6 text-white">
+                <div className="flex h-full flex-col justify-between rounded-[30px] border border-white/12 bg-[linear-gradient(180deg,rgba(15,23,42,0.92),rgba(15,23,42,0.82))] p-6 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/75">Portal Snapshot</p>
-                    <h2 className="mt-3 font-heading text-3xl">{landing.snapshotTitle}</h2>
+                    <h2 className="mt-3 max-w-[10ch] font-heading text-3xl leading-tight sm:max-w-none">{landing.snapshotTitle}</h2>
                   </div>
-                  <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="mt-6 grid gap-3">
                     {(landing.snapshotItems || []).map((item) => (
-                      <div key={item} className="rounded-2xl border border-white/20 bg-white/10 px-4 py-4 backdrop-blur-md">
+                      <div key={item} className="rounded-2xl border border-white/14 bg-white/10 px-4 py-4">
                         <p className="text-sm font-semibold">{item}</p>
                       </div>
                     ))}

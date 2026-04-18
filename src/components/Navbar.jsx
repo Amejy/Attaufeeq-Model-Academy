@@ -411,9 +411,6 @@ function Navbar() {
               </div>
             ) : (
               <div className="hidden items-center gap-2 lg:flex">
-                <NavLink to="/login" className="nav-ghost-action">
-                  Parent/Student
-                </NavLink>
                 <NavLink to="/staff-access" className="nav-ghost-action">
                   Staff
                 </NavLink>
@@ -560,9 +557,6 @@ function Navbar() {
                     </>
                   ) : (
                     <>
-                      <NavLink to="/login" className="nav-ghost-action" onClick={() => setIsOpen(false)}>
-                        Parent/Student
-                      </NavLink>
                       <NavLink to="/staff-access" className="nav-ghost-action" onClick={() => setIsOpen(false)}>
                         Staff
                       </NavLink>

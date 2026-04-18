@@ -56,55 +56,76 @@ function Contact() {
     <main className="section-wrap py-14">
       <h1 className="font-heading text-4xl text-primary">{contact.title}</h1>
       <div className="mt-8 grid gap-8 md:grid-cols-2">
-        <section className="rounded-xl border border-slate-200 p-6">
+        <section className="glass-card min-w-0 overflow-hidden p-6 sm:p-7">
           <h2 className="font-heading text-2xl text-primary">{contact.infoTitle}</h2>
-          <p className="mt-4 text-sm text-slate-700">Address: {branding.address}</p>
-          <div className="mt-1 text-sm text-slate-700">
-            <span>Phone: </span>
-            {phoneNumbers.length ? phoneNumbers.map((phone, index) => (
-              <span key={phone}>
-                {index > 0 ? ', ' : ''}
-                <a href={`tel:${phone}`} className="hover:text-primary">
-                  {phone}
-                </a>
-              </span>
-            )) : branding.phone}
+          <div className="mt-5 space-y-4 text-sm leading-7 text-slate-700">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Address</p>
+              <p className="mt-1 break-words">{branding.address}</p>
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Phone</p>
+              <div className="mt-1 break-words">
+                {phoneNumbers.length ? phoneNumbers.map((phone, index) => (
+                  <span key={phone}>
+                    {index > 0 ? ', ' : ''}
+                    <a href={`tel:${phone}`} className="hover:text-primary">
+                      {phone}
+                    </a>
+                  </span>
+                )) : branding.phone}
+              </div>
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Email</p>
+              <p className="mt-1 break-all">
+                <a href={`mailto:${branding.email || ''}`} className="hover:text-primary">{branding.email}</a>
+              </p>
+            </div>
           </div>
-          <p className="mt-1 text-sm text-slate-700">Email: <a href={`mailto:${branding.email || ''}`} className="hover:text-primary">{branding.email}</a></p>
         </section>
-        <section className="rounded-xl border border-slate-200 p-6">
+        <section className="glass-card min-w-0 overflow-hidden p-6 sm:p-7">
           <h2 className="font-heading text-2xl text-primary">{contact.formTitle}</h2>
           <p className="mt-2 text-sm text-slate-600">{contact.formDescription}</p>
-          <form className="mt-4 space-y-3" onSubmit={handleSubmit}>
-            <input
-              className="w-full rounded-md border border-slate-300 p-3 text-sm"
-              placeholder="Your Name"
-              value={form.fullName}
-              onChange={(event) => setForm((prev) => ({ ...prev, fullName: event.target.value }))}
-              required
-            />
-            <input
-              className="w-full rounded-md border border-slate-300 p-3 text-sm"
-              placeholder="Email Address"
-              type="email"
-              value={form.email}
-              onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
-              required
-            />
-            <textarea
-              className="w-full rounded-md border border-slate-300 p-3 text-sm"
-              rows="4"
-              placeholder="Your Message"
-              value={form.message}
-              onChange={(event) => setForm((prev) => ({ ...prev, message: event.target.value }))}
-              required
-            />
+          <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
+            <label className="block min-w-0">
+              <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Your Name</span>
+              <input
+                className="block w-full min-w-0 rounded-2xl border border-slate-300 bg-white/80 px-4 py-3 text-sm text-slate-800"
+                placeholder="Your Name"
+                value={form.fullName}
+                onChange={(event) => setForm((prev) => ({ ...prev, fullName: event.target.value }))}
+                required
+              />
+            </label>
+            <label className="block min-w-0">
+              <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Email Address</span>
+              <input
+                className="block w-full min-w-0 rounded-2xl border border-slate-300 bg-white/80 px-4 py-3 text-sm text-slate-800"
+                placeholder="Email Address"
+                type="email"
+                value={form.email}
+                onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
+                required
+              />
+            </label>
+            <label className="block min-w-0">
+              <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Your Message</span>
+              <textarea
+                className="block min-h-[160px] w-full min-w-0 rounded-2xl border border-slate-300 bg-white/80 px-4 py-3 text-sm text-slate-800"
+                rows="5"
+                placeholder="Your Message"
+                value={form.message}
+                onChange={(event) => setForm((prev) => ({ ...prev, message: event.target.value }))}
+                required
+              />
+            </label>
             {error && <p className="text-sm text-red-600">{error}</p>}
             {success && <p className="text-sm text-emerald-700">{success}</p>}
             <button
               type="submit"
               disabled={submitting || !canSubmitMessage}
-              className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70"
+              className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70"
             >
               {submitting ? 'Sending...' : (contact.submitLabel || 'Send Message')}
             </button>
