@@ -3,6 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import PortalLayout from '../../components/PortalLayout';
 import SmartImage from '../../components/SmartImage';
 import { ADMIN_INSTITUTIONS } from '../../utils/adminInstitution';
+import { DEFAULT_IMAGES } from '../../utils/defaultImages';
 
 const DEFAULT_INSTITUTION = ADMIN_INSTITUTIONS[0];
 const CATEGORY_ALIASES = {
@@ -279,7 +280,7 @@ function ManageNewsEvents() {
                   <div key={`img-${i}`} className="relative inline-block">
                     <SmartImage
                       src={url}
-                      fallbackSrc="/images/campus.jpg"
+                      fallbackSrc={DEFAULT_IMAGES.gallery}
                       alt="News image preview"
                       className="h-20 w-20 rounded border object-cover"
                     />

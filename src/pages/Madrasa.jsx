@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import SmartImage from '../components/SmartImage';
 import { useSiteContent } from '../context/SiteContentContext';
+import { DEFAULT_IMAGES } from '../utils/defaultImages';
 
 function Madrasa() {
   const { siteContent } = useSiteContent();
@@ -33,8 +34,8 @@ function Madrasa() {
             </div>
           </div>
           <SmartImage
-            src={madrasa.image || '/images/islamic-class.jpg'}
-            fallbackSrc="/images/islamic-class.jpg"
+            src={madrasa.image || DEFAULT_IMAGES.madrasa}
+            fallbackSrc={DEFAULT_IMAGES.madrasa}
             alt="Madrasa learning"
             className="h-[320px] w-full rounded-xl object-cover shadow-lg"
             loading="lazy"

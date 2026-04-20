@@ -1,5 +1,6 @@
 import SmartImage from '../components/SmartImage';
 import { useSiteContent } from '../context/SiteContentContext';
+import { DEFAULT_IMAGES } from '../utils/defaultImages';
 
 function Academics() {
   const { siteContent } = useSiteContent();
@@ -20,8 +21,8 @@ function Academics() {
           </ul>
         </div>
         <SmartImage
-          src={academics.image || '/images/students.jpg'}
-          fallbackSrc="/images/students.jpg"
+          src={academics.image || DEFAULT_IMAGES.students}
+          fallbackSrc={DEFAULT_IMAGES.students}
           alt="Students in class"
           className="h-72 w-full rounded-xl object-cover"
           loading="lazy"

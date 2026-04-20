@@ -3,6 +3,7 @@ import { useSiteContent } from '../context/SiteContentContext';
 import AnimatedCounter from '../components/AnimatedCounter';
 import SmartImage from '../components/SmartImage';
 import useAdmissionPeriod from '../hooks/useAdmissionPeriod';
+import { getInstitutionImageFallback } from '../utils/defaultImages';
 
 function normalizeBadge(value, fallback = '') {
   const normalized = String(value || '').trim();
@@ -101,19 +102,19 @@ function Landing() {
           return (
             <article key={card.title} className="glass-card floating-card overflow-hidden p-4 sm:p-5">
               <div className={`rounded-[28px] bg-gradient-to-br ${card.accent} p-5 text-white`}>
-              <div className="flex items-center justify-between gap-3">
-                <span className="rounded-full border border-white/25 bg-white/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/80">
-                  {cardBadge}
-                </span>
-                <span className="text-xs uppercase tracking-[0.22em] text-white/70">School entry</span>
+                <div className="flex items-center justify-between gap-3">
+                  <span className="rounded-full border border-white/25 bg-white/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/80">
+                    {cardBadge}
+                  </span>
+                  <span className="text-xs uppercase tracking-[0.22em] text-white/70">School entry</span>
+                </div>
+                <SmartImage
+                  src={card.image}
+                  fallbackSrc={getInstitutionImageFallback(card.to || card.title)}
+                  alt={card.title}
+                  className="mt-5 h-56 w-full rounded-[24px] object-cover sm:h-64"
+                />
               </div>
-              <SmartImage
-                src={card.image}
-                fallbackSrc={card.to === '/madrastul-attaufiq' ? '/images/islamic-class.jpg' : '/images/classroom.jpg'}
-                alt={card.title}
-                className="mt-5 h-56 w-full rounded-[24px] object-cover sm:h-64"
-              />
-            </div>
             <div className="px-2 pb-2 pt-6">
               <h2 className="break-words font-heading text-3xl text-primary lg:text-4xl">{card.title}</h2>
               <p className="mt-3 text-sm leading-7 text-slate-700">{card.description}</p>

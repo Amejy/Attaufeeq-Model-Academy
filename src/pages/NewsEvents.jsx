@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import SmartImage from '../components/SmartImage';
 import { NewsCardSkeleton } from '../components/Skeleton';
 import { apiJson } from '../utils/publicApi';
+import { DEFAULT_IMAGES } from '../utils/defaultImages';
 const CATEGORY_ICONS = {
   announcement: '◎',
   event: '◌',
@@ -119,7 +120,7 @@ function NewsEvents() {
                       {Array.isArray(item.images) && item.images.length > 0 ? (
                         <SmartImage
                           src={item.images[0]}
-                          fallbackSrc="/images/campus.jpg"
+                          fallbackSrc={DEFAULT_IMAGES.gallery}
                           alt={item.title}
                           className="news-card__image"
                           loading="lazy"
@@ -197,7 +198,7 @@ function NewsEvents() {
                       {Array.isArray(item.images) && item.images.length > 0 ? (
                         <SmartImage
                           src={item.images[0]}
-                          fallbackSrc="/images/campus.jpg"
+                          fallbackSrc={DEFAULT_IMAGES.gallery}
                           alt={item.title}
                           className="news-card__image"
                           loading="lazy"

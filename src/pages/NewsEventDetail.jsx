@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import SmartImage from '../components/SmartImage';
 import { SkeletonBlock } from '../components/Skeleton';
 import { apiJson } from '../utils/publicApi';
+import { DEFAULT_IMAGES } from '../utils/defaultImages';
 
 function NewsEventDetail() {
   const { slugOrId } = useParams();
@@ -65,7 +66,7 @@ function NewsEventDetail() {
           <p className="text-xs uppercase tracking-wide text-slate-500">
             {item.category} | {new Date(item.publishDate || item.createdAt).toLocaleDateString()} | {item.institution}
           </p>
-          <h1 className="mt-3 font-heading text-4xl text-primary">{item.title}</h1>
+          <h1 className="mt-3 break-words font-heading text-4xl text-primary">{item.title}</h1>
           {item.excerpt && <p className="mt-4 text-lg text-slate-700">{item.excerpt}</p>}
 
           {Array.isArray(item.images) && item.images.length > 0 && (
@@ -74,7 +75,7 @@ function NewsEventDetail() {
                 <a key={`${url}-${index}`} href={url} target="_blank" rel="noreferrer" className="overflow-hidden rounded-2xl border border-slate-200">
                   <SmartImage
                     src={url}
-                    fallbackSrc="/images/campus.jpg"
+                    fallbackSrc={DEFAULT_IMAGES.gallery}
                     alt={`${item.title} ${index + 1}`}
                     className="h-64 w-full object-cover"
                     loading="lazy"

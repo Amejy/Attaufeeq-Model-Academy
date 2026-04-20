@@ -1,5 +1,6 @@
 import SmartImage from '../components/SmartImage';
 import { useSiteContent } from '../context/SiteContentContext';
+import { DEFAULT_IMAGES } from '../utils/defaultImages';
 
 function About() {
   const { siteContent } = useSiteContent();
@@ -54,8 +55,8 @@ function About() {
           )}
         </div>
         <SmartImage
-          src={about.image || '/images/campus.jpg'}
-          fallbackSrc="/images/campus.jpg"
+          src={about.image || DEFAULT_IMAGES.campus}
+          fallbackSrc={DEFAULT_IMAGES.campus}
           alt="ATTAUFEEQ campus"
           className="h-72 w-full rounded-xl object-cover lg:sticky lg:top-24"
           loading="lazy"

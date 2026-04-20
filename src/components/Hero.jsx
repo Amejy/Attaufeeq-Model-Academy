@@ -3,6 +3,7 @@ import { useSiteContent } from '../context/SiteContentContext';
 import AnimatedCounter from './AnimatedCounter';
 import SmartImage from './SmartImage';
 import useAdmissionPeriod from '../hooks/useAdmissionPeriod';
+import { DEFAULT_HERO_IMAGES } from '../utils/defaultImages';
 
 function Hero() {
   const { isLoading, periodOpen } = useAdmissionPeriod();
@@ -11,7 +12,7 @@ function Hero() {
   const branding = siteContent.branding || {};
   const brandLogo = branding.logoUrl || '/images/logo.png';
   const home = siteContent.home || {};
-  const heroImages = home.heroImages || [];
+  const heroImages = home.heroImages?.length ? home.heroImages : DEFAULT_HERO_IMAGES;
   const heroStats = home.heroStats || [];
 
   return (
@@ -79,24 +80,24 @@ function Hero() {
             <div className="hero-stack">
               <div className="hero-stack__card hero-stack__card--main">
                 <SmartImage
-                  src={heroImages[0]?.url || '/images/hero-school.jpg'}
-                  fallbackSrc="/images/hero-school.jpg"
-                  alt={heroImages[0]?.alt || 'School environment'}
+                  src={heroImages[0]?.url || DEFAULT_HERO_IMAGES[0].url}
+                  fallbackSrc={DEFAULT_HERO_IMAGES[0].url}
+                  alt={heroImages[0]?.alt || DEFAULT_HERO_IMAGES[0].alt}
                   loading="eager"
                 />
               </div>
               <div className="hero-stack__card hero-stack__card--top">
                 <SmartImage
-                  src={heroImages[1]?.url || '/images/students.jpg'}
-                  fallbackSrc="/images/students.jpg"
-                  alt={heroImages[1]?.alt || 'Students learning in class'}
+                  src={heroImages[1]?.url || DEFAULT_HERO_IMAGES[1].url}
+                  fallbackSrc={DEFAULT_HERO_IMAGES[1].url}
+                  alt={heroImages[1]?.alt || DEFAULT_HERO_IMAGES[1].alt}
                 />
               </div>
               <div className="hero-stack__card hero-stack__card--bottom">
                 <SmartImage
-                  src={heroImages[2]?.url || '/images/campus.jpg'}
-                  fallbackSrc="/images/campus.jpg"
-                  alt={heroImages[2]?.alt || 'School campus and facilities'}
+                  src={heroImages[2]?.url || DEFAULT_HERO_IMAGES[2].url}
+                  fallbackSrc={DEFAULT_HERO_IMAGES[2].url}
+                  alt={heroImages[2]?.alt || DEFAULT_HERO_IMAGES[2].alt}
                 />
               </div>
 

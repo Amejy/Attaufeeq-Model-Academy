@@ -1,11 +1,12 @@
 import SmartImage from './SmartImage';
+import { DEFAULT_IMAGES } from '../utils/defaultImages';
 
 function FeatureCard({ title, text, image }) {
   return (
     <article className="glass-card floating-card overflow-hidden p-3">
       <SmartImage
         src={image}
-        fallbackSrc="/images/campus.jpg"
+        fallbackSrc={DEFAULT_IMAGES.classroom}
         alt={title}
         className="h-44 w-full rounded-[24px] object-cover"
         loading="lazy"

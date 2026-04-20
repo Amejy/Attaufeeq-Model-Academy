@@ -4,6 +4,7 @@ import FeatureCard from '../components/FeatureCard';
 import SmartImage from '../components/SmartImage';
 import { useSiteContent } from '../context/SiteContentContext';
 import useAdmissionPeriod from '../hooks/useAdmissionPeriod';
+import { DEFAULT_IMAGES } from '../utils/defaultImages';
 
 function Home() {
   const { isLoading, periodOpen } = useAdmissionPeriod();
@@ -55,8 +56,8 @@ function Home() {
           <div className="relative min-h-[340px]">
             <div className="absolute inset-0 rounded-[34px] bg-gradient-to-br from-emerald-100 via-white to-amber-100" />
             <SmartImage
-              src={home.storyImage || '/images/campus.jpg'}
-              fallbackSrc="/images/campus.jpg"
+              src={home.storyImage || DEFAULT_IMAGES.campus}
+              fallbackSrc={DEFAULT_IMAGES.campus}
               alt="School campus"
               className="relative h-full min-h-[340px] w-full rounded-[34px] object-cover shadow-[0_25px_60px_rgba(8,37,26,0.16)]"
               loading="lazy"
@@ -78,7 +79,7 @@ function Home() {
             <article key={program.title} className="glass-card floating-card p-5 sm:p-6">
               <SmartImage
                 src={program.image}
-                fallbackSrc="/images/students.jpg"
+                fallbackSrc={DEFAULT_IMAGES.students}
                 alt={program.title}
                 className="h-56 w-full rounded-[26px] object-cover"
                 loading="lazy"

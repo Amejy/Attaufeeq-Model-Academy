@@ -1,5 +1,6 @@
 import SmartImage from '../components/SmartImage';
 import { useSiteContent } from '../context/SiteContentContext';
+import { DEFAULT_IMAGES } from '../utils/defaultImages';
 
 function Staff() {
   const { siteContent } = useSiteContent();
@@ -19,7 +20,7 @@ function Staff() {
               {person.image && (
                 <SmartImage
                   src={person.image}
-                  fallbackSrc="/images/campus.jpg"
+                  fallbackSrc={DEFAULT_IMAGES.community}
                   alt={person.name}
                   className="h-48 w-full rounded-xl object-cover"
                   loading="lazy"
