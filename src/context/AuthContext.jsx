@@ -4,6 +4,7 @@ import { resolveApiBaseUrl } from '../utils/apiBase';
 
 const AuthContext = createContext(null);
 const API_BASE_URL = resolveApiBaseUrl();
+const AUTH_SESSION_FLAG = 'auth-active';
 
 function decodeTokenPayload(token) {
   try {
@@ -25,6 +26,31 @@ async function parseJsonSafely(response) {
   }
 }
 
+function readSessionFlag() {
+  try {
+    return sessionStorage.getItem(AUTH_SESSION_FLAG) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function writeSessionFlag(isActive) {
+  try {
+    if (isActive) {
+      sessionStorage.setItem(AUTH_SESSION_FLAG, '1');
+    } else {
+      sessionStorage.removeItem(AUTH_SESSION_FLAG);
+    }
+  } catch {
+    // ignore storage failures
+  }
+}
+
+function shouldBootstrapSession() {
+  if (typeof window === 'undefined') return true;
+  return window.location.pathname.startsWith('/portal') || readSessionFlag();
+}
+
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
@@ -43,6 +69,11 @@ export function AuthProvider({ children }) {
     let cancelled = false;
 
     async function bootstrapSession() {
+      if (!shouldBootstrapSession()) {
+        setProfileReady(true);
+        return;
+      }
+
       try {
         const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
           method: 'POST',
@@ -72,6 +103,7 @@ export function AuthProvider({ children }) {
   const login = useCallback(({ token: nextToken, user: nextUser }) => {
     persistSession(nextToken, nextUser);
     setSessionExpired(false);
+    writeSessionFlag(true);
     try {
       sessionStorage.removeItem('session-expired');
     } catch {
@@ -97,6 +129,7 @@ export function AuthProvider({ children }) {
     setToken(null);
     setUser(null);
     setProfileReady(true);
+    writeSessionFlag(false);
     if (!preserveSessionFlag) {
       setSessionExpired(false);
       try {
