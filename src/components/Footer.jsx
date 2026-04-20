@@ -32,9 +32,9 @@ function Footer() {
                 alt={`${branding.name || 'School'} logo`}
                 className="footer-logo"
               />
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/80">{schoolName}</p>
+              <p className="break-words text-xs font-semibold uppercase tracking-[0.24em] text-white/80">{schoolName}</p>
             </div>
-            <h3 className="mt-2 max-w-sm font-heading text-lg leading-tight sm:text-xl">{footerHeading}</h3>
+            <h3 className="mt-2 max-w-sm break-words font-heading text-lg leading-tight sm:text-xl">{footerHeading}</h3>
             <p className="mt-2 max-w-md text-sm leading-6 text-white/80">{branding.motto}</p>
             <div className="mt-4 flex flex-wrap gap-2">
               <Link to="/login" className="rounded-full border border-white/40 bg-white/90 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-primary hover:bg-white">
@@ -63,9 +63,9 @@ function Footer() {
           <div>
             <h4 className="text-sm font-semibold uppercase tracking-[0.22em] text-white/70">Contact</h4>
             <div className="mt-3 space-y-1.5 text-sm leading-6 text-white/88">
-              <p>{branding.address}</p>
-              <p>{phoneNumbers.length ? phoneNumbers.join(', ') : branding.phone}</p>
-              <p>{branding.email}</p>
+              <p className="break-words">{branding.address}</p>
+              <p className="break-words">{phoneNumbers.length ? phoneNumbers.join(', ') : branding.phone}</p>
+              <p className="break-words">{branding.email}</p>
             </div>
           </div>
         </div>

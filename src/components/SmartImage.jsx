@@ -12,8 +12,13 @@ function SmartImage({
   const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
-    setCurrentSrc(src || fallbackSrc || '');
-    setHidden(false);
+    const nextSrc = src || fallbackSrc || '';
+    const frameId = window.requestAnimationFrame(() => {
+      setCurrentSrc(nextSrc);
+      setHidden(false);
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
   }, [src, fallbackSrc]);
 
   if (!currentSrc || hidden) {

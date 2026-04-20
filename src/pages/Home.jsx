@@ -21,7 +21,7 @@ function Home() {
         <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">{home.highlightsEyebrow}</p>
-            <h2 className="mt-2 font-heading text-3xl text-primary md:text-5xl">{home.highlightsTitle}</h2>
+            <h2 className="mt-2 break-words font-heading text-3xl text-primary md:text-5xl">{home.highlightsTitle}</h2>
           </div>
           <div className="glass-card max-w-xl px-5 py-4 text-sm leading-7 text-slate-600">
             {home.highlightsDescription}
@@ -38,7 +38,7 @@ function Home() {
         <div className="grid gap-8 lg:grid-cols-[0.95fr,1.05fr] lg:items-center">
           <div className="glass-panel p-6 sm:p-8">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">{home.storyEyebrow}</p>
-            <h2 className="mt-3 font-heading text-3xl text-primary md:text-4xl">{home.storyTitle}</h2>
+            <h2 className="mt-3 break-words font-heading text-3xl text-primary md:text-4xl">{home.storyTitle}</h2>
             <p className="mt-4 text-sm leading-8 text-slate-700">
               {home.storyText}
             </p>
@@ -68,7 +68,7 @@ function Home() {
       <section className="section-wrap py-14">
         <div className="mb-8 text-center">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">{home.programsEyebrow}</p>
-          <h2 className="mt-2 font-heading text-3xl text-primary md:text-5xl">{home.programsTitle}</h2>
+          <h2 className="mt-2 break-words font-heading text-3xl text-primary md:text-5xl">{home.programsTitle}</h2>
           <p className="mx-auto mt-3 max-w-3xl text-sm leading-7 text-slate-600">
             {home.programsDescription}
           </p>
@@ -83,7 +83,7 @@ function Home() {
                 className="h-56 w-full rounded-[26px] object-cover"
                 loading="lazy"
               />
-              <h3 className="mt-5 font-heading text-3xl text-primary">{program.title}</h3>
+              <h3 className="mt-5 break-words font-heading text-3xl text-primary">{program.title}</h3>
               <p className="mt-3 text-sm leading-7 text-slate-700">{program.description}</p>
               <div className="mt-5 flex flex-wrap gap-2">
                 {program.standards.map((item) => (
@@ -102,7 +102,7 @@ function Home() {
           <div className="grid gap-6 lg:grid-cols-[1.1fr,0.9fr] lg:items-center">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/70">{home.ctaEyebrow}</p>
-              <h2 className="mt-2 font-heading text-3xl md:text-5xl">{home.ctaTitle}</h2>
+              <h2 className="mt-2 break-words font-heading text-3xl md:text-5xl">{home.ctaTitle}</h2>
               <p className="mt-4 max-w-2xl text-sm leading-8 text-white/82">
                 {home.ctaDescription}
               </p>

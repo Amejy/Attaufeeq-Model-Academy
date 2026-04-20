@@ -34,13 +34,13 @@ function Hero() {
               />
               <div>
                 <p className="hero-logo-badge__label">Official Crest</p>
-                <p className="hero-logo-badge__name">{branding.name}</p>
+                <p className="hero-logo-badge__name break-words">{branding.name}</p>
               </div>
             </div>
             <p className="inline-flex rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.26em] text-white/80">
               {home.heroBadge || 'ATTAUFEEQ Model Academy'}
             </p>
-            <h1 className="mt-6 max-w-3xl font-heading text-4xl leading-tight md:text-5xl lg:text-6xl">
+            <h1 className="mt-6 max-w-3xl break-words font-heading text-4xl leading-tight md:text-5xl lg:text-6xl">
               {home.heroTitle}
             </h1>
             <p className="mt-4 text-lg font-medium text-white/88">{branding.motto}</p>

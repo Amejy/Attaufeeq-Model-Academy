@@ -33,7 +33,7 @@ function Landing() {
                   {landingBadge}
                 </p>
               )}
-              <h1 className="mt-6 max-w-4xl font-heading text-4xl leading-tight text-primary sm:text-5xl lg:text-6xl">
+              <h1 className="mt-6 max-w-4xl break-words font-heading text-4xl leading-tight text-primary sm:text-5xl lg:text-6xl">
                 {landing.title}
               </h1>
               <p className="mt-5 max-w-2xl text-base leading-8 text-slate-700 sm:text-lg">
@@ -78,7 +78,7 @@ function Landing() {
                 <div className="flex h-full flex-col justify-between rounded-[30px] border border-white/12 bg-[linear-gradient(180deg,rgba(15,23,42,0.92),rgba(15,23,42,0.82))] p-6 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]">
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/75">Portal Snapshot</p>
-                    <h2 className="mt-3 max-w-[10ch] font-heading text-3xl leading-tight sm:max-w-none">{landing.snapshotTitle}</h2>
+                    <h2 className="mt-3 max-w-[10ch] break-words font-heading text-3xl leading-tight sm:max-w-none">{landing.snapshotTitle}</h2>
                   </div>
                   <div className="mt-6 grid gap-3">
                     {(landing.snapshotItems || []).map((item) => (
@@ -115,7 +115,7 @@ function Landing() {
               />
             </div>
             <div className="px-2 pb-2 pt-6">
-              <h2 className="font-heading text-3xl text-primary lg:text-4xl">{card.title}</h2>
+              <h2 className="break-words font-heading text-3xl text-primary lg:text-4xl">{card.title}</h2>
               <p className="mt-3 text-sm leading-7 text-slate-700">{card.description}</p>
               <Link to={card.to} className="mt-6 inline-flex rounded-full bg-white px-5 py-3 text-sm font-semibold text-primary shadow-[0_14px_35px_rgba(8,37,26,0.12)] hover:-translate-y-0.5">
                 Explore {cardBadge}

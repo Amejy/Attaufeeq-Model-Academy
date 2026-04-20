@@ -18,10 +18,35 @@ function parseNumericValue(value) {
 function AnimatedCounter({ value, duration = 900 }) {
   const parsed = useMemo(() => parseNumericValue(value), [value]);
   const [displayValue, setDisplayValue] = useState(parsed ? 0 : value);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const syncPreference = () => setPrefersReducedMotion(mediaQuery.matches);
+
+    syncPreference();
+
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', syncPreference);
+      return () => mediaQuery.removeEventListener('change', syncPreference);
+    }
+
+    mediaQuery.addListener(syncPreference);
+    return () => mediaQuery.removeListener(syncPreference);
+  }, []);
 
   useEffect(() => {
     if (!parsed) {
       return undefined;
+    }
+
+    if (prefersReducedMotion || duration <= 0) {
+      const frameId = window.requestAnimationFrame(() => {
+        setDisplayValue(parsed.number);
+      });
+      return () => window.cancelAnimationFrame(frameId);
     }
 
     const startTime = performance.now();
@@ -40,7 +65,7 @@ function AnimatedCounter({ value, duration = 900 }) {
 
     frameId = window.requestAnimationFrame(update);
     return () => window.cancelAnimationFrame(frameId);
-  }, [duration, parsed, value]);
+  }, [duration, parsed, prefersReducedMotion, value]);
 
   if (!parsed) return <>{value}</>;
 

@@ -1,3 +1,5 @@
+import { memo, useEffect, useMemo, useState } from 'react';
+
 const particles = [
   { left: '6%', top: '14%', size: 6, delay: '0s', duration: '14s' },
   { left: '14%', top: '68%', size: 8, delay: '-3s', duration: '18s' },
@@ -14,13 +16,39 @@ const particles = [
 ];
 
 function ParticleField({ variant = 'public' }) {
-  if (typeof window !== 'undefined' && window.innerWidth <= 768) {
+  const [enabled, setEnabled] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const mediaQuery = window.matchMedia('(max-width: 1024px), (prefers-reduced-motion: reduce)');
+    const updateVisibility = () => {
+      setEnabled(!mediaQuery.matches);
+    };
+
+    updateVisibility();
+
+    if (typeof mediaQuery.addEventListener === 'function') {
+      mediaQuery.addEventListener('change', updateVisibility);
+      return () => mediaQuery.removeEventListener('change', updateVisibility);
+    }
+
+    mediaQuery.addListener(updateVisibility);
+    return () => mediaQuery.removeListener(updateVisibility);
+  }, []);
+
+  const activeParticles = useMemo(
+    () => (variant === 'portal' ? particles.slice(0, 8) : particles),
+    [variant]
+  );
+
+  if (!enabled) {
     return null;
   }
 
   return (
     <div className={`particle-field particle-field--${variant}`} aria-hidden="true">
-      {particles.map((particle, index) => (
+      {activeParticles.map((particle, index) => (
         <span
           key={`${variant}-${index}`}
           className="particle-field__dot"
@@ -38,4 +66,4 @@ function ParticleField({ variant = 'public' }) {
   );
 }
 
-export default ParticleField;
+export default memo(ParticleField);

@@ -7,6 +7,7 @@ import PageTransition from './components/PageTransition';
 import BackToTopButton from './components/BackToTopButton';
 import ProtectedRoute from './components/ProtectedRoute';
 import useAdmissionPeriod from './hooks/useAdmissionPeriod';
+import { SkeletonBlock } from './components/Skeleton';
 
 const Home = lazy(() => import('./pages/Home'));
 const Landing = lazy(() => import('./pages/Landing'));
@@ -67,13 +68,13 @@ function RouteLoader({ isPortalRoute }) {
     <div className={isPortalRoute ? 'min-h-[60vh] p-6 sm:p-8' : 'section-wrap py-16 sm:py-20'}>
       <div className="glass-panel mx-auto max-w-5xl overflow-hidden p-6 sm:p-8">
         <div className="grid gap-4">
-          <div className="h-3 w-32 rounded-full bg-slate-200/80" />
-          <div className="h-10 w-full max-w-xl rounded-full bg-slate-200/70" />
-          <div className="h-24 rounded-[28px] bg-slate-200/60" />
+          <SkeletonBlock className="h-3 w-32 rounded-full" />
+          <SkeletonBlock className="h-10 w-full max-w-xl rounded-full" />
+          <SkeletonBlock className="h-24 rounded-[28px]" />
           <div className="grid gap-4 md:grid-cols-3">
-            <div className="h-32 rounded-[24px] bg-slate-200/60" />
-            <div className="h-32 rounded-[24px] bg-slate-200/60" />
-            <div className="h-32 rounded-[24px] bg-slate-200/60" />
+            <SkeletonBlock className="h-32 rounded-[24px]" />
+            <SkeletonBlock className="h-32 rounded-[24px]" />
+            <SkeletonBlock className="h-32 rounded-[24px]" />
           </div>
         </div>
       </div>

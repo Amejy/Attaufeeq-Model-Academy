@@ -79,7 +79,7 @@ function NewsEvents() {
     <main className="section-wrap py-14">
       <section className="glass-panel overflow-hidden px-6 py-8 sm:px-8 sm:py-10">
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">School Feed</p>
-        <h1 className="mt-3 font-heading text-4xl text-primary">News & Events</h1>
+        <h1 className="mt-3 break-words font-heading text-4xl text-primary">News & Events</h1>
         <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-700">
           Follow school announcements, activities, examination schedules, holiday notices, and achievements.
         </p>
@@ -99,7 +99,7 @@ function NewsEvents() {
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Video Updates</p>
-                <h2 className="mt-2 font-heading text-3xl text-primary">News Videos</h2>
+                <h2 className="mt-2 break-words font-heading text-3xl text-primary">News Videos</h2>
                 <p className="mt-2 text-sm text-slate-600">Campus highlights, ceremonies, and short updates in motion.</p>
               </div>
               <span className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600">
@@ -152,7 +152,7 @@ function NewsEvents() {
                       <span>•</span>
                       <span>{item.institution}</span>
                     </p>
-                    <h2 className="mt-2 font-heading text-2xl text-primary">{item.title}</h2>
+                    <h2 className="mt-2 break-words font-heading text-2xl text-primary">{item.title}</h2>
                     <p className="mt-2 text-sm text-slate-700">
                       {item.excerpt || (item.content || '').slice(0, 140)}
                       {(item.content || '').length > 140 ? '...' : ''}
@@ -177,7 +177,7 @@ function NewsEvents() {
             <div className="flex flex-wrap items-end justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Written Updates</p>
-                <h2 className="mt-2 font-heading text-3xl text-primary">News Articles</h2>
+                <h2 className="mt-2 break-words font-heading text-3xl text-primary">News Articles</h2>
                 <p className="mt-2 text-sm text-slate-600">Announcements, events, and detailed stories.</p>
               </div>
               <span className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600">
@@ -230,7 +230,7 @@ function NewsEvents() {
                       <span>•</span>
                       <span>{item.institution}</span>
                     </p>
-                    <h2 className="mt-2 font-heading text-2xl text-primary">{item.title}</h2>
+                    <h2 className="mt-2 break-words font-heading text-2xl text-primary">{item.title}</h2>
                     <p className="mt-2 text-sm text-slate-700">
                       {item.excerpt || (item.content || '').slice(0, 140)}
                       {(item.content || '').length > 140 ? '...' : ''}

@@ -68,7 +68,7 @@ function ActionGrid({ actions }) {
         <Link
           key={action.label}
           to={action.to}
-          className="rounded-[22px] border border-white/60 bg-white/68 px-3 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-1 hover:bg-white sm:px-4 sm:py-4"
+          className="surface-outline rounded-[22px] px-3 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-1 sm:px-4 sm:py-4"
         >
           {action.label}
         </Link>
@@ -95,7 +95,7 @@ function DetailListItem({ item }) {
   const badge = normalizeBadge(item.badge);
 
   return (
-    <article className="rounded-[22px] border border-white/55 bg-white/70 px-3 py-3 sm:px-4 sm:py-4">
+    <article className="surface-outline rounded-[22px] px-3 py-3 sm:px-4 sm:py-4">
       <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-slate-900">{item.title}</p>

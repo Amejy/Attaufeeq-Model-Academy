@@ -174,10 +174,14 @@ function Navbar() {
   }, [isOpen]);
 
   useEffect(() => {
-    setIsOpen(false);
-    setMegaOpen(false);
-    setMadrasaMegaOpen(false);
-    setProfileOpen(false);
+    const frameId = window.requestAnimationFrame(() => {
+      setIsOpen(false);
+      setMegaOpen(false);
+      setMadrasaMegaOpen(false);
+      setProfileOpen(false);
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
   }, [location.pathname, location.search]);
 
   return (
@@ -228,8 +232,8 @@ function Navbar() {
             </div>
             <div className="min-w-0">
               <p className="nav-brand-label">{landingLabel(branding)}</p>
-              <h1 className="nav-brand-title">{branding.name}</h1>
-              <p className="nav-brand-subtitle">{branding.navSubtitle}</p>
+              <h1 className="nav-brand-title break-words">{branding.name}</h1>
+              <p className="nav-brand-subtitle break-words">{branding.navSubtitle}</p>
             </div>
           </div>
 

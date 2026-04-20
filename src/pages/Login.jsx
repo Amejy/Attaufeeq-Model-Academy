@@ -132,7 +132,7 @@ function Login({ variant = 'family', defaultRole = '' }) {
   return (
     <main className="section-wrap py-10 sm:py-16">
       <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[1.05fr,0.95fr]">
-        <section className="glass-panel overflow-hidden p-5 sm:p-9">
+        <section className="glass-panel min-w-0 overflow-hidden p-5 sm:p-9">
           <div className="login-logo-row">
             <SmartImage
               src={brandLogo}
@@ -140,13 +140,13 @@ function Login({ variant = 'family', defaultRole = '' }) {
               alt={`${branding.name || 'School'} logo`}
               className="login-logo"
             />
-            <div>
-              <p className="login-logo__label">{schoolName}</p>
-              <p className="login-logo__motto">{branding.motto}</p>
+            <div className="min-w-0">
+              <p className="login-logo__label break-words">{schoolName}</p>
+              <p className="login-logo__motto break-words">{branding.motto}</p>
             </div>
           </div>
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">{variantConfig.heroLabel}</p>
-          <h1 className="mt-3 font-heading text-3xl text-primary sm:mt-4 sm:text-5xl">{variantConfig.title}</h1>
+          <h1 className="mt-3 break-words font-heading text-3xl text-primary sm:mt-4 sm:text-5xl">{variantConfig.title}</h1>
           <p className="mt-3 max-w-xl text-sm leading-6 text-slate-700 sm:mt-4 sm:leading-8">{variantConfig.subtitle}</p>
 
           <div className="mt-6 rounded-[24px] border border-white/60 bg-white/65 p-4 sm:mt-8 sm:rounded-[28px] sm:p-5">
@@ -167,7 +167,7 @@ function Login({ variant = 'family', defaultRole = '' }) {
                 }`}
               >
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] opacity-80">Access Role</p>
-                <p className="mt-2 text-base font-semibold sm:text-lg">{ROLE_LABELS[role]}</p>
+                <p className="mt-2 break-words text-base font-semibold sm:text-lg">{ROLE_LABELS[role]}</p>
               </Link>
             ))}
           </div>
@@ -180,14 +180,14 @@ function Login({ variant = 'family', defaultRole = '' }) {
           </div>
         </section>
 
-        <section className="glass-card p-5 sm:p-8">
+        <section className="glass-card min-w-0 p-5 sm:p-8">
           {sessionMessage && (
             <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
               {sessionMessage}
             </div>
           )}
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Sign In</p>
-          <h2 className="mt-2 font-heading text-2xl text-primary sm:mt-3 sm:text-3xl">
+          <h2 className="mt-2 break-words font-heading text-2xl text-primary sm:mt-3 sm:text-3xl">
             {ROLE_LABELS[roleHint]} Access
           </h2>
           <p className="mt-2 text-sm leading-6 text-slate-600 sm:leading-7">

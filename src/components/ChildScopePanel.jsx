@@ -45,7 +45,7 @@ function ChildScopePanel({ children = [], activeChildId = '', onChange, heading 
               className={`rounded-[24px] border p-3 shadow-sm transition sm:p-4 ${
                 active
                   ? 'border-teal-500 bg-white text-slate-900'
-                  : 'border-white/70 bg-white/70 text-slate-700'
+                  : 'surface-outline text-slate-700'
               }`}
             >
               <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between">

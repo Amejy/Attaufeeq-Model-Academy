@@ -51,27 +51,9 @@ function SchoolReportMark({ institution }) {
   );
 }
 
-function metricLabel(label, value) {
-  return (
-    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
-      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">{label}</p>
-      <p className="mt-1 text-sm font-semibold text-slate-900">{value}</p>
-    </div>
-  );
-}
-
-function compactLabel(label, value) {
-  return (
-    <div className="rounded-lg border border-slate-200 bg-white px-2.5 py-2">
-      <p className="text-[9px] font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
-      <p className="mt-1 text-[12.5px] font-semibold text-slate-900">{value}</p>
-    </div>
-  );
-}
-
 function ReportCardSheet({ reportCard }) {
-  if (!reportCard) return null;
   const { siteContent } = useSiteContent();
+  if (!reportCard) return null;
   const signatureImage = siteContent?.about?.signatureImage || '';
   const student = reportCard.student || {};
   const studentPhoto = resolveStudentPhoto(student);

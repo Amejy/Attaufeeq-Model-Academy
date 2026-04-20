@@ -1,5 +1,5 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { apiJson } from '../utils/publicApi';
 
 const SiteContentContext = createContext(null);
@@ -16,26 +16,86 @@ const emptySiteContent = {
   contact: {}
 };
 
+let cachedSiteContent = emptySiteContent;
+let siteContentLoaded = false;
+let siteContentPromise = null;
+
+async function fetchSiteContent({ force = false } = {}) {
+  if (force) {
+    siteContentLoaded = false;
+    siteContentPromise = null;
+  }
+
+  if (siteContentLoaded && !force) {
+    return cachedSiteContent;
+  }
+
+  if (siteContentPromise) {
+    return siteContentPromise;
+  }
+
+  siteContentPromise = (async () => {
+    const data = await apiJson('/site-content');
+    cachedSiteContent = data.content || emptySiteContent;
+    siteContentLoaded = true;
+    return cachedSiteContent;
+  })();
+
+  try {
+    return await siteContentPromise;
+  } finally {
+    siteContentPromise = null;
+  }
+}
+
 export function SiteContentProvider({ children }) {
-  const [siteContent, setSiteContent] = useState(emptySiteContent);
-  const [loading, setLoading] = useState(true);
+  const [siteContent, setSiteContent] = useState(() => (siteContentLoaded ? cachedSiteContent : emptySiteContent));
+  const [loading, setLoading] = useState(!siteContentLoaded);
   const [error, setError] = useState('');
 
-  async function reload() {
+  const reload = useCallback(async ({ force = false } = {}) => {
     setLoading(true);
     setError('');
     try {
-      const data = await apiJson('/site-content');
-      setSiteContent(data.content || emptySiteContent);
+      const nextContent = await fetchSiteContent({ force });
+      setSiteContent(nextContent || emptySiteContent);
     } catch (err) {
       setError(err.message || 'Unable to load site content.');
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
 
   useEffect(() => {
-    void reload();
+    let cancelled = false;
+
+    if (siteContentLoaded) {
+      setSiteContent(cachedSiteContent);
+      setLoading(false);
+      return undefined;
+    }
+
+    (async () => {
+      setLoading(true);
+      try {
+        const nextContent = await fetchSiteContent();
+        if (!cancelled) {
+          setSiteContent(nextContent || emptySiteContent);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err.message || 'Unable to load site content.');
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const value = useMemo(
@@ -43,9 +103,9 @@ export function SiteContentProvider({ children }) {
       siteContent,
       siteContentLoading: loading,
       siteContentError: error,
-      reloadSiteContent: reload
+      reloadSiteContent: () => reload({ force: true })
     }),
-    [error, loading, siteContent]
+    [error, loading, reload, siteContent]
   );
 
   return <SiteContentContext.Provider value={value}>{children}</SiteContentContext.Provider>;

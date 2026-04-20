@@ -87,7 +87,7 @@ function initials(name = '') {
 }
 
 function PortalLayout({ role, title, subtitle, children, actions = null }) {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const avatarUrl = user?.avatarUrl || user?.profile?.avatarUrl || '';
 
@@ -138,7 +138,7 @@ function PortalLayout({ role, title, subtitle, children, actions = null }) {
                   }`
                 }
               >
-                {item.label}
+                <span className="block break-words">{item.label}</span>
               </NavLink>
             ))}
           </nav>
@@ -151,11 +151,11 @@ function PortalLayout({ role, title, subtitle, children, actions = null }) {
         </aside>
 
         <div className="min-w-0 flex-1">
-          <div className="mb-4 flex items-start justify-between gap-3 rounded-[24px] border border-white/50 bg-white/74 p-3 shadow-[0_18px_40px_rgba(8,37,26,0.08)] backdrop-blur-xl sm:items-center sm:rounded-[28px] sm:p-4 lg:hidden">
-            <div>
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-3 rounded-[24px] border border-white/50 bg-white/74 p-3 shadow-[0_18px_40px_rgba(8,37,26,0.08)] backdrop-blur-xl sm:items-center sm:rounded-[28px] sm:p-4 lg:hidden">
+            <div className="min-w-0 flex-1">
               <p className="text-xs uppercase tracking-[0.22em] text-slate-500">{role} portal</p>
-              <p className="text-sm font-semibold text-primary sm:text-base">{user?.fullName || 'User'}</p>
-              {institutionLabel && <p className="mt-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">{institutionLabel}</p>}
+              <p className="break-words text-sm font-semibold text-primary sm:text-base">{user?.fullName || 'User'}</p>
+              {institutionLabel && <p className="mt-1 break-words text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">{institutionLabel}</p>}
             </div>
             <div className="flex items-center gap-2">
               <div className="h-10 w-10 overflow-hidden rounded-full border border-slate-200 bg-white/80">
@@ -192,7 +192,7 @@ function PortalLayout({ role, title, subtitle, children, actions = null }) {
                       }`
                     }
                   >
-                    {item.label}
+                    <span className="block break-words">{item.label}</span>
                   </NavLink>
                 ))}
               </nav>
@@ -208,10 +208,10 @@ function PortalLayout({ role, title, subtitle, children, actions = null }) {
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(15,81,50,0.08),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(217,179,84,0.12),transparent_30%)]" />
             <div className="relative mb-5 flex flex-wrap items-start justify-between gap-3 sm:mb-6">
               <div className="min-w-0">
-                <h1 className="font-heading text-2xl text-primary sm:text-4xl">{title}</h1>
+                <h1 className="break-words font-heading text-2xl text-primary sm:text-4xl">{title}</h1>
                 {subtitle && <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 sm:leading-7">{subtitle}</p>}
               </div>
-              {actions}
+              {actions && <div className="flex w-full flex-wrap justify-start gap-2 sm:w-auto sm:justify-end">{actions}</div>}
             </div>
             <div className="relative">{children}</div>
           </section>

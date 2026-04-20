@@ -93,7 +93,7 @@ function ResultChecker() {
       <div className="glass-panel mx-auto max-w-5xl p-6 sm:p-8">
           <div className="flex flex-col gap-3">
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Result Checker</p>
-            <h1 className="font-heading text-3xl text-primary sm:text-4xl">Check Your Result</h1>
+            <h1 className="break-words font-heading text-3xl text-primary sm:text-4xl">Check Your Result</h1>
             <p className="text-sm text-slate-600">
               Enter your student ID or student code with a valid result token to view your published results.
             </p>
@@ -136,12 +136,12 @@ function ResultChecker() {
           {payload && (
             <div className="mt-8 space-y-4">
               {student && (
-                <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
                   <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Student Details</p>
                   <div className="mt-3 grid gap-2 sm:grid-cols-2">
                     <div>
                       <p className="text-sm text-slate-600">Name</p>
-                      <p className="font-semibold text-slate-900">{student.fullName}</p>
+                      <p className="break-words font-semibold text-slate-900">{student.fullName}</p>
                     </div>
                     <div>
                       <p className="text-sm text-slate-600">Class</p>
@@ -171,7 +171,7 @@ function ResultChecker() {
                   <button
                     type="button"
                     onClick={() => printResultCard(document.getElementById('result-card-print'))}
-                    className="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700"
+                    className="rounded-2xl border border-slate-300 bg-white/80 px-4 py-3 text-sm font-semibold text-slate-700"
                   >
                     Download PDF
                   </button>

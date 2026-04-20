@@ -13,11 +13,11 @@ function ProvisioningPanel({ title = 'Portal Access Ready', description = '', re
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         {records.map((record) => (
-          <article key={`${record.role}-${record.email}-${record.label}`} className="rounded-[24px] border border-white/80 bg-white/90 p-4 shadow-sm">
+          <article key={`${record.role}-${record.email}-${record.label}`} className="surface-outline rounded-[24px] p-4 shadow-sm">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{record.label}</p>
-                <p className="mt-2 text-lg font-semibold text-slate-900">{record.email}</p>
+                <p className="mt-2 break-all text-lg font-semibold text-slate-900">{record.email}</p>
               </div>
               <span className={`rounded-full px-3 py-1 text-xs font-semibold ${record.reused ? 'bg-slate-100 text-slate-700' : 'bg-emerald-100 text-emerald-700'}`}>
                 {record.reused ? 'Existing account linked' : 'New account'}
