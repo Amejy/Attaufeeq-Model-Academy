@@ -54,10 +54,10 @@ function Contact() {
 
   return (
     <main className="section-wrap py-14">
-      <h1 className="font-heading text-4xl text-primary">{contact.title}</h1>
+      <h1 className="break-words font-heading text-4xl text-primary">{contact.title}</h1>
       <div className="mt-8 grid gap-8 md:grid-cols-2">
         <section className="glass-card min-w-0 overflow-hidden p-6 sm:p-7">
-          <h2 className="font-heading text-2xl text-primary">{contact.infoTitle}</h2>
+          <h2 className="break-words font-heading text-2xl text-primary">{contact.infoTitle}</h2>
           <div className="mt-5 space-y-4 text-sm leading-7 text-slate-700">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Address</p>
@@ -85,7 +85,7 @@ function Contact() {
           </div>
         </section>
         <section className="glass-card min-w-0 overflow-hidden p-6 sm:p-7">
-          <h2 className="font-heading text-2xl text-primary">{contact.formTitle}</h2>
+          <h2 className="break-words font-heading text-2xl text-primary">{contact.formTitle}</h2>
           <p className="mt-2 text-sm text-slate-600">{contact.formDescription}</p>
           <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
             <label className="block min-w-0">
@@ -125,7 +125,7 @@ function Contact() {
             <button
               type="submit"
               disabled={submitting || !canSubmitMessage}
-              className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70"
+              className="w-full rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-70 sm:w-fit"
             >
               {submitting ? 'Sending...' : (contact.submitLabel || 'Send Message')}
             </button>
@@ -156,7 +156,7 @@ function Contact() {
             href={DIRECTIONS_URL}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center justify-center rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white transition duration-200 hover:-translate-y-0.5 hover:bg-primary/90"
+            className="inline-flex w-full items-center justify-center rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white transition duration-200 hover:-translate-y-0.5 hover:bg-primary/90 sm:w-auto"
           >
             Get Directions
           </a>

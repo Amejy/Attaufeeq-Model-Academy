@@ -118,7 +118,7 @@ function ForgotPassword() {
   return (
     <main className="section-wrap py-16">
       <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[1.1fr,0.9fr]">
-        <section className="glass-panel overflow-hidden p-7 sm:p-9">
+        <section className="glass-panel min-w-0 overflow-hidden p-6 sm:p-9">
           <div className="login-logo-row">
             <SmartImage
               src={brandLogo}
@@ -126,13 +126,13 @@ function ForgotPassword() {
               alt={`${branding.name || 'School'} logo`}
               className="login-logo"
             />
-            <div>
-              <p className="login-logo__label">{schoolName}</p>
-              <p className="login-logo__motto">{branding.motto}</p>
+            <div className="min-w-0">
+              <p className="login-logo__label break-words">{schoolName}</p>
+              <p className="login-logo__motto break-words">{branding.motto}</p>
             </div>
           </div>
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Account Recovery</p>
-          <h1 className="mt-4 font-heading text-4xl text-primary sm:text-5xl">Forgot Password</h1>
+          <h1 className="mt-4 break-words font-heading text-4xl text-primary sm:text-5xl">Forgot Password</h1>
           <p className="mt-4 max-w-xl text-sm leading-8 text-slate-700">
             Enter the email address linked to your portal account. We will send a short reset code that allows you to set a new password.
           </p>
@@ -145,9 +145,9 @@ function ForgotPassword() {
           </div>
         </section>
 
-        <section className="glass-card p-7 sm:p-8">
+        <section className="glass-card min-w-0 p-6 sm:p-8">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Step 1</p>
-          <h2 className="mt-3 font-heading text-3xl text-primary">Request reset code</h2>
+          <h2 className="mt-3 break-words font-heading text-3xl text-primary">Request reset code</h2>
           <form className="mt-5 space-y-4" onSubmit={requestReset}>
             <label className="block text-sm">
               <span className="mb-1 block font-medium text-slate-700">Email</span>
@@ -180,7 +180,7 @@ function ForgotPassword() {
           <div className="my-8 h-px bg-slate-200" />
 
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Step 2</p>
-          <h2 className="mt-3 font-heading text-3xl text-primary">Set a new password</h2>
+          <h2 className="mt-3 break-words font-heading text-3xl text-primary">Set a new password</h2>
           <form className="mt-5 space-y-4" onSubmit={submitReset}>
             <label className="block text-sm">
               <span className="mb-1 block font-medium text-slate-700">Email</span>
@@ -240,7 +240,7 @@ function ForgotPassword() {
             </button>
           </form>
 
-          <div className="mt-6 text-sm text-slate-600">
+          <div className="mt-6 break-words text-sm text-slate-600">
             Back to login?{' '}
             <Link to={loginHref} className="font-semibold text-primary hover:underline">
               Sign in here

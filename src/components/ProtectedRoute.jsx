@@ -23,7 +23,18 @@ function ProtectedRoute({ children, allowedRoles, requiredFeature }) {
   const location = useLocation();
 
   if (!profileReady) {
-    return <div className="min-h-screen bg-white px-6 py-10 text-sm text-slate-600">Loading portal scope...</div>;
+    return (
+      <div className="min-h-screen bg-white px-6 py-10 text-sm text-slate-600 dark:bg-slate-950 dark:text-slate-200">
+        <div className="mx-auto max-w-3xl rounded-[28px] border border-slate-200 bg-white/85 px-5 py-6 shadow-sm dark:border-slate-700 dark:bg-slate-900/85">
+          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500 dark:text-slate-400">
+            Portal Access
+          </p>
+          <p className="mt-3 break-words text-base font-medium text-slate-700 dark:text-slate-100">
+            Loading portal scope...
+          </p>
+        </div>
+      </div>
+    );
   }
 
   if (!isAuthenticated) {

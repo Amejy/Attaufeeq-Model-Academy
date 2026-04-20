@@ -349,7 +349,7 @@ function Admissions() {
 
   return (
     <main className="section-wrap py-14">
-      <h1 className="font-heading text-4xl text-primary">Admissions</h1>
+      <h1 className="break-words font-heading text-4xl text-primary">Admissions</h1>
       <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-700">
         Submit your child&apos;s application and choose the exact class requested for placement after full admission confirmation.
       </p>
@@ -357,7 +357,7 @@ function Admissions() {
       {!periodOpen ? (
         <section className="glass-panel mt-8 max-w-4xl p-8">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Admissions Locked</p>
-          <h2 className="mt-3 font-heading text-3xl text-primary">The admissions portal is currently unavailable.</h2>
+          <h2 className="mt-3 break-words font-heading text-3xl text-primary">The admissions portal is currently unavailable.</h2>
           <p className="mt-4 text-sm leading-8 text-slate-700">
             Admin has not opened the public admission window yet. This page stays inaccessible for applications until the admission period is enabled.
           </p>
@@ -385,7 +385,7 @@ function Admissions() {
         {!program ? (
           <section className="glass-panel mt-8 p-6 sm:p-8">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Choose Program</p>
-            <h2 className="mt-3 font-heading text-3xl text-primary">Select the admissions pathway</h2>
+            <h2 className="mt-3 break-words font-heading text-3xl text-primary">Select the admissions pathway</h2>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-700">
               Pick the exact program to unlock the right form. Requirements differ for ATTAUFEEQ Model Academy, Madrasa, and Quran Memorization applicants.
             </p>
@@ -443,13 +443,13 @@ function Admissions() {
         ) : (
           <form onSubmit={handleSubmit} className="admissions-form mt-8 grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
-              <p className="font-semibold">
+              <p className="break-words font-semibold">
                 Selected program: {selectedProgramLabel}
               </p>
               <button
                 type="button"
                 onClick={() => setProgram('')}
-                className="rounded-full border border-emerald-200 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700"
+                className="w-full rounded-full border border-emerald-200 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 sm:w-auto"
               >
                 Change Program
               </button>

@@ -14,8 +14,8 @@ function Signup() {
   return (
     <main className="section-wrap py-16">
       <div className="mx-auto max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">{branding.name || 'School'}</p>
-        <h1 className="font-heading text-3xl text-primary">Parent Access</h1>
+        <p className="break-words text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">{branding.name || 'School'}</p>
+        <h1 className="break-words font-heading text-3xl text-primary">Parent Access</h1>
         <p className="mt-2 text-sm text-slate-600">
           Parent accounts are created during admission registration. Use the issued parent login details, or contact the school if you need your portal access resent.
         </p>
@@ -40,7 +40,7 @@ function Signup() {
           </div>
         </div>
 
-        <p className="mt-6 text-center text-sm text-slate-600">
+        <p className="mt-6 break-words text-center text-sm text-slate-600">
           Need help accessing the portal?{' '}
           <Link to="/login/parent" className="font-semibold text-primary hover:underline">
             Log in here
