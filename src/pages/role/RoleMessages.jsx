@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import ErrorState from '../../components/ErrorState';
 import { useAuth } from '../../context/AuthContext';
 import PortalLayout from '../../components/PortalLayout';
 import ChildScopePanel from '../../components/ChildScopePanel';
+import { SkeletonBlock } from '../../components/Skeleton';
+import Tooltip from '../../components/Tooltip';
 import useParentChildSelection from '../../hooks/useParentChildSelection';
 import useDebouncedValue from '../../hooks/useDebouncedValue';
 
@@ -44,6 +47,7 @@ function RoleMessages() {
   const loadContactsSeq = useRef(0);
   const loadThreadsSeq = useRef(0);
   const openThreadSeq = useRef(0);
+  const messagesEndRef = useRef(null);
   const debouncedThreadSearch = useDebouncedValue(threadSearch.trim(), 300);
   const debouncedContactSearch = useDebouncedValue(contactSearch.trim(), 300);
 
@@ -83,11 +87,21 @@ function RoleMessages() {
       if (openThreadSeq.current !== requestId) return;
       setActiveThread(data.thread);
       setMessages(data.messages || []);
+      setThreads((prev) => prev.map((thread) => (
+        thread.id === data.thread?.id
+          ? {
+            ...thread,
+            ...data.thread,
+            unread: false,
+            lastReadAt: data.thread?.readBy?.[currentUserId] || new Date().toISOString()
+          }
+          : thread
+      )));
     } catch (err) {
       if (openThreadSeq.current !== requestId) return;
       setError(err.message || 'Unable to open thread.');
     }
-  }, [apiJson, scopedThreadQuery]);
+  }, [apiJson, currentUserId, scopedThreadQuery]);
 
   const loadThreads = useCallback(async ({ nextActiveThreadId = '' } = {}) => {
     const requestId = loadThreadsSeq.current + 1;
@@ -242,6 +256,10 @@ function RoleMessages() {
     }
   }, [contactOptions, form.contactId]);
 
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+  }, [messages]);
+
   async function createThread(event) {
     event.preventDefault();
     setError('');
@@ -281,6 +299,31 @@ function RoleMessages() {
 
       setBody('');
       setMessages((prev) => [...prev, data.message]);
+      setActiveThread((prev) => (prev
+        ? {
+          ...prev,
+          updatedAt: data.message?.createdAt || new Date().toISOString(),
+          readBy: {
+            ...(prev.readBy || {}),
+            [currentUserId]: data.message?.createdAt || new Date().toISOString()
+          }
+          }
+        : prev));
+      setThreads((prev) => prev.map((thread) => (
+        thread.id === activeThread.id
+          ? {
+            ...thread,
+            updatedAt: data.message?.createdAt || new Date().toISOString(),
+            lastMessage: data.message,
+            unread: false,
+            lastReadAt: data.message?.createdAt || new Date().toISOString(),
+            readBy: {
+              ...(thread.readBy || {}),
+              [currentUserId]: data.message?.createdAt || new Date().toISOString()
+            }
+          }
+          : thread
+      )));
       void loadThreads({ nextActiveThreadId: activeThread.id });
     } catch (err) {
       setError(err.message || 'Unable to send message.');
@@ -291,13 +334,25 @@ function RoleMessages() {
 
   const canDeleteThread = activeThread && (user?.role === 'admin' || activeThread.createdByUserId === currentUserId);
 
-  async function deleteThread() {
-    if (!activeThread) return;
+  async function deleteThread(targetThread = activeThread) {
+    if (!targetThread) return;
     if (!window.confirm('Delete this thread and all messages?')) return;
     setError('');
     setDeletingThread(true);
     try {
-      await apiJson(`/messages/threads/${activeThread.id}${scopedThreadQuery}`, { method: 'DELETE' });
+      await apiJson(`/messages/threads/${targetThread.id}${scopedThreadQuery}`, { method: 'DELETE' });
+      setThreads((prev) => prev.filter((thread) => thread.id !== targetThread.id));
+      setHiddenThreadIds((prev) => {
+        if (!prev.has(targetThread.id)) return prev;
+        const next = new Set(prev);
+        next.delete(targetThread.id);
+        return next;
+      });
+      if (activeThread?.id === targetThread.id) {
+        setActiveThread(null);
+        setMessages([]);
+        setBody('');
+      }
       await loadThreads();
     } catch (err) {
       setError(err.message || 'Unable to delete thread.');
@@ -318,6 +373,20 @@ function RoleMessages() {
     });
   }
 
+  function messageReadLabel(message) {
+    if (!message || String(message.senderUserId || '') !== currentUserId) return '';
+
+    const participantIds = (activeThread?.participantUserIds || []).filter((id) => String(id || '') && String(id || '') !== currentUserId);
+    if (!participantIds.length) return 'Sent';
+
+    const everyoneRead = participantIds.every((id) => {
+      const readAt = activeThread?.readBy?.[id];
+      return readAt && new Date(readAt).getTime() >= new Date(message.createdAt).getTime();
+    });
+
+    return everyoneRead ? 'Read' : 'Delivered';
+  }
+
   return (
     <PortalLayout
       role={user?.role || 'student'}
@@ -325,9 +394,15 @@ function RoleMessages() {
       subtitle="Start or continue conversations with the right portal-linked contacts. Family roles see class-linked communication, while the admissions desk can speak directly with admin."
     >
       {error && (
-        <p className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-          {error}
-        </p>
+        <ErrorState
+          compact
+          className="mb-4"
+          message={error}
+          onRetry={() => {
+            setError('');
+            void loadThreads();
+          }}
+        />
       )}
       {user?.role === 'parent' && (
         <ChildScopePanel
@@ -339,7 +414,7 @@ function RoleMessages() {
         />
       )}
       <div className="grid gap-5 lg:grid-cols-3">
-        <section className="rounded-xl border border-slate-200 bg-white p-4 lg:col-span-1">
+        <section className="interactive-card rounded-[28px] border border-slate-200 bg-white/90 p-4 shadow-sm lg:col-span-1">
           <h2 className="font-heading text-xl text-primary">Threads</h2>
           <div className="mt-3 grid gap-2">
             <input
@@ -409,7 +484,7 @@ function RoleMessages() {
                 setShowHidden(false);
                 setHiddenThreadIds(new Set());
               }}
-              className="w-full rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600"
+              className="interactive-button w-full rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600"
             >
               Clear filters
             </button>
@@ -417,7 +492,7 @@ function RoleMessages() {
               <button
                 type="button"
                 onClick={() => setHiddenThreadIds(new Set())}
-                className="w-full rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600"
+                className="interactive-button w-full rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600"
               >
                 Unhide all
               </button>
@@ -468,7 +543,7 @@ function RoleMessages() {
               <button
                 type="submit"
                 disabled={!canSubmitThread}
-                className="w-full rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                className="interactive-button w-full rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {creatingThread ? 'Creating...' : 'Create Thread'}
               </button>
@@ -483,19 +558,36 @@ function RoleMessages() {
 
           <div className="mt-4 space-y-2">
             {loading && !threads.length && (
-              <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
-                Loading conversations...
-              </p>
+              <div className="space-y-2">
+                {Array.from({ length: 4 }).map((_, index) => (
+                  <div key={index} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                    <SkeletonBlock className="h-4 w-2/3 rounded-full" />
+                    <SkeletonBlock className="mt-2 h-3 w-1/2 rounded-full" />
+                    <SkeletonBlock className="mt-4 h-3 w-full rounded-full" />
+                  </div>
+                ))}
+              </div>
             )}
             {visibleThreads.map((thread) => (
               <button
                 type="button"
                 key={thread.id}
                 onClick={() => openThread(thread.id)}
-                className={`w-full rounded-md border px-3 py-2 text-left ${activeThread?.id === thread.id ? 'border-primary bg-emerald-50' : 'border-slate-200 bg-white'}`}
+                className={`interactive-card w-full rounded-2xl border px-3 py-3 text-left ${
+                  activeThread?.id === thread.id ? 'border-primary bg-emerald-50/90 shadow-sm' : 'border-slate-200 bg-white/90'
+                }`}
               >
-                <p className="text-sm font-semibold text-slate-800">{thread.title}</p>
-                <p className="text-xs text-slate-500">{thread.contextLabel || thread.participants.join(', ')}</p>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-slate-800">{thread.title}</p>
+                    <p className="text-xs text-slate-500">{thread.contextLabel || thread.participants.join(', ')}</p>
+                  </div>
+                  {thread.unread && (
+                    <span className="shrink-0 rounded-full bg-emerald-600 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white">
+                      New
+                    </span>
+                  )}
+                </div>
                 {thread.lastMessage && (
                   <p className="mt-1 text-xs text-slate-600 line-clamp-2">{thread.lastMessage.body}</p>
                 )}
@@ -504,28 +596,31 @@ function RoleMessages() {
                 </p>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {(user?.role === 'admin' || thread.createdByUserId === currentUserId) && (
+                    <Tooltip text="Delete this conversation">
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          void deleteThread(thread);
+                        }}
+                        className="interactive-button rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-[11px] font-semibold text-rose-600"
+                      >
+                        Delete
+                      </button>
+                    </Tooltip>
+                  )}
+                  <Tooltip text={hiddenThreadIds.has(thread.id) ? 'Show this conversation' : 'Hide this conversation'}>
                     <button
                       type="button"
                       onClick={(event) => {
                         event.stopPropagation();
-                        setActiveThread(thread);
-                        void deleteThread();
+                        toggleHideThread(thread.id);
                       }}
-                      className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-[11px] font-semibold text-rose-600"
+                      className="interactive-button rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-600"
                     >
-                      Delete
+                      {hiddenThreadIds.has(thread.id) ? 'Show' : 'Hide'}
                     </button>
-                  )}
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      toggleHideThread(thread.id);
-                    }}
-                    className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-[11px] font-semibold text-slate-600"
-                  >
-                    {hiddenThreadIds.has(thread.id) ? 'Show' : 'Hide'}
-                  </button>
+                  </Tooltip>
                 </div>
               </button>
             ))}
@@ -537,7 +632,7 @@ function RoleMessages() {
           </div>
         </section>
 
-        <section className="rounded-xl border border-slate-200 bg-white p-4 lg:col-span-2">
+        <section className="rounded-[28px] border border-slate-200 bg-white/92 p-4 shadow-sm lg:col-span-2">
           <div className="flex items-center justify-between gap-3">
             <h2 className="font-heading text-xl text-primary">{activeThread?.title || 'Select a thread'}</h2>
             {canDeleteThread && (
@@ -545,7 +640,7 @@ function RoleMessages() {
                 type="button"
                 onClick={deleteThread}
                 disabled={deletingThread}
-                className="rounded-md border border-red-300 px-3 py-1 text-xs font-semibold text-red-600 disabled:cursor-not-allowed disabled:opacity-60"
+                className="interactive-button rounded-md border border-red-300 px-3 py-1 text-xs font-semibold text-red-600 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {deletingThread ? 'Deleting...' : 'Delete Thread'}
               </button>
@@ -558,13 +653,44 @@ function RoleMessages() {
             </p>
           )}
 
-          <div className="mt-4 max-h-[24rem] space-y-3 overflow-auto rounded-lg border border-slate-200 bg-slate-50 p-3">
-            {messages.map((message) => (
-              <article key={message.id} className="rounded-md border border-slate-200 bg-white p-3">
-                <p className="text-xs uppercase tracking-wide text-slate-500">{message.senderRole} - {message.senderName}</p>
-                <p className="mt-1 text-sm text-slate-700">{message.body}</p>
-              </article>
-            ))}
+          <div className="mt-4 max-h-[28rem] space-y-3 overflow-auto rounded-[24px] border border-slate-200 bg-slate-50/90 p-3">
+            {loading && activeThread && !messages.length && (
+              <div className="space-y-3">
+                {Array.from({ length: 3 }).map((_, index) => (
+                  <div key={index} className="rounded-2xl bg-white p-3">
+                    <SkeletonBlock className="h-3 w-24 rounded-full" />
+                    <SkeletonBlock className="mt-3 h-3 w-full rounded-full" />
+                    <SkeletonBlock className="mt-2 h-3 w-4/5 rounded-full" />
+                  </div>
+                ))}
+              </div>
+            )}
+            {messages.map((message) => {
+              const outgoing = String(message.senderUserId || '') === currentUserId;
+              return (
+                <article
+                  key={message.id}
+                  className={`max-w-[90%] rounded-[22px] border px-4 py-3 ${
+                    outgoing
+                      ? 'ml-auto border-emerald-200 bg-emerald-50 text-slate-800'
+                      : 'mr-auto border-slate-200 bg-white text-slate-800'
+                  }`}
+                >
+                  <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">
+                    <span>{message.senderRole}</span>
+                    <span>{message.senderName}</span>
+                    <span>{new Date(message.createdAt).toLocaleString()}</span>
+                  </div>
+                  <p className="mt-2 text-sm leading-6 text-slate-700">{message.body}</p>
+                  {outgoing && (
+                    <p className="mt-2 text-right text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-700">
+                      {messageReadLabel(message)}
+                    </p>
+                  )}
+                </article>
+              );
+            })}
+            <div ref={messagesEndRef} />
             {!messages.length && <p className="text-sm text-slate-600">No messages yet.</p>}
           </div>
 
@@ -573,18 +699,18 @@ function RoleMessages() {
               Students can only read messages. Replies are disabled in this portal.
             </p>
           )}
-          <form onSubmit={sendMessage} className="mt-3 flex gap-2">
+          <form onSubmit={sendMessage} className="sticky bottom-0 mt-3 flex gap-2 rounded-[24px] border border-slate-200 bg-white/95 p-2 shadow-[0_-10px_25px_rgba(15,23,42,0.05)] backdrop-blur">
             <input
               value={body}
               onChange={(e) => setBody(e.target.value)}
-              placeholder="Type message"
-              className="flex-1 rounded-md border border-slate-300 px-3 py-2 text-sm"
+              placeholder={activeThread ? 'Type a clear message here' : 'Select a thread to start typing'}
+              className="flex-1 rounded-[18px] border border-slate-300 px-4 py-3 text-sm"
               disabled={!activeThread || !canReply}
             />
             <button
               type="submit"
               disabled={!canSendMessage}
-              className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+              className="interactive-button rounded-[18px] bg-primary px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
             >
               {sendingMessage ? 'Sending...' : 'Send'}
             </button>

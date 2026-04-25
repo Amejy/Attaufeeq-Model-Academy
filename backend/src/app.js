@@ -51,6 +51,26 @@ app.use(
 );
 app.use(morgan('dev'));
 app.use(express.json({ limit: '1mb' }));
+app.use((req, res, next) => {
+  const originalJson = res.json.bind(res);
+
+  res.json = (payload) => {
+    if (!payload || typeof payload !== 'object' || Array.isArray(payload)) {
+      return originalJson(payload);
+    }
+
+    if (Object.prototype.hasOwnProperty.call(payload, 'success')) {
+      return originalJson(payload);
+    }
+
+    return originalJson({
+      success: res.statusCode < 400,
+      ...payload
+    });
+  };
+
+  next();
+});
 app.use(attachUserIfPresent);
 
 app.get('/health', (_req, res) => {

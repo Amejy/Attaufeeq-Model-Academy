@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import ErrorState from '../../components/ErrorState';
 import PortalLayout from '../../components/PortalLayout';
+import { SkeletonBlock } from '../../components/Skeleton';
 import { useAuth } from '../../context/AuthContext';
 
 function isPeriodOpen(period) {
@@ -19,6 +21,7 @@ function validateAdmissionPeriod(period = {}) {
     { label: 'Madrastul ATTAUFEEQ', ...programs.madrasa },
     { label: 'Quran Memorization', ...programs.memorization }
   ];
+  const enabledWindows = [];
 
   for (const window of windows) {
     const start = window.startDate ? new Date(window.startDate).getTime() : null;
@@ -32,6 +35,14 @@ function validateAdmissionPeriod(period = {}) {
     if (start != null && end != null && start > end) {
       return `${window.label} start date must be before its end date.`;
     }
+
+    if (period.enabled !== false && window.enabled !== false) {
+      enabledWindows.push(window.label);
+    }
+  }
+
+  if (enabledWindows.length > 1) {
+    return 'Only one admission window can stay active at a time. Disable the others before saving.';
   }
 
   return '';
@@ -207,12 +218,18 @@ function AdminAdmissionsAccess() {
       title="Admissions Access"
       subtitle="Open or close admissions and keep an archive of fully admitted students by class for future reference."
     >
-      {loading && <p className="mt-4 text-sm text-slate-600">Loading admissions access...</p>}
-      {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+      {loading && (
+        <div className="mt-4 grid gap-3">
+          <SkeletonBlock className="h-12 rounded-[20px]" />
+          <SkeletonBlock className="h-48 rounded-[28px]" />
+          <SkeletonBlock className="h-36 rounded-[28px]" />
+        </div>
+      )}
+      {error && <ErrorState compact className="mt-4" message={error} onRetry={loadData} />}
       {success && <p className="mt-4 text-sm text-emerald-700">{success}</p>}
       {periodValidationError && <p className="mt-4 text-sm text-amber-700">{periodValidationError}</p>}
 
-      <section className="mt-4 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="interactive-card mt-4 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-heading text-2xl text-primary">Admission Window</h2>

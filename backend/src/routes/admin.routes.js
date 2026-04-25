@@ -69,10 +69,11 @@ function isUniqueViolation(error) {
 function validateAdmissionPeriodConfig(period = {}) {
   const programs = period.programs && typeof period.programs === 'object' ? period.programs : {};
   const windows = [
-    { label: 'ATTAUFEEQ Model Academy', ...programs.modern },
-    { label: 'Madrastul ATTAUFEEQ', ...programs.madrasa },
-    { label: 'Quran Memorization', ...programs.memorization }
+    { key: 'modern', label: 'ATTAUFEEQ Model Academy', ...programs.modern },
+    { key: 'madrasa', label: 'Madrastul ATTAUFEEQ', ...programs.madrasa },
+    { key: 'memorization', label: 'Quran Memorization', ...programs.memorization }
   ];
+  const activeWindows = [];
 
   for (const window of windows) {
     const startDate = String(window.startDate || '').trim();
@@ -89,6 +90,14 @@ function validateAdmissionPeriodConfig(period = {}) {
     if (start != null && end != null && start > end) {
       return `${window.label} start date must be before its end date.`;
     }
+
+    if (period.enabled !== false && window.enabled !== false) {
+      activeWindows.push(window);
+    }
+  }
+
+  if (activeWindows.length > 1) {
+    return 'Only one admission window can stay active at a time. Disable the other programs before saving.';
   }
 
   return '';

@@ -28,6 +28,29 @@ function canAccessThread(user, thread) {
   return thread.createdByUserId === userId;
 }
 
+function currentUserId(user) {
+  return String(user?.sub || '');
+}
+
+function markThreadRead(thread, userId) {
+  if (!thread || !userId) return thread;
+  thread.readBy = {
+    ...(thread.readBy && typeof thread.readBy === 'object' ? thread.readBy : {}),
+    [userId]: new Date().toISOString()
+  };
+  return thread;
+}
+
+function getUnreadState(thread, lastMessage, userId) {
+  if (!userId || !lastMessage) {
+    return { unread: false, lastReadAt: '' };
+  }
+
+  const lastReadAt = String(thread?.readBy?.[userId] || '');
+  const unread = !lastReadAt || new Date(lastMessage.createdAt).getTime() > new Date(lastReadAt).getTime();
+  return { unread, lastReadAt };
+}
+
 function buildAdminContacts() {
   const parents = [];
   const seenParents = new Set();
@@ -251,6 +274,7 @@ messagesRouter.get('/contacts', async (req, res) => {
 
 messagesRouter.get('/threads', (req, res) => {
   const childId = String(req.query.childId || '').trim();
+  const userId = currentUserId(req.user);
   const requestedChild =
     req.user?.role === 'parent' ? resolveParentChildScope(req.user, childId).child : null;
 
@@ -277,7 +301,11 @@ messagesRouter.get('/threads', (req, res) => {
         .filter((item) => item.threadId === thread.id)
         .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))[0] || null;
 
-      return { ...thread, lastMessage };
+      return {
+        ...thread,
+        lastMessage,
+        ...getUnreadState(thread, lastMessage, userId)
+      };
     })
     .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
 
@@ -341,7 +369,10 @@ messagesRouter.post('/threads', async (req, res) => {
     contextSubtitle,
     contextStudentId,
     createdByRole: role,
-    createdByUserId: String(req.user?.sub || ''),
+    createdByUserId: currentUserId(req.user),
+    readBy: {
+      [currentUserId(req.user)]: new Date().toISOString()
+    },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
@@ -359,6 +390,7 @@ messagesRouter.get('/threads/:id', (req, res) => {
   if (!canAccessThread(req.user, thread)) {
     return res.status(403).json({ message: 'You do not have access to this thread.' });
   }
+  markThreadRead(thread, currentUserId(req.user));
 
   const messages = adminStore.messages
     .filter((item) => item.threadId === thread.id)
@@ -390,6 +422,7 @@ messagesRouter.post('/threads/:id/messages', (req, res) => {
     id: makeId('msg'),
     threadId: thread.id,
     senderRole: role,
+    senderUserId: currentUserId(req.user),
     senderName: req.user?.fullName || req.user?.email || role,
     body,
     createdAt: new Date().toISOString()
@@ -397,6 +430,7 @@ messagesRouter.post('/threads/:id/messages', (req, res) => {
 
   adminStore.messages.push(message);
   thread.updatedAt = new Date().toISOString();
+  markThreadRead(thread, currentUserId(req.user));
 
   return res.status(201).json({ message });
 });

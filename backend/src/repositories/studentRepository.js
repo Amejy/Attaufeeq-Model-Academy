@@ -16,6 +16,46 @@ function getExecutor(executor) {
   return { query };
 }
 
+function currentStudentIdYear() {
+  return new Date().getFullYear();
+}
+
+function normalizeGeneratedStudentId(value = '') {
+  return String(value || '').trim().toUpperCase();
+}
+
+function extractStudentIdSequence(id = '', year = currentStudentIdYear()) {
+  const match = normalizeGeneratedStudentId(id).match(/^AMA-(\d{4})-(\d{4})$/);
+  if (!match) return null;
+  if (Number(match[1]) !== Number(year)) return null;
+  return Number(match[2]);
+}
+
+async function generateStudentId(options = {}) {
+  const year = Number(options.year || currentStudentIdYear());
+
+  if (!env.useDatabase) {
+    const nextSequence = adminStore.students.reduce((max, student) => {
+      const sequence = extractStudentIdSequence(student.id, year);
+      return sequence && sequence > max ? sequence : max;
+    }, 0) + 1;
+    return `AMA-${year}-${String(nextSequence).padStart(4, '0')}`;
+  }
+
+  const executor = getExecutor(options.executor);
+  const result = await executor.query(
+    `SELECT id
+       FROM students
+      WHERE id LIKE $1
+      ORDER BY id DESC
+      LIMIT 1`,
+    [`AMA-${year}-%`]
+  );
+
+  const nextSequence = extractStudentIdSequence(result.rows[0]?.id, year) || 0;
+  return `AMA-${year}-${String(nextSequence + 1).padStart(4, '0')}`;
+}
+
 function mapDbStudent(row) {
   if (!row) return null;
   return {
@@ -187,7 +227,11 @@ export async function findStudentById(id) {
 }
 
 export async function createStudent(record, options = {}) {
-  const item = await normalizeStudentReferences(normalizeStudentInput(record), {
+  const baseItem = normalizeStudentInput(record);
+  const item = await normalizeStudentReferences({
+    ...baseItem,
+    id: baseItem.id || await generateStudentId({ executor: options.executor })
+  }, {
     executor: options.executor,
     onMissingUser: options.onMissingUser || 'error'
   });

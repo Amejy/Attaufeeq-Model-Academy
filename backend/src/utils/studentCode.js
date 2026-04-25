@@ -1,8 +1,4 @@
-const INSTITUTION_CODES = {
-  'ATTAUFEEQ Model Academy': 'AMA',
-  'Madrastul ATTAUFEEQ': 'MAD',
-  'Quran Memorization Academy': 'QMA'
-};
+const STUDENT_ID_PATTERN = /^AMA-\d{4}-\d{4}$/i;
 
 function normalizeInstitution(value = '') {
   const normalized = String(value || '').trim().toLowerCase();
@@ -16,6 +12,10 @@ function safeText(value) {
   return String(value || '').trim();
 }
 
+function isFinalStudentId(value = '') {
+  return STUDENT_ID_PATTERN.test(safeText(value));
+}
+
 function extractYear(value) {
   if (!value) return null;
   const date = new Date(value);
@@ -25,22 +25,27 @@ function extractYear(value) {
 
 function normalizeSuffix(value) {
   const clean = safeText(value).replace(/[^a-z0-9]/gi, '').toUpperCase();
-  if (!clean) return 'XXXXXX';
-  return clean.slice(-6).padStart(6, '0');
+  if (!clean) return '0000';
+  const numeric = clean.replace(/\D/g, '');
+  return (numeric || clean).slice(-4).padStart(4, '0');
 }
 
 export function buildStudentCode(student, overrides = {}) {
   const payload = typeof student === 'object' && student !== null ? student : { id: student };
+  const rawId =
+    payload.id || payload.studentId || payload.student_id || payload.portalId || payload.portal_id;
+  const normalizedId = safeText(rawId).toUpperCase();
+  if (isFinalStudentId(normalizedId)) {
+    return normalizedId;
+  }
+
   const institution = safeText(overrides.institution || payload.institution) || 'ATTAUFEEQ Model Academy';
-  const normalizedInstitution = normalizeInstitution(institution);
-  const prefix = INSTITUTION_CODES[normalizedInstitution] || 'AMA';
+  normalizeInstitution(institution);
   const year =
     extractYear(overrides.createdAt || payload.createdAt || payload.created_at || payload.enrolledAt) ||
     new Date().getFullYear();
-  const id =
-    payload.id || payload.studentId || payload.student_id || payload.portalId || payload.portal_id;
 
-  return `${prefix}-${year}-${normalizeSuffix(id)}`;
+  return `AMA-${year}-${normalizeSuffix(rawId)}`;
 }
 
 export function resolveStudentByIdentifier(students = [], identifier = '') {

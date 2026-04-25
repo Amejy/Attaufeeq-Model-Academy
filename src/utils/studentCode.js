@@ -1,10 +1,6 @@
 import { ADMIN_INSTITUTIONS } from './adminInstitution';
 
-const INSTITUTION_CODES = {
-  'ATTAUFEEQ Model Academy': 'AMA',
-  'Madrastul ATTAUFEEQ': 'MAD',
-  'Quran Memorization Academy': 'QMA'
-};
+const STUDENT_ID_PATTERN = /^AMA-\d{4}-\d{4}$/i;
 
 function safeText(value) {
   return String(value || '').trim();
@@ -27,28 +23,33 @@ function extractYear(value) {
 
 function normalizeSuffix(value) {
   const clean = safeText(value).replace(/[^a-z0-9]/gi, '').toUpperCase();
-  if (!clean) return 'XXXXXX';
-  return clean.slice(-6).padStart(6, '0');
+  if (!clean) return '0000';
+  const numeric = clean.replace(/\D/g, '');
+  return (numeric || clean).slice(-4).padStart(4, '0');
 }
 
 export function buildStudentCode(student, overrides = {}) {
-  if (!student && !overrides) return 'AMA-0000-XXXXXX';
+  if (!student && !overrides) return 'AMA-0000-0000';
 
   const payload = typeof student === 'object' && student !== null ? student : { id: student };
+  const rawId =
+    payload.id || payload.studentId || payload.student_id || payload.portalId || payload.portal_id;
+  const normalizedId = safeText(rawId).toUpperCase();
+  if (STUDENT_ID_PATTERN.test(normalizedId)) {
+    return normalizedId;
+  }
+
   const institution =
     overrides.institution || payload.institution || ADMIN_INSTITUTIONS[0] || 'ATTAUFEEQ Model Academy';
-  const normalizedInstitution = normalizeInstitution(institution);
-  const prefix = INSTITUTION_CODES[normalizedInstitution] || 'AMA';
+  normalizeInstitution(institution);
   const year =
     extractYear(overrides.createdAt || payload.createdAt || payload.created_at || payload.enrolledAt) ||
     new Date().getFullYear();
-  const id =
-    payload.id || payload.studentId || payload.student_id || payload.portalId || payload.portal_id;
 
-  return `${prefix}-${year}-${normalizeSuffix(id)}`;
+  return `AMA-${year}-${normalizeSuffix(rawId)}`;
 }
 
 export function buildStudentCodeLabel(student, overrides = {}) {
   const code = buildStudentCode(student, overrides);
-  return code || 'AMA-0000-XXXXXX';
+  return code || 'AMA-0000-0000';
 }

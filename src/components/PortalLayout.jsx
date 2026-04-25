@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import PageHeader from './PageHeader';
 import SmartImage from './SmartImage';
 import ThemeToggle from './ThemeToggle';
+import Tooltip from './Tooltip';
 
 const roleNav = {
   admin: [
@@ -144,9 +146,11 @@ function PortalLayout({ role, title, subtitle, children, actions = null }) {
           </nav>
 
           <div className="mt-6 grid gap-2 border-t border-white/12 pt-5">
-            <Link to="/" className="rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold text-white/85 hover:bg-white/14">
-              Public Website
-            </Link>
+            <Tooltip text="Return to the public website">
+              <Link to="/" className="interactive-button rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold text-white/85 hover:bg-white/14">
+                Public Website
+              </Link>
+            </Tooltip>
           </div>
         </aside>
 
@@ -168,13 +172,16 @@ function PortalLayout({ role, title, subtitle, children, actions = null }) {
                 )}
               </div>
               <ThemeToggle />
-              <button
-                type="button"
-                onClick={() => setOpen((prev) => !prev)}
-                className="rounded-full border border-slate-300 bg-white/85 px-3 py-2 text-[11px] font-semibold text-slate-700 sm:px-4 sm:text-xs"
-              >
-                Menu
-              </button>
+              <Tooltip text={open ? 'Close navigation menu' : 'Open navigation menu'}>
+                <button
+                  type="button"
+                  onClick={() => setOpen((prev) => !prev)}
+                  className="interactive-button rounded-full border border-slate-300 bg-white/85 px-3 py-2 text-[11px] font-semibold text-slate-700 sm:px-4 sm:text-xs"
+                  aria-label={open ? 'Close navigation menu' : 'Open navigation menu'}
+                >
+                  Menu
+                </button>
+              </Tooltip>
             </div>
           </div>
 
@@ -187,7 +194,7 @@ function PortalLayout({ role, title, subtitle, children, actions = null }) {
                     to={item.to}
                     onClick={() => setOpen(false)}
                     className={({ isActive }) =>
-                      `block rounded-2xl px-3 py-2.5 text-sm font-semibold sm:px-4 sm:py-3 ${
+                      `block rounded-2xl px-3 py-2.5 text-sm font-semibold transition sm:px-4 sm:py-3 ${
                         isActive ? 'bg-primary text-white' : 'bg-white/70 text-slate-700 hover:bg-white'
                       }`
                     }
@@ -197,21 +204,19 @@ function PortalLayout({ role, title, subtitle, children, actions = null }) {
                 ))}
               </nav>
               <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-                <Link to="/" className="rounded-full border border-slate-300 px-4 py-2 text-center text-xs font-semibold text-slate-700">
-                  Website
-                </Link>
+                <Tooltip text="Return to the public website">
+                  <Link to="/" className="interactive-button rounded-full border border-slate-300 px-4 py-2 text-center text-xs font-semibold text-slate-700">
+                    Website
+                  </Link>
+                </Tooltip>
               </div>
             </div>
           )}
 
           <section className="glass-panel relative overflow-hidden p-4 sm:p-7">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(15,81,50,0.08),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(217,179,84,0.12),transparent_30%)]" />
-            <div className="relative mb-5 flex flex-wrap items-start justify-between gap-3 sm:mb-6">
-              <div className="min-w-0">
-                <h1 className="break-words font-heading text-2xl text-primary sm:text-4xl">{title}</h1>
-                {subtitle && <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 sm:leading-7">{subtitle}</p>}
-              </div>
-              {actions && <div className="flex w-full flex-wrap justify-start gap-2 sm:w-auto sm:justify-end">{actions}</div>}
+            <div className="relative">
+              <PageHeader role={role} title={title} subtitle={subtitle} actions={actions} />
             </div>
             <div className="relative">{children}</div>
           </section>
