@@ -60,10 +60,10 @@ function Contact() {
     <main className="section-wrap py-14">
       <h1 className="break-words font-heading text-4xl text-primary">{contact.title}</h1>
       <div className="mt-8 grid gap-8 md:grid-cols-2">
-        <section className="glass-card min-w-0 overflow-hidden p-6 sm:p-7">
+        <section className="glass-card interactive-card min-w-0 overflow-hidden p-6 sm:p-7">
           <h2 className="break-words font-heading text-2xl text-primary">{contact.infoTitle}</h2>
           <div className="mt-5 space-y-4 text-sm leading-7 text-slate-700">
-            <div className="rounded-[24px] border border-emerald-100 bg-emerald-50/80 p-4">
+            <div className="status-banner">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700">Contact Us</p>
               <p className="mt-2 text-sm leading-6 text-emerald-950">
                 Use the quickest channel below. Phone opens your dialer and email opens your mail app immediately.
@@ -107,44 +107,44 @@ function Contact() {
             </div>
           </div>
         </section>
-        <section className="glass-card min-w-0 overflow-hidden p-6 sm:p-7">
+        <section className="glass-card interactive-card min-w-0 overflow-hidden p-6 sm:p-7">
           <h2 className="break-words font-heading text-2xl text-primary">{contact.formTitle}</h2>
           <p className="mt-2 text-sm text-slate-600">{contact.formDescription}</p>
           <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
-            <label className="block min-w-0">
-              <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Your Name</span>
+            <label className="field-shell block min-w-0">
+              <span className="field-label">Your Name</span>
               <input
-                className={`block w-full min-w-0 rounded-2xl border bg-white/80 px-4 py-3 text-sm text-slate-800 ${fullNameError ? 'border-red-300' : 'border-slate-300'}`}
+                className={`form-field block w-full min-w-0 text-sm ${fullNameError ? 'form-field--error' : ''}`.trim()}
                 placeholder="Your Name"
                 value={form.fullName}
                 onChange={(event) => setForm((prev) => ({ ...prev, fullName: event.target.value }))}
                 required
               />
-              {fullNameError && <p className="mt-2 text-sm text-red-600">{fullNameError}</p>}
+              {fullNameError ? <p className="field-error">{fullNameError}</p> : <p className="field-help">Enter the name you want us to reply to.</p>}
             </label>
-            <label className="block min-w-0">
-              <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Email Address</span>
+            <label className="field-shell block min-w-0">
+              <span className="field-label">Email Address</span>
               <input
-                className={`block w-full min-w-0 rounded-2xl border bg-white/80 px-4 py-3 text-sm text-slate-800 ${emailError ? 'border-red-300' : 'border-slate-300'}`}
+                className={`form-field block w-full min-w-0 text-sm ${emailError ? 'form-field--error' : ''}`.trim()}
                 placeholder="Email Address"
                 type="email"
                 value={form.email}
                 onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
                 required
               />
-              {emailError && <p className="mt-2 text-sm text-red-600">{emailError}</p>}
+              {emailError ? <p className="field-error">{emailError}</p> : <p className="field-help">We will use this email for replies and follow-up.</p>}
             </label>
-            <label className="block min-w-0">
-              <span className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Your Message</span>
+            <label className="field-shell block min-w-0">
+              <span className="field-label">Your Message</span>
               <textarea
-                className={`block min-h-[160px] w-full min-w-0 rounded-2xl border bg-white/80 px-4 py-3 text-sm text-slate-800 ${messageError ? 'border-red-300' : 'border-slate-300'}`}
+                className={`form-textarea block w-full min-w-0 text-sm ${messageError ? 'form-textarea--error' : ''}`.trim()}
                 rows="5"
                 placeholder="Tell us how we can help"
                 value={form.message}
                 onChange={(event) => setForm((prev) => ({ ...prev, message: event.target.value }))}
                 required
               />
-              {messageError && <p className="mt-2 text-sm text-red-600">{messageError}</p>}
+              {messageError ? <p className="field-error">{messageError}</p> : <p className="field-help">Give enough detail so the right staff member can help on the first reply.</p>}
             </label>
             {error && (
               <ErrorState
@@ -154,7 +154,7 @@ function Contact() {
                 onRetry={() => setError('')}
               />
             )}
-            {success && <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{success}</p>}
+            {success && <p className="status-banner text-sm">{success}</p>}
             <button
               type="submit"
               disabled={submitting || !canSubmitMessage}
@@ -166,7 +166,7 @@ function Contact() {
         </section>
       </div>
 
-      <section className="mt-10 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="interactive-card mt-10 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="font-heading text-2xl text-primary">Our Location</h2>
           <p className="mt-3 text-sm leading-7 text-slate-600">{SCHOOL_ADDRESS}</p>

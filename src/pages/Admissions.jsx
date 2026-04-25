@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import ErrorState from '../components/ErrorState';
 import { apiFetch, apiJson } from '../utils/publicApi';
 
 const PROGRAM_INSTITUTIONS = {
@@ -346,6 +347,14 @@ function Admissions() {
     : isMadrasa
       ? 'Madrastul ATTAUFEEQ'
       : 'Quran Memorization Academy';
+  const guardianEmailError =
+    form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(form.email || '').trim())
+      ? 'Email format is incorrect.'
+      : '';
+  const studentEmailError =
+    form.studentEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(form.studentEmail || '').trim())
+      ? 'Email format is incorrect.'
+      : '';
 
   return (
     <main className="section-wrap py-14">
@@ -442,69 +451,70 @@ function Admissions() {
           </section>
         ) : (
           <form onSubmit={handleSubmit} className="admissions-form mt-8 grid gap-4 sm:grid-cols-2">
-            <div className="sm:col-span-2 flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+            <div className="status-banner sm:col-span-2 flex flex-wrap items-center justify-between gap-3 text-sm">
               <p className="break-words font-semibold">
                 Selected program: {selectedProgramLabel}
               </p>
               <button
                 type="button"
                 onClick={() => setProgram('')}
-                className="w-full rounded-full border border-emerald-200 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 sm:w-auto"
+                className="interactive-button w-full rounded-full border border-emerald-200 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-700 sm:w-auto"
               >
                 Change Program
               </button>
             </div>
             {!selectedProgramOpen && (
-              <div className="sm:col-span-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <div className="status-banner status-banner--warning sm:col-span-2 text-sm">
                 Admissions are currently closed for the selected program. Please switch programs or check back later.
               </div>
             )}
 
-            <label className="text-sm">
-              <span className="mb-1 block font-medium text-slate-700">Student Full Name</span>
+            <label className="field-shell text-sm">
+              <span className="field-label">Student Full Name</span>
               <input
                 required
                 value={form.fullName}
                 onChange={(e) => setForm((prev) => ({ ...prev, fullName: e.target.value }))}
-                className="w-full rounded-md border border-slate-300 px-3 py-2"
+                className="form-field"
                 placeholder="Enter student full name"
               />
+              <span className="field-help">Use the same name that should appear on school records and portal access.</span>
             </label>
 
             {isModern ? (
-              <label className="text-sm">
-                <span className="mb-1 block font-medium text-slate-700">Date of Birth</span>
+              <label className="field-shell text-sm">
+                <span className="field-label">Date of Birth</span>
                 <input
                   required
                   type="date"
                   value={form.dateOfBirth}
                   onChange={(e) => setForm((prev) => ({ ...prev, dateOfBirth: e.target.value }))}
-                  className="w-full rounded-md border border-slate-300 px-3 py-2"
+                  className="form-field"
                 />
               </label>
             ) : (
-              <label className="text-sm">
-                <span className="mb-1 block font-medium text-slate-700">Student Age</span>
+              <label className="field-shell text-sm">
+                <span className="field-label">Student Age</span>
                 <input
                   required
                   type="number"
                   min="2"
                   value={form.age}
                   onChange={(e) => setForm((prev) => ({ ...prev, age: e.target.value }))}
-                  className="w-full rounded-md border border-slate-300 px-3 py-2"
+                  className="form-field"
                   placeholder="Enter age"
                 />
               </label>
             )}
 
             {isModern && (
-              <label className="text-sm">
-                <span className="mb-1 block font-medium text-slate-700">Gender</span>
+              <label className="field-shell text-sm">
+                <span className="field-label">Gender</span>
                 <select
                   required
                   value={form.gender}
                   onChange={(e) => setForm((prev) => ({ ...prev, gender: e.target.value }))}
-                  className="w-full rounded-md border border-slate-300 px-3 py-2"
+                  className="form-select"
                 >
                   <option value="">Select gender</option>
                   <option value="female">Female</option>
@@ -513,82 +523,88 @@ function Admissions() {
               </label>
             )}
 
-            <label className="text-sm">
-              <span className="mb-1 block font-medium text-slate-700">{isModern ? 'Parent Name' : 'Guardian Name'}</span>
+            <label className="field-shell text-sm">
+              <span className="field-label">{isModern ? 'Parent Name' : 'Guardian Name'}</span>
               <input
                 required
                 value={form.guardianName}
                 onChange={(e) => setForm((prev) => ({ ...prev, guardianName: e.target.value }))}
-                className="w-full rounded-md border border-slate-300 px-3 py-2"
+                className="form-field"
                 placeholder="Enter guardian name"
               />
             </label>
 
-            <label className="text-sm">
-              <span className="mb-1 block font-medium text-slate-700">{isModern ? 'Parent Phone' : 'Guardian Phone'}</span>
+            <label className="field-shell text-sm">
+              <span className="field-label">{isModern ? 'Parent Phone' : 'Guardian Phone'}</span>
               <input
                 required
                 value={form.phone}
                 onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))}
-                className="w-full rounded-md border border-slate-300 px-3 py-2"
+                className="form-field"
                 placeholder="e.g. +234..."
               />
             </label>
 
-            <label className="text-sm">
-              <span className="mb-1 block font-medium text-slate-700">Guardian Email</span>
+            <label className="field-shell text-sm">
+              <span className="field-label">Guardian Email</span>
               <input
                 type="email"
                 required={guardianEmailRequired}
                 value={form.email}
                 onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
-                className="w-full rounded-md border border-slate-300 px-3 py-2"
+                className={`form-field ${guardianEmailError ? 'form-field--error' : ''}`.trim()}
                 placeholder="parent@email.com"
               />
-              <span className="mt-1 block text-xs text-slate-500">
-                {guardianEmailRequired
-                  ? 'Required so portal access, approval updates, and password delivery can be sent automatically.'
-                  : 'Used for portal access updates and password delivery when email delivery is enabled.'}
-              </span>
+              {guardianEmailError ? (
+                <span className="field-error">{guardianEmailError}</span>
+              ) : (
+                <span className="field-help">
+                  {guardianEmailRequired
+                    ? 'Required so portal access, approval updates, and password delivery can be sent automatically.'
+                    : 'Used for portal access updates and password delivery when email delivery is enabled.'}
+                </span>
+              )}
             </label>
 
-            <label className="text-sm">
-              <span className="mb-1 block font-medium text-slate-700">Student Email</span>
+            <label className="field-shell text-sm">
+              <span className="field-label">Student Email</span>
               <input
                 type="email"
                 required
                 value={form.studentEmail}
                 onChange={(e) => setForm((prev) => ({ ...prev, studentEmail: e.target.value }))}
-                className="w-full rounded-md border border-slate-300 px-3 py-2"
+                className={`form-field ${studentEmailError ? 'form-field--error' : ''}`.trim()}
                 placeholder="student@email.com"
               />
-              <span className="mt-1 block text-xs text-slate-500">
-                Used for student portal access and delivery of the one-time password.
-              </span>
+              {studentEmailError ? (
+                <span className="field-error">{studentEmailError}</span>
+              ) : (
+                <span className="field-help">Used for student portal access and delivery of the one-time password.</span>
+              )}
             </label>
 
             {isModern && (
-              <label className="text-sm">
-                <span className="mb-1 block font-medium text-slate-700">Previous School</span>
+              <label className="field-shell text-sm">
+                <span className="field-label">Previous School</span>
                 <input
                   required
                   value={form.previousSchool}
                   onChange={(e) => setForm((prev) => ({ ...prev, previousSchool: e.target.value }))}
-                  className="w-full rounded-md border border-slate-300 px-3 py-2"
+                  className="form-field"
                   placeholder="Enter previous school"
                 />
               </label>
             )}
 
             {usesClassSelection && (
-              <label className="text-sm">
-                <span className="mb-1 block font-medium text-slate-700">Class Applying For</span>
+              <label className="field-shell text-sm">
+                <span className="field-label">Class Applying For</span>
                 <select
                   required
                   disabled={loadingOptions || !programClasses.length}
                   value={form.classId}
                   onChange={(e) => setForm((prev) => ({ ...prev, classId: e.target.value }))}
-                  className="w-full rounded-md border border-slate-300 px-3 py-2"
+                  className="form-select"
                 >
                   {!programClasses.length && (
                     <option value="">
@@ -602,7 +618,7 @@ function Admissions() {
                   ))}
                 </select>
                 {!loadingOptions && !programClasses.length && (
-                  <span className="mt-1 block text-xs text-amber-700">
+                  <span className="field-error">
                     No class is available for this program yet. Please contact the school before submitting this application.
                   </span>
                 )}
@@ -611,61 +627,61 @@ function Admissions() {
 
             {(isMadrasa || isMemorization) && (
               <>
-                <label className="text-sm">
-                  <span className="mb-1 block font-medium text-slate-700">Quran Reading Level</span>
+                <label className="field-shell text-sm">
+                  <span className="field-label">Quran Reading Level</span>
                   <input
                     required
                     value={form.quranLevel}
                     onChange={(e) => setForm((prev) => ({ ...prev, quranLevel: e.target.value }))}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2"
+                    className="form-field"
                     placeholder="Beginner / Intermediate / Advanced"
                   />
                 </label>
 
-                <label className="text-sm">
-                  <span className="mb-1 block font-medium text-slate-700">Memorization Level</span>
+                <label className="field-shell text-sm">
+                  <span className="field-label">Memorization Level</span>
                   <input
                     required
                     value={form.memorizationLevel}
                     onChange={(e) => setForm((prev) => ({ ...prev, memorizationLevel: e.target.value }))}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2"
+                    className="form-field"
                     placeholder="e.g. Juz 1-3"
                   />
                 </label>
 
-                <label className="text-sm sm:col-span-2">
-                  <span className="mb-1 block font-medium text-slate-700">
+                <label className="field-shell text-sm sm:col-span-2">
+                  <span className="field-label">
                     {isMadrasa ? 'Previous Madrasa (Optional)' : 'Previous Memorization School (Optional)'}
                   </span>
                   <input
                     value={form.previousMadrasa}
                     onChange={(e) => setForm((prev) => ({ ...prev, previousMadrasa: e.target.value }))}
-                    className="w-full rounded-md border border-slate-300 px-3 py-2"
+                    className="form-field"
                     placeholder={isMadrasa ? 'Enter previous madrasa' : 'Enter previous memorization school'}
                   />
                 </label>
               </>
             )}
 
-            <label className="text-sm sm:col-span-2">
-              <span className="mb-1 block font-medium text-slate-700">Address</span>
+            <label className="field-shell text-sm sm:col-span-2">
+              <span className="field-label">Address</span>
               <textarea
                 required
                 rows={3}
                 value={form.address}
                 onChange={(e) => setForm((prev) => ({ ...prev, address: e.target.value }))}
-                className="w-full rounded-md border border-slate-300 px-3 py-2"
+                className="form-textarea"
                 placeholder="Enter home address"
               />
             </label>
 
-            <label className="text-sm sm:col-span-2">
-              <span className="mb-1 block font-medium text-slate-700">Admission Documents (Optional)</span>
+            <label className="field-shell text-sm sm:col-span-2">
+              <span className="field-label">Admission Documents (Optional)</span>
               <div className="flex flex-wrap items-center gap-2">
                 <button
                   type="button"
                   onClick={openFilePicker}
-                  className="rounded-full border border-slate-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-700 hover:border-slate-400"
+                  className="interactive-button rounded-full border border-slate-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-700 hover:border-slate-400"
                 >
                   {documentFiles.length ? 'Replace Files' : 'Choose Files'}
                 </button>
@@ -673,7 +689,7 @@ function Admissions() {
                   <button
                     type="button"
                     onClick={() => setDocumentFiles([])}
-                    className="rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 hover:border-slate-300"
+                    className="interactive-button rounded-full border border-slate-200 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 hover:border-slate-300"
                   >
                     Clear
                   </button>
@@ -693,7 +709,7 @@ function Admissions() {
                 onChange={handleDocumentSelection}
                 className="sr-only"
               />
-              {documentError && <p className="mt-2 text-xs text-red-600">{documentError}</p>}
+              {documentError && <p className="field-error">{documentError}</p>}
               {!!documentFiles.length && (
                 <div className="mt-3 space-y-1 rounded-md bg-slate-50 p-3 text-xs text-slate-600">
                   {documentFiles.map((file) => (
@@ -704,7 +720,7 @@ function Admissions() {
             </label>
 
             {usesClassSelection && (
-              <div className="sm:col-span-2 rounded-md bg-slate-50 p-3 text-sm text-slate-700">
+              <div className="sm:col-span-2 rounded-[24px] border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
                 <p>
                   Selected Institution: <span className="font-semibold">{selectedClass?.institution || '-'}</span>
                 </p>
@@ -720,8 +736,8 @@ function Admissions() {
             <div className="sm:col-span-2">
               <button
                 type="submit"
-                disabled={loading || !canSubmitApplication}
-                className="rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-70"
+                disabled={loading || !canSubmitApplication || Boolean(guardianEmailError) || Boolean(studentEmailError)}
+                className="interactive-button rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {loading ? 'Submitting...' : 'Submit Application'}
               </button>
@@ -731,8 +747,17 @@ function Admissions() {
       </>
       )}
 
-      {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
-      {success && <p className="mt-4 text-sm text-emerald-700">{success}</p>}
+      {error && (
+        <div className="mt-4">
+          <ErrorState
+            compact
+            title="Application not submitted"
+            message={error}
+            onRetry={() => setError('')}
+          />
+        </div>
+      )}
+      {success && <p className="status-banner mt-4 text-sm">{success}</p>}
     </main>
   );
 }

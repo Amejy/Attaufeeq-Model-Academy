@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import ErrorState from '../components/ErrorState';
 import { useNavigate } from 'react-router-dom';
 import PasswordField from '../components/PasswordField';
 import PortalLayout from '../components/PortalLayout';
@@ -84,8 +85,8 @@ function ChangePassword() {
               showPassword={showPasswords.currentPassword}
               onToggleVisibility={() => setShowPasswords((prev) => ({ ...prev, currentPassword: !prev.currentPassword }))}
               autoComplete="current-password"
-              className="w-full rounded-2xl border border-slate-300 px-4 py-3 pr-20"
               error={touched.currentPassword && !currentPasswordValue ? 'Temporary password is required.' : ''}
+              helperText="Use the temporary password exactly as it was issued."
             />
 
             <PasswordField
@@ -98,7 +99,6 @@ function ChangePassword() {
               showPassword={showPasswords.newPassword}
               onToggleVisibility={() => setShowPasswords((prev) => ({ ...prev, newPassword: !prev.newPassword }))}
               autoComplete="new-password"
-              className="w-full rounded-2xl border border-slate-300 px-4 py-3 pr-20"
               error={
                 touched.newPassword && newPasswordTooShort
                   ? 'Password must be at least 10 characters.'
@@ -118,17 +118,23 @@ function ChangePassword() {
               showPassword={showPasswords.confirmPassword}
               onToggleVisibility={() => setShowPasswords((prev) => ({ ...prev, confirmPassword: !prev.confirmPassword }))}
               autoComplete="new-password"
-              className="w-full rounded-2xl border border-slate-300 px-4 py-3 pr-20"
               error={touched.confirmPassword && confirmMismatch ? 'Passwords do not match.' : ''}
             />
 
-            {error && <p className="text-sm text-red-600">{error}</p>}
-            {success && <p className="text-sm text-emerald-700">{success}</p>}
+            {error && (
+              <ErrorState
+                compact
+                title="Password not changed"
+                message={error}
+                onRetry={() => setError('')}
+              />
+            )}
+            {success && <p className="status-banner text-sm">{success}</p>}
 
             <button
               type="submit"
               disabled={loading || !canSubmit}
-              className="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+              className="interactive-button w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
             >
               {loading ? 'Saving new password...' : 'Save New Password'}
             </button>

@@ -1,5 +1,6 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import ErrorState from '../../components/ErrorState';
 import PortalLayout from '../../components/PortalLayout';
 import ProvisioningPanel from '../../components/ProvisioningPanel';
 import { ADMIN_INSTITUTIONS, canonicalInstitution, institutionAccent } from '../../utils/adminInstitution';
@@ -824,77 +825,92 @@ function ManageAdmissions() {
           : 'Review documents, approve, verify, or confirm payment. As soon as every requirement is satisfied, portal access is issued automatically and the student is fully admitted.'
       }
       actions={
-        <div className="flex flex-wrap gap-2">
-          <select value={filter} onChange={(e) => setFilter(e.target.value)} className="rounded-2xl border border-slate-300 px-3 py-2 text-sm">
-            <option value="all">All Statuses</option>
-            <option value="pending">Pending</option>
-            <option value="approved">Approved</option>
-            <option value="rejected">Rejected</option>
-          </select>
-          <select
-            value={institutionFilter}
-            onChange={(e) => setInstitutionFilter(e.target.value)}
-            className="rounded-2xl border border-slate-300 px-3 py-2 text-sm"
-          >
-            <option value="all">All Institutions</option>
-            {ADMIN_INSTITUTIONS.map((institution) => (
-              <option key={institution} value={institution}>
-                {institution}
-              </option>
-            ))}
-          </select>
-          <select
-            value={classFilter}
-            onChange={(e) => setClassFilter(e.target.value)}
-            className="rounded-2xl border border-slate-300 px-3 py-2 text-sm"
-          >
-            <option value="">All Classes</option>
-            {classFilterOptions.map((item) => (
-              <option key={item.id} value={item.id}>
-                {item.label}
-              </option>
-            ))}
-          </select>
-          <select
-            value={paymentFilter}
-            onChange={(e) => setPaymentFilter(e.target.value)}
-            className="rounded-2xl border border-slate-300 px-3 py-2 text-sm"
-          >
-            <option value="all">All Payments</option>
-            <option value="confirmed">Confirmed</option>
-            <option value="pending">Pending</option>
-          </select>
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="rounded-2xl border border-slate-300 px-3 py-2 text-sm"
-          >
-            <option value="submitted-desc">Latest submitted</option>
-            <option value="submitted-asc">Oldest submitted</option>
-            <option value="name-asc">Name A-Z</option>
-            <option value="name-desc">Name Z-A</option>
-          </select>
+        <div className="admin-toolbar">
+          <label className="field-shell min-w-[11rem]">
+            <span className="field-label">Status</span>
+            <select value={filter} onChange={(e) => setFilter(e.target.value)} className="form-select">
+              <option value="all">All Statuses</option>
+              <option value="pending">Pending</option>
+              <option value="approved">Approved</option>
+              <option value="rejected">Rejected</option>
+            </select>
+          </label>
+          <label className="field-shell min-w-[14rem]">
+            <span className="field-label">Institution</span>
+            <select
+              value={institutionFilter}
+              onChange={(e) => setInstitutionFilter(e.target.value)}
+              className="form-select"
+            >
+              <option value="all">All Institutions</option>
+              {ADMIN_INSTITUTIONS.map((institution) => (
+                <option key={institution} value={institution}>
+                  {institution}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field-shell min-w-[12rem]">
+            <span className="field-label">Class</span>
+            <select
+              value={classFilter}
+              onChange={(e) => setClassFilter(e.target.value)}
+              className="form-select"
+            >
+              <option value="">All Classes</option>
+              {classFilterOptions.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field-shell min-w-[11rem]">
+            <span className="field-label">Payment</span>
+            <select
+              value={paymentFilter}
+              onChange={(e) => setPaymentFilter(e.target.value)}
+              className="form-select"
+            >
+              <option value="all">All Payments</option>
+              <option value="confirmed">Confirmed</option>
+              <option value="pending">Pending</option>
+            </select>
+          </label>
+          <label className="field-shell min-w-[12rem]">
+            <span className="field-label">Sort</span>
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="form-select"
+            >
+              <option value="submitted-desc">Latest submitted</option>
+              <option value="submitted-asc">Oldest submitted</option>
+              <option value="name-asc">Name A-Z</option>
+              <option value="name-desc">Name Z-A</option>
+            </select>
+          </label>
         </div>
       }
     >
-      {loading && <p className="mt-4 text-sm text-slate-600">Loading admissions...</p>}
-      {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
-      {success && <p className="mt-4 text-sm text-emerald-700">{success}</p>}
+      {loading && <div className="status-banner mt-4">Loading admissions...</div>}
+      {error && <ErrorState compact title="Unable to manage admissions" message={error} className="mt-4" onRetry={loadAdmissions} />}
+      {success && <div className="status-banner mt-4">{success}</div>}
       <ProvisioningPanel
         title="Full admission access issued"
         description="After confirmation, the student and parent can sign in immediately with these temporary credentials and will be forced to set new passwords."
         records={provisionedCredentials}
       />
       {!isAdmissionsDesk && periodValidationError && (
-        <p className="mt-4 text-sm text-amber-700">{periodValidationError}</p>
+        <p className="status-banner status-banner--warning mt-4">{periodValidationError}</p>
       )}
 
       {!isAdmissionsDesk && (
-        <div className="mt-4 rounded-[28px] border border-slate-200 bg-slate-50 p-5">
+        <div className="admin-surface mt-4">
           <h3 className="text-sm font-semibold text-slate-800">Admission Period</h3>
           <p className="mt-1 text-xs text-slate-600">Applicants can upload documents only within the configured window when enabled.</p>
           <form onSubmit={saveAdmissionPeriod} className="mt-4 grid gap-4 lg:grid-cols-2">
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 lg:col-span-2">
+            <div className="dashboard-tile lg:col-span-2">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <h3 className="text-sm font-semibold text-slate-800">Master Admissions Switch</h3>
@@ -915,7 +931,7 @@ function ManageAdmissions() {
                 </label>
               </div>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="dashboard-tile">
               <h3 className="text-sm font-semibold text-slate-800">ATTAUFEEQ Model Academy (Modern)</h3>
               <div className="mt-3 flex flex-wrap items-center gap-3">
                 <label className="flex items-center gap-2 text-sm">
@@ -948,7 +964,7 @@ function ManageAdmissions() {
                       }
                     }))
                   }
-                  className="rounded-2xl border border-slate-300 px-3 py-2 text-sm"
+                  className="form-field"
                 />
                 <input
                   type="datetime-local"
@@ -963,11 +979,11 @@ function ManageAdmissions() {
                       }
                     }))
                   }
-                  className="rounded-2xl border border-slate-300 px-3 py-2 text-sm"
+                  className="form-field"
                 />
               </div>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="dashboard-tile">
               <h3 className="text-sm font-semibold text-slate-800">Madrastul ATTAUFEEQ (Madrasa)</h3>
               <div className="mt-3 flex flex-wrap items-center gap-3">
                 <label className="flex items-center gap-2 text-sm">
@@ -1000,7 +1016,7 @@ function ManageAdmissions() {
                       }
                     }))
                   }
-                  className="rounded-2xl border border-slate-300 px-3 py-2 text-sm"
+                  className="form-field"
                 />
                 <input
                   type="datetime-local"
@@ -1015,11 +1031,11 @@ function ManageAdmissions() {
                       }
                     }))
                   }
-                  className="rounded-2xl border border-slate-300 px-3 py-2 text-sm"
+                  className="form-field"
                 />
               </div>
             </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+            <div className="dashboard-tile">
               <h3 className="text-sm font-semibold text-slate-800">Quran Memorization</h3>
               <div className="mt-3 flex flex-wrap items-center gap-3">
                 <label className="flex items-center gap-2 text-sm">
@@ -1052,7 +1068,7 @@ function ManageAdmissions() {
                       }
                     }))
                   }
-                  className="rounded-2xl border border-slate-300 px-3 py-2 text-sm"
+                  className="form-field"
                 />
                 <input
                   type="datetime-local"
@@ -1067,7 +1083,7 @@ function ManageAdmissions() {
                       }
                     }))
                   }
-                  className="rounded-2xl border border-slate-300 px-3 py-2 text-sm"
+                  className="form-field"
                 />
               </div>
             </div>
@@ -1075,7 +1091,7 @@ function ManageAdmissions() {
               <button
                 type="submit"
                 disabled={!canSavePeriod}
-                className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                className="interactive-button"
               >
                 {periodSaving ? 'Saving...' : 'Save Period'}
               </button>
@@ -1084,19 +1100,23 @@ function ManageAdmissions() {
         </div>
       )}
 
-      <div className="mt-4 rounded-[28px] border border-slate-200 bg-white p-5">
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search applicant, guardian, or phone"
-          className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-        />
+      <div className="admin-surface mt-4">
+        <label className="field-shell">
+          <span className="field-label">Search</span>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search applicant, guardian, or phone"
+            className="form-field w-full"
+          />
+          <span className="field-help">Search across applicant, guardian, phone, and email details.</span>
+        </label>
       </div>
 
       <div className="mt-8 space-y-6">
         {groupedAdmissions.map((group) => (
-          <section key={isAdmissionsDesk ? `${group.institution}::${group.classLabel}` : group.institution} className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-3">
+          <section key={isAdmissionsDesk ? `${group.institution}::${group.classLabel}` : group.institution} className="admin-surface">
+            <div className="admin-toolbar">
               <div>
                 <h2 className="font-heading text-2xl text-primary">
                   {isAdmissionsDesk ? (group.classLabel || 'Unassigned class') : group.institution}
@@ -1111,7 +1131,7 @@ function ManageAdmissions() {
               </span>
             </div>
 
-            <div className="mt-5 overflow-x-auto rounded-3xl border border-slate-200">
+            <div className="data-table-shell mt-5">
               <table className="min-w-full text-sm">
                 <thead className="bg-slate-50 text-left">
                   <tr>
@@ -1176,16 +1196,16 @@ function ManageAdmissions() {
                           <td className="px-4 py-3">{admission.workflowHistory?.length || 0} events</td>
                           <td className="px-4 py-3">
                             <div className="flex flex-wrap gap-2">
-                              <button type="button" onClick={() => toggleExpanded(admission.id)} className="rounded-xl border border-slate-300 px-3 py-2 text-xs">
+                              <button type="button" onClick={() => toggleExpanded(admission.id)} className="interactive-button">
                                 {open ? 'Hide' : 'Open'}
                               </button>
-                              <button type="button" disabled={!canApprove || rowBusy} onClick={() => updateStatus(admission.id, 'approved')} className="rounded-xl border border-emerald-300 px-3 py-2 text-xs text-emerald-700 disabled:cursor-not-allowed disabled:opacity-60">
+                              <button type="button" disabled={!canApprove || rowBusy} onClick={() => updateStatus(admission.id, 'approved')} className="interactive-button border-emerald-300 text-emerald-700">
                                 Approve
                               </button>
-                              <button type="button" disabled={!canReject || rowBusy} onClick={() => updateStatus(admission.id, 'rejected')} className="rounded-xl border border-red-300 px-3 py-2 text-xs text-red-700 disabled:cursor-not-allowed disabled:opacity-60">
+                              <button type="button" disabled={!canReject || rowBusy} onClick={() => updateStatus(admission.id, 'rejected')} className="interactive-button border-red-300 text-red-700">
                                 Reject
                               </button>
-                              <button type="button" disabled={!canVerify || rowBusy} onClick={() => updateVerification(admission.id, 'verified')} className="rounded-xl border border-slate-300 px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-60">
+                              <button type="button" disabled={!canVerify || rowBusy} onClick={() => updateVerification(admission.id, 'verified')} className="interactive-button">
                                 Verify
                               </button>
                             </div>
@@ -1195,7 +1215,7 @@ function ManageAdmissions() {
                           <tr className="border-t border-slate-100 bg-slate-50/70">
                             <td className="px-4 py-4" colSpan={9}>
                               <div className="grid gap-4 xl:grid-cols-4">
-                                <article className="rounded-2xl border border-slate-200 bg-white p-4">
+                                <article className="dashboard-tile">
                                   <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Uploaded documents</h3>
                                   <div className="mt-3 space-y-2">
                                     {admission.documents?.map((document, index) => (
@@ -1205,7 +1225,7 @@ function ManageAdmissions() {
                                             type="button"
                                             onClick={() => openAdmissionDocument(document, admission.id, index)}
                                             disabled={openingDocumentKey === `${admission.id}:${index}`}
-                                            className="font-semibold text-primary underline-offset-2 hover:underline disabled:cursor-not-allowed disabled:opacity-60"
+                                            className="interactive-link font-semibold disabled:cursor-not-allowed disabled:opacity-60"
                                           >
                                             {openingDocumentKey === `${admission.id}:${index}`
                                               ? 'Opening...'
@@ -1220,7 +1240,7 @@ function ManageAdmissions() {
                                   </div>
                                 </article>
 
-                                <article className="rounded-2xl border border-slate-200 bg-white p-4">
+                                <article className="dashboard-tile">
                                   <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Workflow history</h3>
                                   <div className="mt-3 space-y-3">
                                     {admission.workflowHistory?.map((event) => (
@@ -1234,7 +1254,7 @@ function ManageAdmissions() {
                                   </div>
                                 </article>
 
-                                <article className="rounded-2xl border border-slate-200 bg-white p-4">
+                                <article className="dashboard-tile">
                                   <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Applicant contact</h3>
                                   <div className="mt-3 space-y-3 text-sm text-slate-700">
                                     <div>
@@ -1257,7 +1277,7 @@ function ManageAdmissions() {
                                       {normalizePhoneLink(admission.phone) && (
                                         <a
                                           href={`tel:${normalizePhoneLink(admission.phone)}`}
-                                          className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700"
+                                          className="interactive-button border-emerald-200 text-emerald-700"
                                         >
                                           Call guardian
                                         </a>
@@ -1265,7 +1285,7 @@ function ManageAdmissions() {
                                       {buildMailtoLink(admission.email, admission.fullName) && (
                                         <a
                                           href={buildMailtoLink(admission.email, admission.fullName)}
-                                          className="rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700"
+                                          className="interactive-button"
                                         >
                                           Email guardian
                                         </a>
@@ -1274,7 +1294,7 @@ function ManageAdmissions() {
                                   </div>
                                 </article>
 
-                                <article className="rounded-2xl border border-slate-200 bg-white p-4">
+                                <article className="dashboard-tile">
                                   <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Portal delivery</h3>
                                   <div className="mt-3 space-y-3 text-sm text-slate-700">
                                     <div>
@@ -1304,7 +1324,7 @@ function ManageAdmissions() {
                                           type="button"
                                           disabled={!canConfirmDelivery || rowBusy}
                                           onClick={() => updateDeliveryStatus(admission.id, 'confirmed')}
-                                          className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                          className="interactive-button border-emerald-200 text-emerald-700"
                                         >
                                           Mark Delivery Confirmed
                                         </button>
@@ -1315,22 +1335,22 @@ function ManageAdmissions() {
                               </div>
 
                               <div className="mt-4 flex flex-wrap gap-2">
-                                <button type="button" disabled={!canRejectDocuments || rowBusy} onClick={() => updateVerification(admission.id, 'rejected')} className="rounded-xl border border-red-300 px-3 py-2 text-xs text-red-700 disabled:cursor-not-allowed disabled:opacity-60">
+                                <button type="button" disabled={!canRejectDocuments || rowBusy} onClick={() => updateVerification(admission.id, 'rejected')} className="interactive-button border-red-300 text-red-700">
                                   Reject Documents
                                 </button>
                                 {paymentStatus === 'confirmed' ? (
-                                  <button type="button" disabled={!canResetPayment || rowBusy} onClick={() => updatePaymentStatus(admission.id, 'pending')} className="rounded-xl border border-amber-300 px-3 py-2 text-xs text-amber-700 disabled:cursor-not-allowed disabled:opacity-60">
+                                  <button type="button" disabled={!canResetPayment || rowBusy} onClick={() => updatePaymentStatus(admission.id, 'pending')} className="interactive-button border-amber-300 text-amber-700">
                                     Reset Payment
                                   </button>
                                 ) : (
-                                  <button type="button" disabled={!canConfirmPayment || rowBusy} onClick={() => updatePaymentStatus(admission.id, 'confirmed')} className="rounded-xl border border-emerald-300 px-3 py-2 text-xs text-emerald-700 disabled:cursor-not-allowed disabled:opacity-60">
+                                  <button type="button" disabled={!canConfirmPayment || rowBusy} onClick={() => updatePaymentStatus(admission.id, 'confirmed')} className="interactive-button border-emerald-300 text-emerald-700">
                                     Confirm Payment
                                   </button>
                                 )}
-                                <button type="button" disabled={!canScheduleInterview || rowBusy} onClick={() => scheduleInterview(admission.id)} className="rounded-xl border border-slate-300 px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-60">
+                                <button type="button" disabled={!canScheduleInterview || rowBusy} onClick={() => scheduleInterview(admission.id)} className="interactive-button">
                                   Schedule Interview
                                 </button>
-                                <button type="button" disabled={!canGenerateOffer || rowBusy} onClick={() => generateOffer(admission.id)} className="rounded-xl border border-slate-300 px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-60">
+                                <button type="button" disabled={!canGenerateOffer || rowBusy} onClick={() => generateOffer(admission.id)} className="interactive-button">
                                   Generate Offer
                                 </button>
                                 {!isAdmissionsDesk && (
@@ -1338,7 +1358,7 @@ function ManageAdmissions() {
                                     type="button"
                                     onClick={() => promoteAdmission(admission)}
                                     disabled={!canConfirm || rowBusy}
-                                    className="rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                                    className="interactive-button"
                                   >
                                     Confirm Full Admission
                                   </button>
@@ -1348,7 +1368,7 @@ function ManageAdmissions() {
                                     type="button"
                                     onClick={() => deleteAdmission(admission.id)}
                                     disabled={rowBusy}
-                                    className="rounded-xl border border-red-300 px-3 py-2 text-xs text-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                    className="interactive-button border-red-300 text-red-700"
                                   >
                                     Delete Admission
                                   </button>

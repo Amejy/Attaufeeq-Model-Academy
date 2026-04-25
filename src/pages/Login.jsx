@@ -5,6 +5,7 @@ import { useSiteContent } from '../context/SiteContentContext';
 import { apiJson } from '../utils/publicApi';
 import PasswordField from '../components/PasswordField';
 import SmartImage from '../components/SmartImage';
+import ErrorState from '../components/ErrorState';
 
 const ROLE_LABELS = { student: 'Student', teacher: 'Teacher', parent: 'Parent', admin: 'Admin', admissions: 'Admissions' };
 const LOGIN_VARIANTS = {
@@ -51,6 +52,10 @@ function Login({ variant = 'family', defaultRole = '' }) {
   const [error, setError] = useState('');
   const [sessionMessage, setSessionMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const emailError =
+    form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(form.email || '').trim())
+      ? 'Email format is incorrect.'
+      : '';
   const canSubmit = Boolean(String(form.email || '').trim() && String(form.password || '').trim());
 
   useEffect(() => {
@@ -180,9 +185,9 @@ function Login({ variant = 'family', defaultRole = '' }) {
           </div>
         </section>
 
-        <section className="glass-card min-w-0 p-5 sm:p-8">
+        <section className="glass-card interactive-card min-w-0 p-5 sm:p-8">
           {sessionMessage && (
-            <div className="mb-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            <div className="status-banner status-banner--warning mb-4 text-sm">
               {sessionMessage}
             </div>
           )}
@@ -195,47 +200,55 @@ function Login({ variant = 'family', defaultRole = '' }) {
           </p>
 
           <form className="mt-6 space-y-4" onSubmit={onSubmit}>
-          <label className="block text-sm">
-            <span className="mb-1 block font-medium text-slate-700">Email</span>
-            <input
-              name="email"
-              type="email"
+            <label className="field-shell block text-sm">
+              <span className="field-label">Email</span>
+              <input
+                name="email"
+                type="email"
+                required
+                value={form.email}
+                onChange={onChange}
+                className={`form-field ${emailError ? 'form-field--error' : ''}`.trim()}
+                placeholder="you@example.com"
+              />
+              {emailError ? <p className="field-error">{emailError}</p> : <p className="field-help">Use the exact email issued for this portal.</p>}
+            </label>
+            <PasswordField
+              label="Password"
+              name="password"
               required
-              value={form.email}
+              value={form.password}
               onChange={onChange}
-              className="w-full rounded-md border border-slate-300 px-3 py-2"
-              placeholder="you@example.com"
+              placeholder="Enter password"
+              showPassword={showPassword}
+              onToggleVisibility={() => setShowPassword((prev) => !prev)}
+              autoComplete="current-password"
+              helperText="Passwords are case-sensitive."
             />
-          </label>
-          <PasswordField
-            label="Password"
-            name="password"
-            required
-            value={form.password}
-            onChange={onChange}
-            placeholder="Enter password"
-            showPassword={showPassword}
-            onToggleVisibility={() => setShowPassword((prev) => !prev)}
-            autoComplete="current-password"
-            className="w-full rounded-md border border-slate-300 px-3 py-2 pr-20"
-          />
 
-          {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && (
+              <ErrorState
+                compact
+                title="Sign-in failed"
+                message={error}
+                onRetry={() => setError('')}
+              />
+            )}
 
-          <button
-            type="submit"
-            disabled={loading || !canSubmit}
-            className="w-full rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-70 sm:py-3"
-          >
-            {loading ? 'Signing in...' : 'Sign In'}
-          </button>
+            <button
+              type="submit"
+              disabled={loading || !canSubmit || Boolean(emailError)}
+              className="interactive-button w-full rounded-full bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-70 sm:py-3"
+            >
+              {loading ? 'Signing in...' : 'Sign In'}
+            </button>
           </form>
 
           <p className="mt-6 text-center text-sm text-slate-600">
             Forgot your password?{' '}
             <Link
               to={`/forgot-password?variant=${encodeURIComponent(variant)}&role=${encodeURIComponent(roleHint)}`}
-              className="font-semibold text-primary hover:underline"
+              className="interactive-link font-semibold text-primary hover:underline"
             >
               Reset it here
             </Link>
@@ -254,7 +267,7 @@ function Login({ variant = 'family', defaultRole = '' }) {
             {variant === 'family' ? (
               <>
                 Internal school operations account?{' '}
-                <Link to="/staff-access" className="font-semibold text-primary hover:underline">
+                <Link to="/staff-access" className="interactive-link font-semibold text-primary hover:underline">
                   Open staff access
                 </Link>
                 <p className="mt-2">
@@ -264,7 +277,7 @@ function Login({ variant = 'family', defaultRole = '' }) {
             ) : (
               <>
                 Student or parent account?{' '}
-                <Link to="/login" className="font-semibold text-primary hover:underline">
+                <Link to="/login" className="interactive-link font-semibold text-primary hover:underline">
                   Open family login
                 </Link>
               </>

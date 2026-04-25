@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import ErrorState from '../../components/ErrorState';
 import PortalLayout from '../../components/PortalLayout';
 import { ADMIN_INSTITUTIONS, institutionAccent } from '../../utils/adminInstitution';
 
 function Metric({ label, value }) {
   return (
-    <article className="rounded-xl border border-slate-200 bg-white p-4">
+    <article className="dashboard-tile">
       <p className="text-xs uppercase tracking-wide text-slate-500">{label}</p>
       <p className="mt-2 text-2xl font-bold text-primary">{value}</p>
     </article>
@@ -113,69 +114,78 @@ function AdminReports() {
       title="Admin Reports"
       subtitle="Performance is now broken down by class and institution, with the top 3 students surfaced for each class."
       actions={
-        <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-          <select
-            value={sessionId}
-            onChange={(e) => {
-              const next = e.target.value;
-              setSessionId(next);
-              loadData({ sessionId: next });
-            }}
-            className="rounded-2xl border border-slate-300 px-3 py-2 text-sm"
-          >
-            {!sessions.length && <option value="">No sessions available</option>}
-            {sessions.map((session) => (
-              <option key={session.id} value={session.id}>
-                {session.sessionName} {session.isActive ? '(Active)' : ''}
-              </option>
-            ))}
-          </select>
-          <select
-            value={term}
-            onChange={(e) => {
-              const next = e.target.value;
-              setTerm(next);
-              loadData({ term: next });
-            }}
-            className="rounded-2xl border border-slate-300 px-3 py-2 text-sm"
-          >
-            <option value="">All Terms</option>
-            {['First Term', 'Second Term', 'Third Term'].map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
-          <select
-            value={institution}
-            onChange={(e) => {
-              const next = e.target.value;
-              setInstitution(next);
-              loadData({ institution: next });
-            }}
-            className="rounded-2xl border border-slate-300 px-3 py-2 text-sm"
-          >
-            <option value="">All Institutions</option>
-            {ADMIN_INSTITUTIONS.map((item) => (
-              <option key={item} value={item}>
-                {item}
-              </option>
-            ))}
-          </select>
+        <div className="admin-toolbar">
+          <label className="field-shell min-w-[12rem]">
+            <span className="field-label">Session</span>
+            <select
+              value={sessionId}
+              onChange={(e) => {
+                const next = e.target.value;
+                setSessionId(next);
+                loadData({ sessionId: next });
+              }}
+              className="form-select"
+            >
+              {!sessions.length && <option value="">No sessions available</option>}
+              {sessions.map((session) => (
+                <option key={session.id} value={session.id}>
+                  {session.sessionName} {session.isActive ? '(Active)' : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field-shell min-w-[11rem]">
+            <span className="field-label">Term</span>
+            <select
+              value={term}
+              onChange={(e) => {
+                const next = e.target.value;
+                setTerm(next);
+                loadData({ term: next });
+              }}
+              className="form-select"
+            >
+              <option value="">All Terms</option>
+              {['First Term', 'Second Term', 'Third Term'].map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field-shell min-w-[14rem]">
+            <span className="field-label">Institution</span>
+            <select
+              value={institution}
+              onChange={(e) => {
+                const next = e.target.value;
+                setInstitution(next);
+                loadData({ institution: next });
+              }}
+              className="form-select"
+            >
+              <option value="">All Institutions</option>
+              {ADMIN_INSTITUTIONS.map((item) => (
+                <option key={item} value={item}>
+                  {item}
+                </option>
+              ))}
+            </select>
+          </label>
           <button
             type="button"
             onClick={downloadPerformanceCsv}
             disabled={loading || !sessionId}
-            className="rounded-2xl border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700"
+            className="interactive-button"
           >
             Download CSV
           </button>
         </div>
       }
     >
-      {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
-      {loading && <p className="mb-3 text-sm text-slate-600">Loading reports...</p>}
-      <p className="mb-4 text-sm text-slate-600">
+      {error && <ErrorState compact title="Unable to load reports" message={error} onRetry={() => loadData()} className="mb-4" />}
+      {loading && <div className="status-banner mb-4">Loading reports...</div>}
+      <p className="admin-toolbar__meta mb-4">
         Scope: <span className="font-semibold text-slate-900">{institutionLabel}</span> • <span className="font-semibold text-slate-900">{termLabel}</span> • <span className="font-semibold text-slate-900">{sessionLabel}</span>
       </p>
 
@@ -190,7 +200,7 @@ function AdminReports() {
 
           <div className="mt-6 grid gap-4 lg:grid-cols-2">
             {(summary.institutionSummary || []).map((row) => (
-              <section key={row.institution} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+              <section key={row.institution} className="admin-surface">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <h2 className="font-heading text-2xl text-primary">{row.institution}</h2>
@@ -211,7 +221,7 @@ function AdminReports() {
           </div>
 
           <div className="mt-6 grid gap-6 lg:grid-cols-3">
-            <section className="rounded-xl border border-slate-200 bg-white p-4">
+            <section className="admin-surface">
               <h2 className="font-heading text-xl text-primary">Admissions by Status</h2>
               <ul className="mt-3 space-y-2 text-sm">
                 {summary.admissionsByStatus.map((row) => (
@@ -223,7 +233,7 @@ function AdminReports() {
               </ul>
             </section>
 
-            <section className="rounded-xl border border-slate-200 bg-white p-4">
+            <section className="admin-surface">
               <h2 className="font-heading text-xl text-primary">Students by Institution</h2>
               <ul className="mt-3 space-y-2 text-sm">
                 {summary.studentsByInstitution.map((row) => (
@@ -235,7 +245,7 @@ function AdminReports() {
               </ul>
             </section>
 
-            <section className="rounded-xl border border-slate-200 bg-white p-4">
+            <section className="admin-surface">
               <h2 className="font-heading text-xl text-primary">Grade Distribution</h2>
               <ul className="mt-3 space-y-2 text-sm">
                 {summary.gradeDistribution.map((row) => (
@@ -250,16 +260,16 @@ function AdminReports() {
         </>
       )}
 
-      <section className="mt-6 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="admin-surface mt-6">
         <h2 className="font-heading text-2xl text-primary">Top 3 Students Per Class</h2>
         <div className="mt-5 grid gap-5 xl:grid-cols-2">
           {!showTop3 && (
-            <p className="text-sm text-amber-700">
+            <p className="status-banner status-banner--warning">
               Top 3 rankings are only available after Third Term.
             </p>
           )}
           {showTop3 && performanceByClass.map((group) => (
-            <article key={`${group.institution}-${group.classId}`} className="rounded-3xl border border-slate-200 bg-slate-50/60 p-4">
+            <article key={`${group.institution}-${group.classId}`} className="dashboard-tile">
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <h3 className="text-lg font-semibold text-slate-900">{group.classLabel}</h3>
@@ -269,7 +279,7 @@ function AdminReports() {
                 </div>
               </div>
 
-              <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-200 bg-white">
+              <div className="data-table-shell mt-4">
                 <table className="min-w-full text-sm">
                   <thead className="bg-slate-50 text-left">
                     <tr>
@@ -292,24 +302,24 @@ function AdminReports() {
             </article>
           ))}
           {showTop3 && !performanceByClass.length && (
-            <p className="text-sm text-slate-600">No class-based performance data available for the selected term.</p>
+            <p className="empty-state-inline">No class-based performance data available for the selected term.</p>
           )}
         </div>
       </section>
 
-      <section className="mt-6 rounded-xl border border-slate-200 bg-white p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+      <section className="admin-surface mt-6">
+        <div className="admin-toolbar">
           <h2 className="font-heading text-xl text-primary">All Performance Rows</h2>
           <button
             type="button"
             onClick={() => setShowAllPerformance((prev) => !prev)}
-            className="rounded-full border border-slate-300 px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-700"
+            className="interactive-button"
           >
             {showAllPerformance ? 'Hide Rows' : 'Show Rows'}
           </button>
         </div>
         {showAllPerformance && (
-          <div className="mt-3 overflow-x-auto rounded-lg border border-slate-200">
+          <div className="data-table-shell mt-3">
             <table className="min-w-full text-sm">
               <thead className="bg-slate-50 text-left">
                 <tr>
@@ -330,7 +340,7 @@ function AdminReports() {
                 ))}
                 {!performance.length && (
                   <tr>
-                    <td colSpan={4} className="px-3 py-3 text-slate-600">No data available for selected term.</td>
+                    <td colSpan={4} className="px-3 py-3 text-slate-600">No data available for the selected filters.</td>
                   </tr>
                 )}
               </tbody>

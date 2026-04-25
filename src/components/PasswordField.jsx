@@ -1,3 +1,5 @@
+import Tooltip from './Tooltip';
+
 function PasswordField({
   label,
   name,
@@ -7,14 +9,15 @@ function PasswordField({
   required = false,
   showPassword = false,
   onToggleVisibility,
-  className = 'w-full rounded-md border border-slate-300 px-3 py-2 pr-16',
+  className = 'form-field w-full pr-20 text-sm',
   autoComplete,
   error = '',
-  onBlur
+  onBlur,
+  helperText = ''
 }) {
   return (
-    <label className="block text-sm">
-      <span className="mb-1 block font-medium text-slate-700">{label}</span>
+    <label className="field-shell block text-sm">
+      <span className="field-label">{label}</span>
       <div className="relative">
         <input
           name={name}
@@ -27,16 +30,19 @@ function PasswordField({
           placeholder={placeholder}
           autoComplete={autoComplete}
         />
-        <button
-          type="button"
-          onClick={onToggleVisibility}
-          className="absolute inset-y-1.5 right-2 rounded-full px-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
-          aria-label={`${showPassword ? 'Hide' : 'Show'} ${label.toLowerCase()}`}
-        >
-          {showPassword ? 'Hide' : 'Show'}
-        </button>
+        <Tooltip text={`${showPassword ? 'Hide' : 'Show'} ${label.toLowerCase()}`}>
+          <button
+            type="button"
+            onClick={onToggleVisibility}
+            className="interactive-button absolute inset-y-1.5 right-2 rounded-full px-3 text-xs font-semibold uppercase tracking-[0.14em] text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+            aria-label={`${showPassword ? 'Hide' : 'Show'} ${label.toLowerCase()}`}
+            title={`${showPassword ? 'Hide' : 'Show'} ${label.toLowerCase()}`}
+          >
+            {showPassword ? 'Hide' : 'Show'}
+          </button>
+        </Tooltip>
       </div>
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      {error ? <p className="field-error">{error}</p> : helperText ? <p className="field-help">{helperText}</p> : null}
     </label>
   );
 }

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import ErrorState from '../../components/ErrorState';
 import PortalLayout from '../../components/PortalLayout';
 import { ADMIN_INSTITUTIONS, canonicalInstitution } from '../../utils/adminInstitution';
 
@@ -192,60 +193,92 @@ function ManageTimetable() {
       title="Timetable Management"
       subtitle="Filter by institution and class so opening JSS 1 now shows only the JSS 1 timetable."
     >
-      <form onSubmit={createEntry} className="grid gap-3 rounded-[28px] border border-slate-200 bg-white p-5 sm:grid-cols-2 lg:grid-cols-5">
-        <select value={institutionFilter} onChange={(e) => setInstitutionFilter(e.target.value)} className="rounded-2xl border border-slate-300 px-4 py-3 text-sm" required>
-          {ADMIN_INSTITUTIONS.map((institution) => <option key={institution}>{institution}</option>)}
-        </select>
-        <select value={form.classId} onChange={(e) => setForm((p) => ({ ...p, classId: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3 text-sm" required>
-          {scopedClasses.map((item) => <option key={item.id} value={item.id}>{item.name} {item.arm}</option>)}
-        </select>
-        <select value={form.subjectId} onChange={(e) => setForm((p) => ({ ...p, subjectId: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3 text-sm" required>
-          {availableSubjects.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-        </select>
-        <select value={form.teacherId} onChange={(e) => setForm((p) => ({ ...p, teacherId: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3 text-sm" required>
-          {availableTeachers.map((item) => <option key={item.id} value={item.id}>{item.fullName}</option>)}
-        </select>
-        <select value={form.dayOfWeek} onChange={(e) => setForm((p) => ({ ...p, dayOfWeek: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3 text-sm" required>
-          {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map((day) => <option key={day}>{day}</option>)}
-        </select>
-        <input type="time" value={form.startTime} onChange={(e) => setForm((p) => ({ ...p, startTime: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3 text-sm" required />
-        <input type="time" value={form.endTime} onChange={(e) => setForm((p) => ({ ...p, endTime: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3 text-sm" required />
-        <select value={form.term} onChange={(e) => setForm((p) => ({ ...p, term: e.target.value }))} className="rounded-2xl border border-slate-300 px-4 py-3 text-sm" required>
-          {['First Term', 'Second Term', 'Third Term'].map((term) => <option key={term}>{term}</option>)}
-        </select>
-        <input value={form.room} onChange={(e) => setForm((p) => ({ ...p, room: e.target.value }))} placeholder="Room" className="rounded-2xl border border-slate-300 px-4 py-3 text-sm" />
+      <form onSubmit={createEntry} className="admin-surface grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <label className="field-shell">
+          <span className="field-label">Institution</span>
+          <select value={institutionFilter} onChange={(e) => setInstitutionFilter(e.target.value)} className="form-select" required>
+            {ADMIN_INSTITUTIONS.map((institution) => <option key={institution}>{institution}</option>)}
+          </select>
+        </label>
+        <label className="field-shell">
+          <span className="field-label">Class</span>
+          <select value={form.classId} onChange={(e) => setForm((p) => ({ ...p, classId: e.target.value }))} className="form-select" required>
+            {scopedClasses.map((item) => <option key={item.id} value={item.id}>{item.name} {item.arm}</option>)}
+          </select>
+        </label>
+        <label className="field-shell">
+          <span className="field-label">Subject</span>
+          <select value={form.subjectId} onChange={(e) => setForm((p) => ({ ...p, subjectId: e.target.value }))} className="form-select" required>
+            {availableSubjects.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+          </select>
+        </label>
+        <label className="field-shell">
+          <span className="field-label">Teacher</span>
+          <select value={form.teacherId} onChange={(e) => setForm((p) => ({ ...p, teacherId: e.target.value }))} className="form-select" required>
+            {availableTeachers.map((item) => <option key={item.id} value={item.id}>{item.fullName}</option>)}
+          </select>
+        </label>
+        <label className="field-shell">
+          <span className="field-label">Day</span>
+          <select value={form.dayOfWeek} onChange={(e) => setForm((p) => ({ ...p, dayOfWeek: e.target.value }))} className="form-select" required>
+            {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map((day) => <option key={day}>{day}</option>)}
+          </select>
+        </label>
+        <label className="field-shell">
+          <span className="field-label">Start time</span>
+          <input type="time" value={form.startTime} onChange={(e) => setForm((p) => ({ ...p, startTime: e.target.value }))} className="form-field" required />
+        </label>
+        <label className="field-shell">
+          <span className="field-label">End time</span>
+          <input type="time" value={form.endTime} onChange={(e) => setForm((p) => ({ ...p, endTime: e.target.value }))} className="form-field" required />
+        </label>
+        <label className="field-shell">
+          <span className="field-label">Term</span>
+          <select value={form.term} onChange={(e) => setForm((p) => ({ ...p, term: e.target.value }))} className="form-select" required>
+            {['First Term', 'Second Term', 'Third Term'].map((term) => <option key={term}>{term}</option>)}
+          </select>
+        </label>
+        <label className="field-shell">
+          <span className="field-label">Room</span>
+          <input value={form.room} onChange={(e) => setForm((p) => ({ ...p, room: e.target.value }))} placeholder="Room" className="form-field" />
+        </label>
         <button
           type="submit"
           disabled={!form.classId || !form.subjectId || !form.teacherId}
-          className="rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+          className="interactive-button self-end"
         >
           Add Entry
         </button>
       </form>
 
-      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
-      {success && <p className="mt-3 text-sm text-emerald-700">{success}</p>}
+      {error && <ErrorState compact title="Unable to manage timetable" message={error} className="mt-3" onRetry={() => loadData({ preserveSuccess: true })} />}
+      {success && <div className="status-banner mt-3">{success}</div>}
       {!availableSubjects.length && form.classId && (
-        <p className="mt-3 text-sm text-amber-700">No teacher assignment exists yet for this class and term. Create the assignment first before adding timetable entries.</p>
+        <p className="status-banner status-banner--warning mt-3">No teacher assignment exists yet for this class and term. Create the assignment first before adding timetable entries.</p>
       )}
       {availableSubjects.length > 0 && !availableTeachers.length && form.classId && form.subjectId && (
-        <p className="mt-3 text-sm text-amber-700">No teacher is assigned to this class-subject pair for the selected term.</p>
+        <p className="status-banner status-banner--warning mt-3">No teacher is assigned to this class-subject pair for the selected term.</p>
       )}
 
-      <div className="mt-6 flex flex-wrap gap-3 rounded-[28px] border border-slate-200 bg-white p-5">
-        <select value={classFilter} onChange={(e) => setClassFilter(e.target.value)} className="rounded-2xl border border-slate-300 px-4 py-3 text-sm">
-          <option value="">All Classes</option>
-          {scopedClasses.map((item) => <option key={item.id} value={item.id}>{item.name} {item.arm}</option>)}
-        </select>
+      <div className="admin-surface mt-6">
+        <div className="admin-toolbar">
+          <label className="field-shell min-w-[14rem]">
+            <span className="field-label">Class filter</span>
+            <select value={classFilter} onChange={(e) => setClassFilter(e.target.value)} className="form-select">
+              <option value="">All Classes</option>
+              {scopedClasses.map((item) => <option key={item.id} value={item.id}>{item.name} {item.arm}</option>)}
+            </select>
+          </label>
+        </div>
       </div>
 
-      <div className="mt-6 overflow-x-auto rounded-[28px] border border-slate-200 bg-white">
+      <div className="data-table-shell mt-6">
         <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
           <span>Timetable table</span>
           <button
             type="button"
             onClick={() => setShowRows((prev) => !prev)}
-            className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"
+            className="interactive-button"
           >
             {showRows ? 'Hide rows' : 'Show rows'}
           </button>
@@ -279,7 +312,7 @@ function ManageTimetable() {
                 <td className="px-4 py-3">{item.teacherName}</td>
                 <td className="px-4 py-3">{item.room || '-'}</td>
                 <td className="px-4 py-3">
-                  <button type="button" disabled={deletingId === item.id} onClick={() => removeEntry(item.id)} className="rounded-xl border border-red-300 px-3 py-2 text-xs text-red-600 disabled:cursor-not-allowed disabled:opacity-60">{deletingId === item.id ? 'Deleting...' : 'Delete'}</button>
+                  <button type="button" disabled={deletingId === item.id} onClick={() => removeEntry(item.id)} className="interactive-button border-red-300 text-red-600">{deletingId === item.id ? 'Deleting...' : 'Delete'}</button>
                 </td>
               </tr>
             ))}

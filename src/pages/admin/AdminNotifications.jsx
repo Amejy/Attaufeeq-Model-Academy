@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import ErrorState from '../../components/ErrorState';
 import { useAuth } from '../../context/AuthContext';
 import PortalLayout from '../../components/PortalLayout';
 
@@ -224,9 +225,8 @@ function AdminNotifications() {
       title="Notifications"
       subtitle="Send announcements to specific portal roles."
     >
-
-      <form onSubmit={sendNotification} className="mt-6 grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-4">
-        <input value={form.title} onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))} placeholder="Title" className="rounded-md border border-slate-300 px-3 py-2 text-sm sm:col-span-2" required />
+      <form onSubmit={sendNotification} className="admin-surface mt-6 grid gap-3 p-4 sm:grid-cols-4">
+        <input value={form.title} onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))} placeholder="Title" className="form-field text-sm sm:col-span-2" required />
         <select
           value={form.roleTarget}
           onChange={(e) => {
@@ -238,14 +238,14 @@ function AdminNotifications() {
               teacherId: nextRole === 'teacher' ? prev.teacherId : ''
             }));
           }}
-          className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="form-select text-sm"
         >
           {['all', 'admin', 'teacher', 'student', 'parent'].map((target) => <option key={target} value={target}>{target}</option>)}
         </select>
         <button
           type="submit"
           disabled={!canSendNotification}
-          className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+          className="interactive-button rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
         >
           {sending ? 'Sending...' : 'Send'}
         </button>
@@ -255,7 +255,7 @@ function AdminNotifications() {
               value={form.classId}
               onChange={(e) => setForm((prev) => ({ ...prev, classId: e.target.value, teacherId: '' }))}
               disabled={hasDirectRecipient}
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm sm:col-span-2"
+              className="form-select text-sm sm:col-span-2"
             >
               <option value="">All classes</option>
               {classes.map((item) => (
@@ -266,7 +266,7 @@ function AdminNotifications() {
               value={form.teacherId}
               onChange={(e) => setForm((prev) => ({ ...prev, teacherId: e.target.value, classId: '' }))}
               disabled={hasDirectRecipient}
-              className="rounded-md border border-slate-300 px-3 py-2 text-sm sm:col-span-2"
+              className="form-select text-sm sm:col-span-2"
             >
               <option value="">All teachers</option>
               {teachers.map((item) => (
@@ -286,39 +286,43 @@ function AdminNotifications() {
             }))
           }
           placeholder="Specific email (optional)"
-          className="rounded-md border border-slate-300 px-3 py-2 text-sm sm:col-span-4"
+          className="form-field text-sm sm:col-span-4"
         />
         {hasDirectRecipient && !hasValidDirectRecipient && (
-          <p className="text-sm text-amber-700 sm:col-span-4">
+          <p className="field-error sm:col-span-4">
             Enter a valid email address to send a direct notification.
           </p>
         )}
         {!hasDirectRecipient && form.roleTarget === 'teacher' && form.classId && !classHasAssignedTeachers && (
-          <p className="text-sm text-amber-700 sm:col-span-4">
+          <p className="field-error sm:col-span-4">
             The selected class has no teacher assignments yet, so this notification would reach nobody.
           </p>
         )}
-        <textarea value={form.message} onChange={(e) => setForm((prev) => ({ ...prev, message: e.target.value }))} placeholder="Message" className="rounded-md border border-slate-300 px-3 py-2 text-sm sm:col-span-4" rows="4" required />
+        <textarea value={form.message} onChange={(e) => setForm((prev) => ({ ...prev, message: e.target.value }))} placeholder="Message" className="form-textarea text-sm sm:col-span-4" rows="4" required />
       </form>
 
-      {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
-      {success && <p className="mt-4 text-sm text-emerald-700">{success}</p>}
+      {error && (
+        <div className="mt-4">
+          <ErrorState compact title="Notification issue" message={error} onRetry={() => setError('')} />
+        </div>
+      )}
+      {success && <p className="status-banner mt-4 text-sm">{success}</p>}
       {form.roleTarget === 'teacher' && targetsError && (
-        <p className="mt-4 text-sm text-amber-700">{targetsError}</p>
+        <p className="field-error mt-4">{targetsError}</p>
       )}
 
-      <div className="mt-6 rounded-xl border border-slate-200 bg-white p-4">
+      <div className="admin-surface mt-6 p-4">
         <div className="grid gap-3 sm:grid-cols-3">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search notifications"
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="form-field text-sm"
           />
           <select
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="form-select text-sm"
           >
             <option value="all">All recipients</option>
             <option value="admin">Admin</option>
@@ -330,7 +334,7 @@ function AdminNotifications() {
           <select
             value={sortOrder}
             onChange={(e) => setSortOrder(e.target.value)}
-            className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+            className="form-select text-sm"
           >
             <option value="recent">Most recent</option>
             <option value="oldest">Oldest</option>
@@ -345,7 +349,7 @@ function AdminNotifications() {
               setRoleFilter('all');
               setSortOrder('recent');
             }}
-            className="rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600"
+            className="interactive-button rounded-2xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600"
           >
             Clear filters
           </button>
@@ -356,23 +360,23 @@ function AdminNotifications() {
       </div>
 
       <div className="mt-6 space-y-3">
-        <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-          <span>Notifications list</span>
+        <div className="admin-toolbar">
+          <span className="admin-toolbar__meta">Notifications list</span>
           <button
             type="button"
             onClick={() => setShowRows((prev) => !prev)}
-            className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700"
+            className="interactive-button rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700"
           >
             {showRows ? 'Hide rows' : 'Show rows'}
           </button>
         </div>
         {!showRows && (
-          <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 text-center">
+          <div className="empty-state-inline text-center text-sm">
             Rows are hidden. Click “Show rows” to display notifications.
           </div>
         )}
         {showRows && filteredNotifications.map((item) => (
-          <article key={item.id} className="rounded-xl border border-slate-200 bg-white p-4">
+          <article key={item.id} className="admin-surface interactive-card p-4">
             <p className="text-xs uppercase text-slate-500">
               {item.recipientEmail
                 ? `Direct: ${item.recipientEmail}`
@@ -389,7 +393,7 @@ function AdminNotifications() {
                 type="button"
                 disabled={deletingId === item.id}
                 onClick={() => deleteNotification(item.id)}
-                className="rounded-md border border-red-300 px-3 py-1 text-xs text-red-600 disabled:cursor-not-allowed disabled:opacity-60"
+                className="interactive-button rounded-2xl border border-red-300 px-3 py-2 text-xs text-red-600 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {deletingId === item.id ? 'Deleting...' : 'Delete'}
               </button>
@@ -397,7 +401,7 @@ function AdminNotifications() {
           </article>
         ))}
         {showRows && !filteredNotifications.length && (
-          <p className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+          <p className="empty-state-inline text-sm">
             No notifications match the current filters.
           </p>
         )}

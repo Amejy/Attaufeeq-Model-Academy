@@ -40,7 +40,7 @@ function renderLeadContact(classLead) {
 
 function MetricCard({ label, value, note, accent = 'linear-gradient(135deg, #0f5132, #d9b354)' }) {
   return (
-    <article className="glass-card floating-card relative overflow-hidden p-4 sm:p-5">
+    <article className="glass-card dashboard-tile floating-card relative overflow-hidden p-4 sm:p-5">
       <div className="absolute inset-x-4 top-0 h-1 rounded-full sm:inset-x-5" style={{ background: accent }} />
       <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">{label}</p>
       <p className="mt-3 break-words font-heading text-2xl text-primary sm:mt-4 sm:text-4xl">
@@ -53,7 +53,7 @@ function MetricCard({ label, value, note, accent = 'linear-gradient(135deg, #0f5
 
 function Panel({ title, eyebrow, children }) {
   return (
-    <section className="glass-card p-4 sm:p-6">
+    <section className="glass-card admin-surface p-4 sm:p-6">
       {eyebrow && <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">{eyebrow}</p>}
       <h2 className="mt-2 font-heading text-xl text-primary sm:text-2xl">{title}</h2>
       <div className="mt-4 sm:mt-5">{children}</div>
@@ -68,7 +68,7 @@ function ActionGrid({ actions }) {
         <Link
           key={action.label}
           to={action.to}
-          className="surface-outline rounded-[22px] px-3 py-3 text-sm font-semibold text-slate-700 shadow-sm transition hover:-translate-y-1 sm:px-4 sm:py-4"
+          className="surface-outline interactive-card rounded-[22px] px-3 py-3 text-sm font-semibold text-slate-700 shadow-sm sm:px-4 sm:py-4"
         >
           {action.label}
         </Link>
@@ -95,7 +95,7 @@ function DetailListItem({ item }) {
   const badge = normalizeBadge(item.badge);
 
   return (
-    <article className="surface-outline rounded-[22px] px-3 py-3 sm:px-4 sm:py-4">
+    <article className="surface-outline dashboard-tile rounded-[22px] px-3 py-3 sm:px-4 sm:py-4">
       <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-slate-900">{item.title}</p>

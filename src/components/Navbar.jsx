@@ -5,6 +5,7 @@ import { useSiteContent } from '../context/SiteContentContext';
 import useAdmissionPeriod from '../hooks/useAdmissionPeriod';
 import SmartImage from './SmartImage';
 import ThemeToggle from './ThemeToggle';
+import Tooltip from './Tooltip';
 
 const primaryLinks = [
   { to: '/', label: 'Home' },
@@ -384,19 +385,21 @@ function Navbar() {
 
             {isAuthenticated ? (
               <div className="relative" onClick={(event) => event.stopPropagation()}>
-                <button type="button" onClick={() => setProfileOpen((prev) => !prev)} className="nav-profile-trigger">
-                  <div className="nav-profile-avatar">
-                    {avatarUrl ? (
-                      <SmartImage src={avatarUrl} alt="Profile avatar" />
-                    ) : (
-                      initials(user?.fullName || user?.email || 'U')
-                    )}
-                  </div>
-                  <div className="hidden text-left lg:block">
-                    <p className="text-sm font-semibold text-slate-900">{user?.fullName || 'Portal User'}</p>
-                    <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">{user?.role} workspace</p>
-                  </div>
-                </button>
+                <Tooltip text={profileOpen ? 'Close account menu' : 'Open account menu'}>
+                  <button type="button" onClick={() => setProfileOpen((prev) => !prev)} className="nav-profile-trigger">
+                    <div className="nav-profile-avatar">
+                      {avatarUrl ? (
+                        <SmartImage src={avatarUrl} alt="Profile avatar" />
+                      ) : (
+                        initials(user?.fullName || user?.email || 'U')
+                      )}
+                    </div>
+                    <div className="hidden text-left lg:block">
+                      <p className="text-sm font-semibold text-slate-900">{user?.fullName || 'Portal User'}</p>
+                      <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">{user?.role} workspace</p>
+                    </div>
+                  </button>
+                </Tooltip>
 
                 {profileOpen && (
                   <div className="nav-profile-panel">
@@ -432,23 +435,25 @@ function Navbar() {
 
             <div className="flex items-center gap-2 xl:hidden">
               <ThemeToggle />
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  setIsOpen((prev) => !prev);
-                  setMegaOpen(false);
-                }}
-                className="nav-mobile-trigger"
-                aria-expanded={isOpen}
-                aria-label="Toggle navigation menu"
-              >
-                <span className="nav-mobile-trigger__label">Menu</span>
-                <span className="nav-mobile-trigger__bars">
-                  <span />
-                  <span />
-                </span>
-              </button>
+              <Tooltip text={isOpen ? 'Close navigation menu' : 'Open navigation menu'}>
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    setIsOpen((prev) => !prev);
+                    setMegaOpen(false);
+                  }}
+                  className="nav-mobile-trigger"
+                  aria-expanded={isOpen}
+                  aria-label="Toggle navigation menu"
+                >
+                  <span className="nav-mobile-trigger__label">Menu</span>
+                  <span className="nav-mobile-trigger__bars">
+                    <span />
+                    <span />
+                  </span>
+                </button>
+              </Tooltip>
             </div>
           </div>
         </div>

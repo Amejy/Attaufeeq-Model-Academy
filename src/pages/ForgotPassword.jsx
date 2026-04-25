@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
+import ErrorState from '../components/ErrorState';
 import PasswordField from '../components/PasswordField';
 import SmartImage from '../components/SmartImage';
 import { useSiteContent } from '../context/SiteContentContext';
@@ -42,6 +43,12 @@ function ForgotPassword() {
   const [resetError, setResetError] = useState('');
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const requestEmailError = email && !isValidEmail(email) ? 'Email format is incorrect.' : '';
+  const resetEmailError = resetForm.email && !isValidEmail(resetForm.email) ? 'Email format is incorrect.' : '';
+  const confirmPasswordError =
+    resetForm.confirmPassword && resetForm.newPassword !== resetForm.confirmPassword
+      ? 'Passwords do not match.'
+      : '';
   const canRequestReset = isValidEmail(email);
   const canSubmitReset =
     isValidEmail(resetForm.email) &&
@@ -145,33 +152,41 @@ function ForgotPassword() {
           </div>
         </section>
 
-        <section className="glass-card min-w-0 p-6 sm:p-8">
+        <section className="glass-card interactive-card min-w-0 p-6 sm:p-8">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Step 1</p>
           <h2 className="mt-3 break-words font-heading text-3xl text-primary">Request reset code</h2>
           <form className="mt-5 space-y-4" onSubmit={requestReset}>
-            <label className="block text-sm">
-              <span className="mb-1 block font-medium text-slate-700">Email</span>
+            <label className="field-shell block text-sm">
+              <span className="field-label">Email</span>
               <input
                 name="email"
                 type="email"
                 required
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                className="w-full rounded-md border border-slate-300 px-3 py-2"
+                className={`form-field ${requestEmailError ? 'form-field--error' : ''}`.trim()}
                 placeholder="you@example.com"
               />
+              {requestEmailError ? <p className="field-error">{requestEmailError}</p> : <p className="field-help">Use the email currently attached to your portal account.</p>}
             </label>
-            {requestError && <p className="text-sm text-red-600">{requestError}</p>}
-            {requestMessage && <p className="text-sm text-emerald-700">{requestMessage}</p>}
+            {requestError && (
+              <ErrorState
+                compact
+                title="Reset code not sent"
+                message={requestError}
+                onRetry={() => setRequestError('')}
+              />
+            )}
+            {requestMessage && <p className="status-banner text-sm">{requestMessage}</p>}
             {resetCode && (
-              <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              <div className="status-banner status-banner--warning text-sm">
                 Reset code: <span className="font-semibold">{resetCode}</span>
               </div>
             )}
             <button
               type="submit"
               disabled={requesting || !canRequestReset}
-              className="w-full rounded-full bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-70"
+              className="interactive-button w-full rounded-full bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {requesting ? 'Sending...' : 'Send reset code'}
             </button>
@@ -182,26 +197,27 @@ function ForgotPassword() {
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Step 2</p>
           <h2 className="mt-3 break-words font-heading text-3xl text-primary">Set a new password</h2>
           <form className="mt-5 space-y-4" onSubmit={submitReset}>
-            <label className="block text-sm">
-              <span className="mb-1 block font-medium text-slate-700">Email</span>
+            <label className="field-shell block text-sm">
+              <span className="field-label">Email</span>
               <input
                 name="email"
                 type="email"
                 required
                 value={resetForm.email}
                 onChange={onResetChange}
-                className="w-full rounded-md border border-slate-300 px-3 py-2"
+                className={`form-field ${resetEmailError ? 'form-field--error' : ''}`.trim()}
                 placeholder="you@example.com"
               />
+              {resetEmailError && <p className="field-error">{resetEmailError}</p>}
             </label>
-            <label className="block text-sm">
-              <span className="mb-1 block font-medium text-slate-700">Reset Code</span>
+            <label className="field-shell block text-sm">
+              <span className="field-label">Reset Code</span>
               <input
                 name="code"
                 required
                 value={resetForm.code}
                 onChange={onResetChange}
-                className="w-full rounded-md border border-slate-300 px-3 py-2"
+                className="form-field"
                 placeholder="Enter the 6-digit code"
               />
             </label>
@@ -215,7 +231,7 @@ function ForgotPassword() {
               showPassword={showNewPassword}
               onToggleVisibility={() => setShowNewPassword((prev) => !prev)}
               autoComplete="new-password"
-              className="w-full rounded-md border border-slate-300 px-3 py-2 pr-20"
+              helperText="Choose at least 10 characters for better security."
             />
             <PasswordField
               label="Confirm Password"
@@ -227,14 +243,21 @@ function ForgotPassword() {
               showPassword={showConfirmPassword}
               onToggleVisibility={() => setShowConfirmPassword((prev) => !prev)}
               autoComplete="new-password"
-              className="w-full rounded-md border border-slate-300 px-3 py-2 pr-20"
+              error={confirmPasswordError}
             />
-            {resetError && <p className="text-sm text-red-600">{resetError}</p>}
-            {resetMessage && <p className="text-sm text-emerald-700">{resetMessage}</p>}
+            {resetError && (
+              <ErrorState
+                compact
+                title="Password not updated"
+                message={resetError}
+                onRetry={() => setResetError('')}
+              />
+            )}
+            {resetMessage && <p className="status-banner text-sm">{resetMessage}</p>}
             <button
               type="submit"
               disabled={resetting || !canSubmitReset}
-              className="w-full rounded-full bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-70"
+              className="interactive-button w-full rounded-full bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {resetting ? 'Updating...' : 'Update password'}
             </button>
@@ -242,7 +265,7 @@ function ForgotPassword() {
 
           <div className="mt-6 break-words text-sm text-slate-600">
             Back to login?{' '}
-            <Link to={loginHref} className="font-semibold text-primary hover:underline">
+            <Link to={loginHref} className="interactive-link font-semibold text-primary hover:underline">
               Sign in here
             </Link>
           </div>

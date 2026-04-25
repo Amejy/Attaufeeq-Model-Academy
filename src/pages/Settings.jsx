@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import ErrorState from '../components/ErrorState';
 import PasswordField from '../components/PasswordField';
 import SmartImage from '../components/SmartImage';
 import PortalLayout from '../components/PortalLayout';
@@ -147,7 +148,7 @@ function Settings() {
       subtitle="Manage your password and profile image. Changes apply immediately across your portal."
     >
       <div className="grid gap-6 lg:grid-cols-[1.1fr,0.9fr]">
-        <section className="glass-card p-5 sm:p-6">
+        <section className="glass-card interactive-card p-5 sm:p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Profile Image</p>
           <h2 className="mt-2 font-heading text-2xl text-primary">Update your avatar</h2>
           <p className="mt-2 text-sm text-slate-600">
@@ -169,7 +170,7 @@ function Settings() {
                 type="button"
                 onClick={triggerAvatarPicker}
                 disabled={avatarBusy}
-                className="rounded-full border border-slate-300 bg-white px-4 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-700 hover:border-slate-400 disabled:cursor-not-allowed disabled:opacity-70"
+                className="interactive-button"
               >
                 {avatarBusy ? 'Uploading...' : 'Choose Image'}
               </button>
@@ -181,13 +182,13 @@ function Settings() {
                 onChange={handleAvatarChange}
                 className="sr-only"
               />
-              {avatarError && <p className="text-xs text-red-600">{avatarError}</p>}
-              {avatarSuccess && <p className="text-xs text-emerald-700">{avatarSuccess}</p>}
+              {avatarError && <ErrorState compact title="Avatar update failed" message={avatarError} onRetry={triggerAvatarPicker} />}
+              {avatarSuccess && <p className="status-banner text-xs">{avatarSuccess}</p>}
             </div>
           </div>
         </section>
 
-        <section className="glass-card p-5 sm:p-6">
+        <section className="glass-card interactive-card p-5 sm:p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Password</p>
           <h2 className="mt-2 font-heading text-2xl text-primary">Change your password</h2>
           <p className="mt-2 text-sm text-slate-600">
@@ -195,57 +196,46 @@ function Settings() {
           </p>
 
           <form className="mt-5 space-y-3" onSubmit={handlePasswordChange}>
-            <label className="text-sm">
-              <span className="mb-1 block font-medium text-slate-700">Current password</span>
-              <PasswordField
-                value={form.currentPassword}
-                onChange={(event) => setForm((prev) => ({ ...prev, currentPassword: event.target.value }))}
-                onBlur={() => setTouched((prev) => ({ ...prev, currentPassword: true }))}
-                className="w-full rounded-md border border-slate-300 px-3 py-2"
-                placeholder="Enter current password"
-                required
-              />
-              {touched.currentPassword && !currentPasswordValue && (
-                <p className="mt-1 text-xs text-red-600">Current password is required.</p>
-              )}
-            </label>
-            <label className="text-sm">
-              <span className="mb-1 block font-medium text-slate-700">New password</span>
-              <PasswordField
-                value={form.newPassword}
-                onChange={(event) => setForm((prev) => ({ ...prev, newPassword: event.target.value }))}
-                onBlur={() => setTouched((prev) => ({ ...prev, newPassword: true }))}
-                className="w-full rounded-md border border-slate-300 px-3 py-2"
-                placeholder="At least 10 characters"
-                required
-              />
-              {touched.newPassword && newPasswordTooShort && (
-                <p className="mt-1 text-xs text-red-600">Password must be at least 10 characters.</p>
-              )}
-              {touched.newPassword && newPasswordMatchesCurrent && (
-                <p className="mt-1 text-xs text-red-600">New password must be different from the current one.</p>
-              )}
-            </label>
-            <label className="text-sm">
-              <span className="mb-1 block font-medium text-slate-700">Confirm new password</span>
-              <PasswordField
-                value={form.confirmPassword}
-                onChange={(event) => setForm((prev) => ({ ...prev, confirmPassword: event.target.value }))}
-                onBlur={() => setTouched((prev) => ({ ...prev, confirmPassword: true }))}
-                className="w-full rounded-md border border-slate-300 px-3 py-2"
-                placeholder="Re-enter new password"
-                required
-              />
-              {touched.confirmPassword && confirmMismatch && (
-                <p className="mt-1 text-xs text-red-600">Passwords do not match.</p>
-              )}
-            </label>
-            {passwordError && <p className="text-xs text-red-600">{passwordError}</p>}
-            {passwordSuccess && <p className="text-xs text-emerald-700">{passwordSuccess}</p>}
+            <PasswordField
+              label="Current password"
+              value={form.currentPassword}
+              onChange={(event) => setForm((prev) => ({ ...prev, currentPassword: event.target.value }))}
+              onBlur={() => setTouched((prev) => ({ ...prev, currentPassword: true }))}
+              placeholder="Enter current password"
+              required
+              error={touched.currentPassword && !currentPasswordValue ? 'Current password is required.' : ''}
+            />
+            <PasswordField
+              label="New password"
+              value={form.newPassword}
+              onChange={(event) => setForm((prev) => ({ ...prev, newPassword: event.target.value }))}
+              onBlur={() => setTouched((prev) => ({ ...prev, newPassword: true }))}
+              placeholder="At least 10 characters"
+              required
+              error={
+                touched.newPassword && newPasswordTooShort
+                  ? 'Password must be at least 10 characters.'
+                  : touched.newPassword && newPasswordMatchesCurrent
+                    ? 'New password must be different from the current one.'
+                    : ''
+              }
+              helperText="Use a strong password you do not use anywhere else."
+            />
+            <PasswordField
+              label="Confirm new password"
+              value={form.confirmPassword}
+              onChange={(event) => setForm((prev) => ({ ...prev, confirmPassword: event.target.value }))}
+              onBlur={() => setTouched((prev) => ({ ...prev, confirmPassword: true }))}
+              placeholder="Re-enter new password"
+              required
+              error={touched.confirmPassword && confirmMismatch ? 'Passwords do not match.' : ''}
+            />
+            {passwordError && <ErrorState compact title="Password not updated" message={passwordError} />}
+            {passwordSuccess && <p className="status-banner text-xs">{passwordSuccess}</p>}
             <button
               type="submit"
               disabled={!canSubmitPassword || passwordBusy}
-              className="rounded-full bg-primary px-6 py-2.5 text-xs font-semibold uppercase tracking-[0.2em] text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-70"
+              className="interactive-button"
             >
               {passwordBusy ? 'Saving...' : 'Update Password'}
             </button>
@@ -254,28 +244,28 @@ function Settings() {
       </div>
 
       {role === 'admin' && (
-        <section className="glass-card mt-6 flex flex-wrap items-center justify-between gap-4 p-5 sm:p-6">
+        <section className="glass-card interactive-card mt-6 flex flex-wrap items-center justify-between gap-4 p-5 sm:p-6">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Admin Tools</p>
             <h2 className="mt-2 font-heading text-2xl text-primary">Refresh portal data</h2>
             <p className="mt-2 text-sm text-slate-600">
               Reload assignments, classes, and dashboards from the database without a server restart.
             </p>
-            {refreshError && <p className="mt-2 text-xs text-red-600">{refreshError}</p>}
-            {refreshSuccess && <p className="mt-2 text-xs text-emerald-700">{refreshSuccess}</p>}
+            {refreshError && <ErrorState compact title="Refresh failed" message={refreshError} className="mt-3" onRetry={handleRefreshPortal} />}
+            {refreshSuccess && <p className="status-banner mt-3 text-xs">{refreshSuccess}</p>}
           </div>
           <button
             type="button"
             onClick={handleRefreshPortal}
             disabled={refreshBusy}
-            className="rounded-full border border-emerald-200 bg-emerald-50 px-6 py-2.5 text-xs font-semibold uppercase tracking-[0.2em] text-emerald-800 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-70"
+            className="interactive-button border-emerald-200 text-emerald-800"
           >
             {refreshBusy ? 'Refreshing...' : 'Refresh Portal'}
           </button>
         </section>
       )}
 
-      <section className="glass-card mt-6 flex flex-wrap items-center justify-between gap-4 p-5 sm:p-6">
+      <section className="glass-card interactive-card mt-6 flex flex-wrap items-center justify-between gap-4 p-5 sm:p-6">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Session</p>
           <h2 className="mt-2 font-heading text-2xl text-primary">Sign out safely</h2>
@@ -284,7 +274,7 @@ function Settings() {
         <button
           type="button"
           onClick={logout}
-          className="rounded-full border border-red-200 bg-red-50 px-6 py-2.5 text-xs font-semibold uppercase tracking-[0.2em] text-red-700 hover:bg-red-100"
+          className="interactive-button border-red-200 text-red-700"
         >
           Logout
         </button>

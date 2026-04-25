@@ -413,15 +413,16 @@ function RoleMessages() {
           description="Teacher contacts now follow the active child so you can start the right conversation for each student."
         />
       )}
-      <div className="grid gap-5 lg:grid-cols-3">
-        <section className="interactive-card rounded-[28px] border border-slate-200 bg-white/90 p-4 shadow-sm lg:col-span-1">
+      <div className="thread-shell lg:grid-cols-3 lg:[grid-template-columns:minmax(0,0.95fr)_minmax(0,1.45fr)]">
+        <section className="thread-panel interactive-card p-4 lg:col-span-1">
           <h2 className="font-heading text-xl text-primary">Threads</h2>
-          <div className="mt-3 grid gap-2">
+          <p className="mt-1 text-sm text-slate-600">Search, filter, and reopen conversations without losing context.</p>
+          <div className="mt-3 grid gap-3">
             <input
               value={threadSearch}
               onChange={(event) => setThreadSearch(event.target.value)}
               placeholder="Search threads"
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="form-field text-sm"
             />
             <div className="grid gap-2 sm:grid-cols-2">
               <label className="flex items-center gap-2 text-xs text-slate-600">
@@ -455,7 +456,7 @@ function RoleMessages() {
             <select
               value={threadRoleFilter}
               onChange={(event) => setThreadRoleFilter(event.target.value)}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="form-select text-sm"
             >
               <option value="all">All participants</option>
               {['admin', 'teacher', 'parent', 'student'].map((role) => (
@@ -467,7 +468,7 @@ function RoleMessages() {
             <select
               value={threadSort}
               onChange={(event) => setThreadSort(event.target.value)}
-              className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+              className="form-select text-sm"
             >
               <option value="recent">Recent activity</option>
               <option value="oldest">Oldest first</option>
@@ -484,7 +485,7 @@ function RoleMessages() {
                 setShowHidden(false);
                 setHiddenThreadIds(new Set());
               }}
-              className="interactive-button w-full rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600"
+              className="interactive-button w-full rounded-2xl border border-slate-200 px-3 py-3 text-xs font-semibold text-slate-600"
             >
               Clear filters
             </button>
@@ -492,64 +493,80 @@ function RoleMessages() {
               <button
                 type="button"
                 onClick={() => setHiddenThreadIds(new Set())}
-                className="interactive-button w-full rounded-md border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600"
+                className="interactive-button w-full rounded-2xl border border-slate-200 px-3 py-3 text-xs font-semibold text-slate-600"
               >
                 Unhide all
               </button>
             )}
           </div>
           {canCreateThread ? (
-            <form onSubmit={createThread} className="mt-3 space-y-2">
-              <input
-                value={form.title}
-                onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
-                placeholder="New thread title"
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-                required
-              />
-              <select
-                value={form.participantRole}
-                onChange={(e) => setForm((prev) => ({ ...prev, participantRole: e.target.value }))}
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-              >
-                {targetOptions.map((item) => (
-                  <option key={item} value={item}>{item}</option>
-                ))}
-              </select>
-              <input
-                value={contactSearch}
-                onChange={(e) => setContactSearch(e.target.value)}
-                placeholder="Search contacts"
-                className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
-              />
-              {contactOptions.length > 0 && (
+            <form onSubmit={createThread} className="mt-4 space-y-3">
+              <div className="field-shell">
+                <label className="field-label" htmlFor="message-thread-title">Conversation title</label>
+                <input
+                  id="message-thread-title"
+                  value={form.title}
+                  onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))}
+                  placeholder="Example: Grade 4 attendance follow-up"
+                  className="form-field text-sm"
+                  required
+                />
+              </div>
+              <div className="field-shell">
+                <label className="field-label" htmlFor="message-thread-role">Who should receive it?</label>
                 <select
-                  value={form.contactId}
-                  onChange={(e) => setForm((prev) => ({ ...prev, contactId: e.target.value }))}
-                  className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm"
+                  id="message-thread-role"
+                  value={form.participantRole}
+                  onChange={(e) => setForm((prev) => ({ ...prev, participantRole: e.target.value }))}
+                  className="form-select text-sm"
                 >
-                  {contactOptions.map((contact) => (
-                    <option key={contact.id} value={contact.id}>
-                      {contact.label} {contact.subtitle ? `- ${contact.subtitle}` : ''}
-                    </option>
+                  {targetOptions.map((item) => (
+                    <option key={item} value={item}>{item}</option>
                   ))}
                 </select>
+              </div>
+              <div className="field-shell">
+                <label className="field-label" htmlFor="message-contact-search">Find contact</label>
+                <input
+                  id="message-contact-search"
+                  value={contactSearch}
+                  onChange={(e) => setContactSearch(e.target.value)}
+                  placeholder="Search contacts"
+                  className="form-field text-sm"
+                />
+              </div>
+              {contactOptions.length > 0 && (
+                <div className="field-shell">
+                  <label className="field-label" htmlFor="message-contact-select">Select contact</label>
+                  <select
+                    id="message-contact-select"
+                    value={form.contactId}
+                    onChange={(e) => setForm((prev) => ({ ...prev, contactId: e.target.value }))}
+                    className="form-select text-sm"
+                  >
+                    {contactOptions.map((contact) => (
+                      <option key={contact.id} value={contact.id}>
+                        {contact.label} {contact.subtitle ? `- ${contact.subtitle}` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               )}
               {!contactOptions.length && (
-                <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-700">
-                  No contacts available for this role yet. Ask the admin to add contacts or check your child selection.
+                <p className="status-banner status-banner--warning text-xs">
+                  No contacts are available for this role yet. Ask the admin to add contacts or switch your active child first.
                 </p>
               )}
               <button
                 type="submit"
                 disabled={!canSubmitThread}
-                className="interactive-button w-full rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                className="interactive-button w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {creatingThread ? 'Creating...' : 'Create Thread'}
               </button>
             </form>
           ) : (
-            <p className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
+            <p className="status-banner status-banner--warning mt-4 text-sm">
               {user?.role === 'student'
                 ? 'Messages are read-only for students. Your teachers can post updates here for you to read.'
                 : 'New threads are started by admin or teachers. You can reply inside your own conversation threads here.'}
@@ -573,14 +590,14 @@ function RoleMessages() {
                 type="button"
                 key={thread.id}
                 onClick={() => openThread(thread.id)}
-                className={`interactive-card w-full rounded-2xl border px-3 py-3 text-left ${
+                className={`interactive-card w-full rounded-[24px] border px-4 py-3 text-left ${
                   activeThread?.id === thread.id ? 'border-primary bg-emerald-50/90 shadow-sm' : 'border-slate-200 bg-white/90'
                 }`}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-slate-800">{thread.title}</p>
-                    <p className="text-xs text-slate-500">{thread.contextLabel || thread.participants.join(', ')}</p>
+                    <p className="mt-1 text-xs text-slate-500">{thread.contextLabel || thread.participants.join(', ')}</p>
                   </div>
                   {thread.unread && (
                     <span className="shrink-0 rounded-full bg-emerald-600 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white">
@@ -589,12 +606,12 @@ function RoleMessages() {
                   )}
                 </div>
                 {thread.lastMessage && (
-                  <p className="mt-1 text-xs text-slate-600 line-clamp-2">{thread.lastMessage.body}</p>
+                  <p className="mt-2 text-xs leading-5 text-slate-600 line-clamp-2">{thread.lastMessage.body}</p>
                 )}
-                <p className="mt-1 text-[11px] text-slate-400">
+                <p className="mt-2 text-[11px] font-medium text-slate-400">
                   {thread.updatedAt ? new Date(thread.updatedAt).toLocaleString() : 'No activity yet'}
                 </p>
-                <div className="mt-2 flex flex-wrap gap-2">
+                <div className="mt-3 flex flex-wrap gap-2">
                   {(user?.role === 'admin' || thread.createdByUserId === currentUserId) && (
                     <Tooltip text="Delete this conversation">
                       <button
@@ -625,35 +642,42 @@ function RoleMessages() {
               </button>
             ))}
             {!loading && !visibleThreads.length && (
-              <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-3 text-sm text-slate-600">
-                No conversations found for this scope yet.
+              <p className="status-banner status-banner--warning text-sm">
+                No conversations matched this view yet.
               </p>
             )}
           </div>
         </section>
 
-        <section className="rounded-[28px] border border-slate-200 bg-white/92 p-4 shadow-sm lg:col-span-2">
+        <section className="thread-panel p-4 lg:col-span-2">
           <div className="flex items-center justify-between gap-3">
-            <h2 className="font-heading text-xl text-primary">{activeThread?.title || 'Select a thread'}</h2>
+            <div>
+              <h2 className="font-heading text-xl text-primary">{activeThread?.title || 'Select a thread'}</h2>
+              <p className="mt-1 text-sm text-slate-600">
+                {activeThread
+                  ? 'Messages stay ordered by time so parents, staff, and admin can follow the conversation clearly.'
+                  : 'Choose any thread from the left to read or reply.'}
+              </p>
+            </div>
             {canDeleteThread && (
               <button
                 type="button"
                 onClick={deleteThread}
                 disabled={deletingThread}
-                className="interactive-button rounded-md border border-red-300 px-3 py-1 text-xs font-semibold text-red-600 disabled:cursor-not-allowed disabled:opacity-60"
+                className="interactive-button rounded-2xl border border-red-300 px-3 py-2 text-xs font-semibold text-red-600 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {deletingThread ? 'Deleting...' : 'Delete Thread'}
               </button>
             )}
           </div>
           {activeThread?.contextLabel && (
-            <p className="mt-1 text-sm text-slate-600">
+            <p className="mt-2 text-sm text-slate-600">
               {activeThread.contextLabel}
               {activeThread.contextSubtitle ? ` • ${activeThread.contextSubtitle}` : ''}
             </p>
           )}
 
-          <div className="mt-4 max-h-[28rem] space-y-3 overflow-auto rounded-[24px] border border-slate-200 bg-slate-50/90 p-3">
+          <div className="mt-4 max-h-[30rem] space-y-3 overflow-auto rounded-[24px] border border-slate-200 bg-slate-50/90 p-3">
             {loading && activeThread && !messages.length && (
               <div className="space-y-3">
                 {Array.from({ length: 3 }).map((_, index) => (
@@ -670,11 +694,7 @@ function RoleMessages() {
               return (
                 <article
                   key={message.id}
-                  className={`max-w-[90%] rounded-[22px] border px-4 py-3 ${
-                    outgoing
-                      ? 'ml-auto border-emerald-200 bg-emerald-50 text-slate-800'
-                      : 'mr-auto border-slate-200 bg-white text-slate-800'
-                  }`}
+                  className={`thread-message ${outgoing ? 'thread-message--outgoing' : 'thread-message--incoming'}`}
                 >
                   <div className="flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.14em] text-slate-500">
                     <span>{message.senderRole}</span>
@@ -695,25 +715,30 @@ function RoleMessages() {
           </div>
 
           {!canReply && (
-            <p className="mt-3 rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600">
-              Students can only read messages. Replies are disabled in this portal.
+            <p className="status-banner status-banner--warning mt-3 text-sm">
+              Students can read messages here, but replies are disabled in this portal.
             </p>
           )}
-          <form onSubmit={sendMessage} className="sticky bottom-0 mt-3 flex gap-2 rounded-[24px] border border-slate-200 bg-white/95 p-2 shadow-[0_-10px_25px_rgba(15,23,42,0.05)] backdrop-blur">
-            <input
+          <form onSubmit={sendMessage} className="thread-composer mt-3">
+            <textarea
               value={body}
               onChange={(e) => setBody(e.target.value)}
               placeholder={activeThread ? 'Type a clear message here' : 'Select a thread to start typing'}
-              className="flex-1 rounded-[18px] border border-slate-300 px-4 py-3 text-sm"
+              className="form-textarea text-sm"
               disabled={!activeThread || !canReply}
             />
-            <button
-              type="submit"
-              disabled={!canSendMessage}
-              className="interactive-button rounded-[18px] bg-primary px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {sendingMessage ? 'Sending...' : 'Send'}
-            </button>
+            <div className="thread-composer__actions">
+              <p className="text-xs text-slate-500">
+                Keep replies short and clear so non-technical users can follow the thread easily.
+              </p>
+              <button
+                type="submit"
+                disabled={!canSendMessage}
+                className="interactive-button rounded-[18px] bg-primary px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {sendingMessage ? 'Sending...' : 'Send'}
+              </button>
+            </div>
           </form>
         </section>
       </div>

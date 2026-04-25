@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import ErrorState from '../../components/ErrorState';
 import PortalLayout from '../../components/PortalLayout';
 import { ADMIN_INSTITUTIONS, canonicalInstitution, institutionAccent } from '../../utils/adminInstitution';
 
@@ -142,7 +143,7 @@ function ManageClasses() {
     >
       <div className="grid gap-4 lg:grid-cols-3">
         {groupedClasses.map((group) => (
-          <article key={group.institution} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+          <article key={group.institution} className="dashboard-tile">
             <p className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${institutionAccent(group.institution)}`}>
               {group.institution}
             </p>
@@ -152,53 +153,65 @@ function ManageClasses() {
         ))}
       </div>
 
-      <form onSubmit={handleSubmit} className="mt-6 grid gap-3 rounded-3xl border border-slate-200 bg-white p-5 sm:grid-cols-5">
-        <input
-          required
-          value={form.name}
-          onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-          placeholder="Class name"
-          className="rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-        />
-        <input
-          required
-          value={form.arm}
-          onChange={(e) => setForm((prev) => ({ ...prev, arm: e.target.value }))}
-          placeholder="Arm"
-          className="rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-        />
-        <input
-          type="number"
-          value={form.progressionOrder}
-          onChange={(e) => setForm((prev) => ({ ...prev, progressionOrder: e.target.value }))}
-          placeholder="Progression order"
-          className="rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-        />
-        <select
-          value={form.institution}
-          onChange={(e) => setForm((prev) => ({ ...prev, institution: e.target.value }))}
-          className="rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-        >
-          {ADMIN_INSTITUTIONS.map((institution) => (
-            <option key={institution}>{institution}</option>
-          ))}
-        </select>
+      <form onSubmit={handleSubmit} className="admin-surface mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+        <label className="field-shell">
+          <span className="field-label">Class name</span>
+          <input
+            required
+            value={form.name}
+            onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
+            placeholder="Class name"
+            className="form-field"
+          />
+        </label>
+        <label className="field-shell">
+          <span className="field-label">Arm</span>
+          <input
+            required
+            value={form.arm}
+            onChange={(e) => setForm((prev) => ({ ...prev, arm: e.target.value }))}
+            placeholder="Arm"
+            className="form-field"
+          />
+        </label>
+        <label className="field-shell">
+          <span className="field-label">Progression order</span>
+          <input
+            type="number"
+            value={form.progressionOrder}
+            onChange={(e) => setForm((prev) => ({ ...prev, progressionOrder: e.target.value }))}
+            placeholder="Progression order"
+            className="form-field"
+          />
+        </label>
+        <label className="field-shell">
+          <span className="field-label">Institution</span>
+          <select
+            value={form.institution}
+            onChange={(e) => setForm((prev) => ({ ...prev, institution: e.target.value }))}
+            className="form-select"
+          >
+            {ADMIN_INSTITUTIONS.map((institution) => (
+              <option key={institution}>{institution}</option>
+            ))}
+          </select>
+        </label>
         <button
           type="submit"
           disabled={creatingClass || !canCreateClass}
-          className="rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+          className="interactive-button self-end"
         >
           {creatingClass ? 'Adding...' : 'Add Class'}
         </button>
       </form>
 
-      {loading && <p className="mt-4 text-sm text-slate-600">Loading classes...</p>}
-      {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+      {loading && <div className="status-banner mt-4">Loading classes...</div>}
+      {error && <ErrorState compact title="Unable to manage classes" message={error} className="mt-4" onRetry={loadClasses} />}
 
       <div className="mt-8 space-y-6">
         {groupedClasses.map((group) => (
-          <section key={group.institution} className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-3">
+          <section key={group.institution} className="admin-surface">
+            <div className="admin-toolbar">
               <div>
                 <h2 className="font-heading text-2xl text-primary">{group.institution}</h2>
                 <p className="mt-2 text-sm text-slate-600">Classes stay isolated here and show live student counts.</p>
@@ -217,7 +230,7 @@ function ManageClasses() {
                     const nextValue = !resolveShowRows(group.institution);
                     setShowRowsByInstitution((prev) => ({ ...prev, [group.institution]: nextValue }));
                   }}
-                  className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"
+                  className="interactive-button"
                 >
                   {resolveShowRows(group.institution) ? 'Hide rows' : 'Show rows'}
                 </button>
@@ -247,7 +260,7 @@ function ManageClasses() {
                           <input
                             value={editForm.name}
                             onChange={(e) => setEditForm((prev) => ({ ...prev, name: e.target.value }))}
-                            className="w-full rounded-xl border border-slate-300 px-3 py-2"
+                            className="form-field w-full"
                           />
                         ) : (
                           classItem.name
@@ -258,7 +271,7 @@ function ManageClasses() {
                           <input
                             value={editForm.arm}
                             onChange={(e) => setEditForm((prev) => ({ ...prev, arm: e.target.value }))}
-                            className="w-full rounded-xl border border-slate-300 px-3 py-2"
+                            className="form-field w-full"
                           />
                         ) : (
                           classItem.arm
@@ -270,7 +283,7 @@ function ManageClasses() {
                             type="number"
                             value={editForm.progressionOrder}
                             onChange={(e) => setEditForm((prev) => ({ ...prev, progressionOrder: e.target.value }))}
-                            className="w-full rounded-xl border border-slate-300 px-3 py-2"
+                            className="form-field w-full"
                           />
                         ) : (
                           classItem.progressionOrder ?? '—'
@@ -284,7 +297,7 @@ function ManageClasses() {
                               type="button"
                               onClick={() => handleUpdate(classItem.id)}
                               disabled={savingClassId === classItem.id || !canSaveClass}
-                              className="rounded-xl bg-primary px-3 py-2 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                              className="interactive-button"
                             >
                               {savingClassId === classItem.id ? 'Saving...' : 'Save'}
                             </button>
@@ -292,7 +305,7 @@ function ManageClasses() {
                               type="button"
                               onClick={cancelEdit}
                               disabled={savingClassId === classItem.id}
-                              className="rounded-xl border border-slate-300 px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-60"
+                              className="interactive-button"
                             >
                               Cancel
                             </button>
@@ -302,7 +315,7 @@ function ManageClasses() {
                             <button
                               type="button"
                               onClick={() => startEdit(classItem)}
-                              className="rounded-xl border border-slate-300 px-3 py-2 text-xs"
+                              className="interactive-button"
                             >
                               Edit
                             </button>
@@ -310,7 +323,7 @@ function ManageClasses() {
                               type="button"
                               onClick={() => handleDelete(classItem.id)}
                               disabled={deletingId === classItem.id}
-                              className="rounded-xl border border-red-300 px-3 py-2 text-xs text-red-600 disabled:cursor-not-allowed disabled:opacity-60"
+                              className="interactive-button border-red-300 text-red-600"
                             >
                               {deletingId === classItem.id ? 'Deleting...' : 'Delete'}
                             </button>
