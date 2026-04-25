@@ -49,8 +49,12 @@ async function signInAndWait(page, email, password, expectedUrl) {
 }
 
 test("public homepage loads", async ({ page }) => {
-  await page.goto("/");
+  test.setTimeout(60000);
+  await page.goto("/", { waitUntil: "domcontentloaded" });
   await expect(page).toHaveTitle(/ATTAUFEEQ/i);
+  await expect(
+    page.getByRole("banner").getByRole("link", { name: /parent\/student/i })
+  ).toBeVisible({ timeout: 15000 });
 });
 
 test("student login page loads", async ({ page }) => {
