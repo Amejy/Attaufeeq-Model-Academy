@@ -24,6 +24,14 @@ import { listActivityLogs } from '../repositories/activityLogRepository.js';
 import { sendAdminNotificationEmail, sendPasswordResetEmail } from '../utils/mailer.js';
 import { generateTemporaryPassword, hashPassword } from '../utils/passwords.js';
 import { normalizeAdmissionPeriod } from '../utils/admissionPeriod.js';
+import {
+  computeAcademicOrder,
+  describePromotionStep,
+  getNextTerm,
+  isSessionRolloverTerm,
+  normalizeTerm,
+  resolveNextClass
+} from '../utils/academicProgression.js';
 import { normalizeInstitution } from '../utils/institution.js';
 import {
   findMatchingStudentForAdmission,
@@ -427,45 +435,6 @@ function isPromotionEligibleStatus(status) {
   return ['pending', 'provisioned', 'active'].includes(normalizeStatus(status));
 }
 
-function normalizeClassText(value) {
-  return String(value || '')
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, ' ')
-    .trim();
-}
-
-function parseClassNumber(name) {
-  const match = normalizeClassText(name).match(/(\d{1,2})/);
-  return match ? Number(match[1]) : 0;
-}
-
-function detectClassStage(name) {
-  const normalized = normalizeClassText(name);
-  if (!normalized) return null;
-
-  if (/(jss|junior secondary|js)/.test(normalized)) return { key: 'jss', weight: 30 };
-  if (/(sss|ss|senior secondary)/.test(normalized)) return { key: 'ss', weight: 40 };
-  if (/(primary|pri)/.test(normalized)) return { key: 'primary', weight: 20 };
-  if (/(nursery|pre nursery|preschool|kg|kindergarten|creche)/.test(normalized)) return { key: 'nursery', weight: 10 };
-
-  return null;
-}
-
-function computeClassOrder(classItem) {
-  if (!classItem) return null;
-  const direct =
-    Number.isFinite(classItem.progressionOrder) ? Number(classItem.progressionOrder) :
-    Number.isFinite(classItem.levelOrder) ? Number(classItem.levelOrder) :
-    null;
-
-  if (Number.isFinite(direct)) return direct;
-
-  const stage = detectClassStage(classItem.name);
-  if (!stage) return null;
-  const number = parseClassNumber(classItem.name);
-  return stage.weight * 100 + number;
-}
-
 function buildAutoPromotionMap(classes = []) {
   const byInstitution = classes.reduce((acc, item) => {
     const institution = item.institution || 'Unknown';
@@ -478,17 +447,14 @@ function buildAutoPromotionMap(classes = []) {
 
   Object.values(byInstitution).forEach((group) => {
     const ranked = group
-      .map((item) => ({ item, order: computeClassOrder(item) }))
+      .map((item) => ({ item, order: computeAcademicOrder(item) }))
       .filter((entry) => Number.isFinite(entry.order))
       .sort((a, b) => a.order - b.order || String(a.item.arm).localeCompare(String(b.item.arm)));
 
-    ranked.forEach(({ item, order }) => {
-      const candidates = ranked.filter((entry) => entry.order > order);
-      if (!candidates.length) return;
-      const sameArm = candidates.filter((entry) => entry.item.arm === item.arm);
-      const pick = (sameArm.length ? sameArm : candidates)[0];
-      if (pick?.item?.id) {
-        map.set(item.id, pick.item.id);
+    ranked.forEach(({ item }) => {
+      const { nextClass } = resolveNextClass(item, group);
+      if (nextClass?.id) {
+        map.set(item.id, nextClass.id);
       }
     });
   });
@@ -1484,26 +1450,11 @@ adminRouter.put('/terms/closures', async (req, res) => {
 
 adminRouter.get('/promotions/preview', async (req, res) => {
   const institution = req.query.institution ? String(req.query.institution) : '';
-  const term = req.query.term ? String(req.query.term) : '';
+  const term = normalizeTerm(req.query.term ? String(req.query.term) : '');
   const sessions = await listAcademicSessions();
   const activeSession = sessions.find((session) => session.isActive) || sessions[0] || null;
   const sessionId = req.query.sessionId ? String(req.query.sessionId) : activeSession?.id || '';
   const classIdFilter = req.query.classId ? String(req.query.classId) : '';
-
-  if (term !== 'Third Term') {
-    return res.json({
-      sessionId,
-      activeSession,
-      institution,
-      term,
-      canPromote: false,
-      eligible: [],
-      graduated: [],
-      skipped: [],
-      recommendationCount: 0,
-      promotionMap: []
-    });
-  }
 
   const enrollments = sessionId ? await listStudentEnrollments({ sessionId }) : [];
   const sourceRows = enrollments.length
@@ -1521,13 +1472,6 @@ adminRouter.get('/promotions/preview', async (req, res) => {
 
   const autoMap = buildAutoPromotionMap(adminStore.classes);
   const recommendationMap = buildPromotionRecommendationMap(sessionId, term);
-  const maxOrderByInstitution = adminStore.classes.reduce((acc, item) => {
-    const institution = item.institution || 'Unknown';
-    const order = computeClassOrder(item);
-    if (!Number.isFinite(order)) return acc;
-    acc[institution] = Math.max(acc[institution] ?? order, order);
-    return acc;
-  }, {});
 
   const eligible = [];
   const graduated = [];
@@ -1549,17 +1493,20 @@ adminRouter.get('/promotions/preview', async (req, res) => {
       continue;
     }
 
-    const nextClassId = autoMap.get(classItem.id) || '';
-    if (nextClassId) {
-      const nextClass = adminStore.classes.find((item) => item.id === nextClassId);
+    const nextStep = describePromotionStep(term, classItem, adminStore.classes);
+
+    if (nextStep.action === 'term') {
       eligible.push({
         studentId: student.id,
         fullName: student.fullName,
         classId: classItem.id,
         classLabel: classLabel(classItem),
         institution: normalizeInstitution(student.institution || classItem.institution || ''),
-        nextClassId,
-        nextClassLabel: nextClass ? classLabel(nextClass) : nextClassId,
+        nextTerm: nextStep.nextTerm,
+        nextStepType: 'term',
+        nextStepLabel: nextStep.label,
+        nextClassId: classItem.id,
+        nextClassLabel: classLabel(classItem),
         parentEmail: student.parentPortalEmail || student.guardianEmail || '',
         accountStatus: student.accountStatus || 'active',
         recommendation: recommendationMap.get(student.id) || null
@@ -1567,21 +1514,38 @@ adminRouter.get('/promotions/preview', async (req, res) => {
       continue;
     }
 
-    const order = computeClassOrder(classItem);
-    const institution = normalizeInstitution(classItem.institution || student.institution || 'Unknown');
-    if (Number.isFinite(order) && order >= (maxOrderByInstitution[institution] ?? order)) {
+    if (nextStep.action === 'class' && nextStep.nextClass?.id) {
+      eligible.push({
+        studentId: student.id,
+        fullName: student.fullName,
+        classId: classItem.id,
+        classLabel: classLabel(classItem),
+        institution: normalizeInstitution(student.institution || classItem.institution || ''),
+        nextStepType: 'class',
+        nextStepLabel: nextStep.label,
+        nextClassId: nextStep.nextClass.id,
+        nextClassLabel: classLabel(nextStep.nextClass),
+        parentEmail: student.parentPortalEmail || student.guardianEmail || '',
+        accountStatus: student.accountStatus || 'active',
+        recommendation: recommendationMap.get(student.id) || null
+      });
+      continue;
+    }
+
+    if (nextStep.action === 'graduate') {
       graduated.push({
         studentId: student.id,
         fullName: student.fullName,
         classId: classItem.id,
         classLabel: classLabel(classItem),
-        institution,
-        reason: 'highest_level',
+        institution: normalizeInstitution(classItem.institution || student.institution || 'Unknown'),
+        reason: nextStep.reason || 'graduation_gate',
+        graduationLabel: nextStep.label,
         parentEmail: student.parentPortalEmail || student.guardianEmail || '',
         accountStatus: student.accountStatus || 'active'
       });
     } else {
-      skipped.push({ studentId: student.id, classId: classItem.id, reason: 'no_promotion_mapping' });
+      skipped.push({ studentId: student.id, classId: classItem.id, reason: nextStep.reason || 'no_promotion_mapping' });
     }
   }
 
@@ -1590,7 +1554,7 @@ adminRouter.get('/promotions/preview', async (req, res) => {
     activeSession,
     institution,
     term,
-    canPromote: term === 'Third Term',
+    canPromote: Boolean(term),
     eligible,
     graduated,
     skipped,
@@ -1639,12 +1603,15 @@ adminRouter.post('/academic-sessions/rollover', async (req, res) => {
     const normalizedSessionName = String(toSessionName || '').trim();
     const normalizedStartDate = String(startDate || '').trim();
     const normalizedEndDate = String(endDate || '').trim();
+    const normalizedTerm = normalizeTerm(term);
 
-    if (term !== 'Third Term') {
-      return res.status(400).json({ message: 'Promotion can only run after Third Term.' });
+    if (!normalizedTerm) {
+      return res.status(400).json({ message: 'Select a valid term before running promotion.' });
     }
 
-    if (!normalizedSessionName) {
+    const requiresSessionRollover = isSessionRolloverTerm(normalizedTerm);
+
+    if (requiresSessionRollover && !normalizedSessionName) {
       return res.status(400).json({ message: 'toSessionName is required.' });
     }
     if (normalizedStartDate && Number.isNaN(new Date(normalizedStartDate).getTime())) {
@@ -1695,37 +1662,41 @@ adminRouter.post('/academic-sessions/rollover', async (req, res) => {
     });
     if (!approvedResults) {
       return res.status(400).json({
-        message: 'Promotion requires approved Third Term results for the selected scope.'
+        message: `Promotion requires approved ${normalizedTerm} results for the selected scope.`
       });
     }
 
-    const existingTarget = sessions.find((session) => session.sessionName === normalizedSessionName) || null;
-    const targetSessionId = existingTarget?.id || String(toSessionId || '').trim();
-    if (targetSessionId) {
-      const targetEnrollments = await listStudentEnrollments({ sessionId: targetSessionId });
-      const targetStudentIds = new Set(targetEnrollments.map((row) => row.studentId));
-      const alreadyPromoted = sourceRows.some((row) => targetStudentIds.has(row.studentId));
-      if (alreadyPromoted) {
-        return res.status(409).json({
-          message: 'Promotion already ran for this session/scope. Clear the target session before re-running.'
-        });
+    let createdSession = null;
+
+    if (requiresSessionRollover) {
+      const existingTarget = sessions.find((session) => session.sessionName === normalizedSessionName) || null;
+      const targetSessionId = existingTarget?.id || String(toSessionId || '').trim();
+      if (targetSessionId) {
+        const targetEnrollments = await listStudentEnrollments({ sessionId: targetSessionId });
+        const targetStudentIds = new Set(targetEnrollments.map((row) => row.studentId));
+        const alreadyPromoted = sourceRows.some((row) => targetStudentIds.has(row.studentId));
+        if (alreadyPromoted) {
+          return res.status(409).json({
+            message: 'Promotion already ran for this session/scope. Clear the target session before re-running.'
+          });
+        }
       }
-    }
 
-    const createdSession = await createAcademicSession({
-      id: toSessionId || makeId('ses'),
-      sessionName: normalizedSessionName,
-      startDate: normalizedStartDate,
-      endDate: normalizedEndDate,
-      isActive: Boolean(activateNewSession)
-    });
+      createdSession = await createAcademicSession({
+        id: toSessionId || makeId('ses'),
+        sessionName: normalizedSessionName,
+        startDate: normalizedStartDate,
+        endDate: normalizedEndDate,
+        isActive: Boolean(activateNewSession)
+      });
 
-    if (!createdSession) {
-      return res.status(400).json({ message: 'Unable to create new academic session.' });
-    }
+      if (!createdSession) {
+        return res.status(400).json({ message: 'Unable to create new academic session.' });
+      }
 
-    if (activateNewSession) {
-      await activateAcademicSession(createdSession.id);
+      if (activateNewSession) {
+        await activateAcademicSession(createdSession.id);
+      }
     }
 
     const map = new Map();
@@ -1757,14 +1728,6 @@ adminRouter.post('/academic-sessions/rollover', async (req, res) => {
         }
       });
     }
-
-    const maxOrderByInstitution = adminStore.classes.reduce((acc, item) => {
-      const institution = item.institution || 'Unknown';
-      const order = computeClassOrder(item);
-      if (!Number.isFinite(order)) return acc;
-      acc[institution] = Math.max(acc[institution] ?? order, order);
-      return acc;
-    }, {});
 
     const promoted = [];
     const repeated = [];
@@ -1799,14 +1762,22 @@ adminRouter.post('/academic-sessions/rollover', async (req, res) => {
           }
         }
 
-        await upsertStudentEnrollment({
+        if (createdSession?.id) {
+          await upsertStudentEnrollment({
+            studentId: row.studentId,
+            classId: currentClassId,
+            sessionId: createdSession.id,
+            promotedFromClass: currentClassId
+          });
+        }
+
+        repeated.push({
           studentId: row.studentId,
           classId: currentClassId,
-          sessionId: createdSession.id,
-          promotedFromClass: currentClassId
+          term: normalizedTerm,
+          nextTerm: getNextTerm(normalizedTerm) || '',
+          reason: 'repeat'
         });
-
-        repeated.push({ studentId: row.studentId, classId: currentClassId, reason: 'repeat' });
         continue;
       }
 
@@ -1822,36 +1793,46 @@ adminRouter.post('/academic-sessions/rollover', async (req, res) => {
         continue;
       }
 
-      const nextClassId = map.get(currentClassId) || (carryOverUnmapped ? currentClassId : '');
-      if (!nextClassId) {
-        const currentClass = adminStore.classes.find((item) => item.id === currentClassId);
-        const order = computeClassOrder(currentClass);
-        const institution = currentClass?.institution || 'Unknown';
-        if (Number.isFinite(order) && order >= (maxOrderByInstitution[institution] ?? order)) {
-          const student = await findStudentById(row.studentId);
-          if (student) {
-            const updated = await updateStudent(student.id, { ...student, accountStatus: 'graduated' });
-            if (updated) {
-              replaceStoreRecord('students', updated);
-            }
-          }
-          graduated.push({ studentId: row.studentId, classId: currentClassId, reason: 'highest_level' });
-          continue;
-        }
-
-        skipped.push({ studentId: row.studentId, classId: currentClassId, reason: 'no_promotion_mapping' });
+      const student = await findStudentById(row.studentId);
+      if (!student) {
+        skipped.push({ studentId: row.studentId, classId: currentClassId, reason: 'student_missing' });
+        continue;
+      }
+      if (!isPromotionEligibleStatus(student.accountStatus)) {
+        skipped.push({ studentId: row.studentId, classId: currentClassId, reason: 'inactive_or_graduated' });
         continue;
       }
 
-    const student = await findStudentById(row.studentId);
-    if (!student) {
-      skipped.push({ studentId: row.studentId, classId: currentClassId, reason: 'student_missing' });
-      continue;
-    }
-    if (!isPromotionEligibleStatus(student.accountStatus)) {
-      skipped.push({ studentId: row.studentId, classId: currentClassId, reason: 'inactive_or_graduated' });
-      continue;
-    }
+      const currentClass = adminStore.classes.find((item) => item.id === currentClassId);
+      const nextStep = describePromotionStep(normalizedTerm, currentClass, adminStore.classes);
+
+      if (nextStep.action === 'graduate') {
+        const updated = await updateStudent(student.id, { ...student, accountStatus: 'graduated' });
+        if (updated) {
+          replaceStoreRecord('students', updated);
+        }
+        graduated.push({ studentId: row.studentId, classId: currentClassId, reason: nextStep.reason || 'graduation_gate' });
+        continue;
+      }
+
+      if (nextStep.action === 'term') {
+        promoted.push({
+          studentId: student.id,
+          classId: currentClassId,
+          fromTerm: normalizedTerm,
+          toTerm: nextStep.nextTerm || '',
+          stepType: 'term'
+        });
+        continue;
+      }
+
+      const nextClassId = map.get(currentClassId)
+        || nextStep.nextClass?.id
+        || (carryOverUnmapped ? currentClassId : '');
+      if (!nextClassId) {
+        skipped.push({ studentId: row.studentId, classId: currentClassId, reason: nextStep.reason || 'no_promotion_mapping' });
+        continue;
+      }
 
       const nextClass = adminStore.classes.find((item) => item.id === nextClassId);
       const nextLevel = nextClass ? `${nextClass.name} ${nextClass.arm}` : student.level;
@@ -1865,17 +1846,20 @@ adminRouter.post('/academic-sessions/rollover', async (req, res) => {
         replaceStoreRecord('students', updated);
       }
 
-      await upsertStudentEnrollment({
-        studentId: student.id,
-        classId: nextClassId,
-        sessionId: createdSession.id,
-        promotedFromClass: currentClassId
-      });
+      if (createdSession?.id) {
+        await upsertStudentEnrollment({
+          studentId: student.id,
+          classId: nextClassId,
+          sessionId: createdSession.id,
+          promotedFromClass: currentClassId
+        });
+      }
 
       promoted.push({
         studentId: student.id,
         fromClassId: currentClassId,
-        toClassId: nextClassId
+        toClassId: nextClassId,
+        stepType: 'class'
       });
     }
 
@@ -1890,11 +1874,12 @@ adminRouter.post('/academic-sessions/rollover', async (req, res) => {
       id: makeId('promo'),
       institution,
       classId,
-      term,
+      term: normalizedTerm,
       fromSessionId: sourceSessionId,
-      toSessionId: createdSession.id,
-      toSessionName: createdSession.sessionName,
+      toSessionId: createdSession?.id || '',
+      toSessionName: createdSession?.sessionName || '',
       promotionMode: useAutoMap ? 'auto' : 'manual',
+      progressionMode: requiresSessionRollover ? 'session-rollover' : 'term-advance',
       promotionMap: responseMap.filter((entry) => entry.fromClassId && entry.toClassId),
       promotedCount: promoted.length,
       repeatedCount: repeated.length,
@@ -1925,8 +1910,9 @@ adminRouter.post('/academic-sessions/rollover', async (req, res) => {
       toSession: createdSession,
       institution,
       classId,
-      term,
+      term: normalizedTerm,
       promotionMode: useAutoMap ? 'auto' : 'manual',
+      progressionMode: requiresSessionRollover ? 'session-rollover' : 'term-advance',
       promotionMap: responseMap.filter((entry) => entry.fromClassId && entry.toClassId),
       promotedCount: promoted.length,
       repeatedCount: repeated.length,

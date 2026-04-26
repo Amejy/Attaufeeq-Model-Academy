@@ -244,10 +244,28 @@ function classLabel(classItem) {
   return classItem ? `${classItem.name} ${classItem.arm}` : '';
 }
 
+function getActiveSessionId() {
+  const sessions = adminStore.academicSessions || [];
+  const active = sessions.find((session) => session.isActive) || sessions[0] || null;
+  return active?.id || '';
+}
+
+function resolveEnrollmentClassId(studentId, sessionId = '') {
+  if (!studentId || !sessionId) return '';
+  const enrollment = (adminStore.studentEnrollments || []).find(
+    (entry) => entry.studentId === studentId && entry.sessionId === sessionId
+  );
+  return enrollment?.classId || '';
+}
+
 function enrichStudent(student) {
-  const classItem = adminStore.classes.find((item) => item.id === student.classId);
+  const activeSessionId = getActiveSessionId();
+  const enrolledClassId = resolveEnrollmentClassId(student.id, activeSessionId);
+  const classId = enrolledClassId || student.classId;
+  const classItem = adminStore.classes.find((item) => item.id === classId);
   return {
     ...student,
+    classId,
     classLabel: classLabel(classItem) || student.level || '',
     institution: classItem?.institution || student.institution || ''
   };

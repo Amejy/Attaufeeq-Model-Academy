@@ -10,10 +10,30 @@ function normalizeIsbn(value) {
   return String(value || '').trim().toLowerCase();
 }
 
+function getActiveSessionId() {
+  const sessions = adminStore.academicSessions || [];
+  const active = sessions.find((session) => session.isActive) || sessions[0] || null;
+  return active?.id || '';
+}
+
+function resolveEnrollmentClassId(studentId, sessionId = '') {
+  if (!studentId || !sessionId) return '';
+  const enrollment = (adminStore.studentEnrollments || []).find(
+    (entry) => entry.studentId === studentId && entry.sessionId === sessionId
+  );
+  return enrollment?.classId || '';
+}
+
+function resolveLibraryClassId(student) {
+  const activeSessionId = getActiveSessionId();
+  return resolveEnrollmentClassId(student?.id, activeSessionId) || student?.classId || '';
+}
+
 function withBookDetails(issue) {
   const book = adminStore.libraryBooks.find((item) => item.id === issue.bookId);
   const student = adminStore.students.find((item) => item.id === issue.studentId);
-  const classItem = adminStore.classes.find((item) => item.id === student?.classId);
+  const classId = student ? resolveLibraryClassId(student) : '';
+  const classItem = adminStore.classes.find((item) => item.id === classId);
   return {
     ...issue,
     bookTitle: book?.title || issue.bookTitle || issue.bookId,
@@ -213,7 +233,8 @@ libraryRouter.post('/admin/issue', requireAuth, requireRole('admin', 'admissions
     return res.status(400).json({ message: 'Book and student must belong to the same institution.' });
   }
 
-  if (student && book.classId && student.classId !== book.classId) {
+  const studentClassId = student ? resolveLibraryClassId(student) : '';
+  if (student && book.classId && studentClassId !== book.classId) {
     return res.status(400).json({ message: 'Book is restricted to a different class.' });
   }
 
@@ -302,10 +323,11 @@ libraryRouter.delete('/admin/issues/:issueId', requireAuth, requireRole('admin',
 
 libraryRouter.get('/student', requireAuth, requireRole('student'), (req, res) => {
   const student = findStudentByUser(req.user);
+  const studentClassId = student ? resolveLibraryClassId(student) : '';
   const books = student
     ? adminStore.libraryBooks
         .filter((book) => book.institution === student.institution)
-        .filter((book) => book.classId === student.classId)
+        .filter((book) => book.classId === studentClassId)
         .map(withBookClass)
     : [];
 
@@ -322,10 +344,11 @@ libraryRouter.get('/student', requireAuth, requireRole('student'), (req, res) =>
 libraryRouter.get('/parent', requireAuth, requireRole('parent'), (req, res) => {
   const children = findChildrenForParent(req.user);
   const child = findChildForParent(req.user, String(req.query.childId || '')) || children[0] || null;
+  const childClassId = child ? resolveLibraryClassId(child) : '';
   const books = child
     ? adminStore.libraryBooks
         .filter((book) => book.institution === child.institution)
-        .filter((book) => book.classId === child.classId)
+        .filter((book) => book.classId === childClassId)
         .map(withBookClass)
     : [];
 

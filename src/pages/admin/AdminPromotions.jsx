@@ -15,6 +15,10 @@ function nextSessionName(value = '') {
   return `${start}/${end}`;
 }
 
+function isSessionRolloverTerm(term = '') {
+  return term === 'Third Term';
+}
+
 function AdminPromotions() {
   const { apiJson } = useAuth();
   const [sessions, setSessions] = useState([]);
@@ -193,6 +197,7 @@ function AdminPromotions() {
     () => nextSessionName(selectedSession?.sessionName),
     [selectedSession]
   );
+  const requiresSessionRollover = isSessionRolloverTerm(term);
 
   const summary = useMemo(() => ({
     eligible: eligibleRows.length,
@@ -201,14 +206,19 @@ function AdminPromotions() {
     repeated: repeatedRows.length
   }), [eligibleRows.length, graduatedRows.length, preview.skipped, repeatedRows.length]);
   const actionableCount = summary.eligible + summary.repeated + summary.graduated;
-  const canRunPromotion = Boolean(sessionId && toSessionName.trim() && term === 'Third Term' && actionableCount > 0);
+  const canRunPromotion = Boolean(
+    sessionId &&
+    actionableCount > 0 &&
+    preview.canPromote &&
+    (!requiresSessionRollover || toSessionName.trim())
+  );
   const filteredEligibleRows = useMemo(() => {
     const query = debouncedSearch.toLowerCase();
     return eligibleRows.filter((row) => {
       const decision = decisions[row.studentId] || 'promote';
       const matchesDecision = decisionFilter === 'all' ? true : decision === decisionFilter;
       const matchesClass = classId ? row.classId === classId : true;
-      const searchable = `${row.fullName} ${buildStudentCode(row)} ${row.classLabel} ${row.nextClassLabel}`.toLowerCase();
+      const searchable = `${row.fullName} ${buildStudentCode(row)} ${row.classLabel} ${row.nextClassLabel || ''} ${row.nextStepLabel || ''}`.toLowerCase();
       const matchesSearch = !query || searchable.includes(query);
       return matchesDecision && matchesSearch && matchesClass;
     });
@@ -243,7 +253,7 @@ function AdminPromotions() {
     setMessage('');
 
     try {
-      if (!toSessionName.trim()) {
+      if (requiresSessionRollover && !toSessionName.trim()) {
         throw new Error('New session name is required.');
       }
       const payload = await apiJson('/admin/academic-sessions/rollover', {
@@ -252,9 +262,9 @@ function AdminPromotions() {
           institution,
           classId,
           term,
-          toSessionName: toSessionName.trim(),
+          toSessionName: requiresSessionRollover ? toSessionName.trim() : '',
           fromSessionId: sessionId,
-          activateNewSession: true,
+          activateNewSession: requiresSessionRollover,
           studentDecisions: Object.entries(decisions).map(([studentId, action]) => ({
             studentId,
             action
@@ -263,7 +273,9 @@ function AdminPromotions() {
       });
 
       setMessage(
-        `Promotion completed. ${payload.promotedCount} promoted, ${payload.repeatedCount || 0} repeated, ${payload.graduatedCount} graduated${classId ? ' in the selected class scope' : ''}.`
+        requiresSessionRollover
+          ? `Class promotion completed. ${payload.promotedCount} moved forward, ${payload.repeatedCount || 0} marked to repeat, ${payload.graduatedCount} graduated${classId ? ' in the selected class' : ''}.`
+          : `Term promotion completed. ${payload.promotedCount} moved to the next term and ${payload.repeatedCount || 0} were marked to repeat${classId ? ' in the selected class' : ''}.`
       );
       setSessionNameTouched(false);
       await loadSessions();
@@ -299,7 +311,7 @@ function AdminPromotions() {
     <PortalLayout
       role="admin"
       title="Promotion & Session Rollover"
-      subtitle="Promotion runs after Third Term only. Review eligible students, confirm the next session, then roll forward while preserving historical records."
+      subtitle="Review each student, move approved students into the next term when results are ready, and roll the school into a new session after Third Term."
     >
       {loading && <p className="text-sm text-slate-600">Loading promotion data...</p>}
       {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
@@ -314,17 +326,17 @@ function AdminPromotions() {
         <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Eligible Students</p>
           <p className="mt-3 text-2xl font-semibold text-slate-900">{summary.eligible}</p>
-          <p className="mt-2 text-xs text-slate-500">Students mapped to the next class level.</p>
+          <p className="mt-2 text-xs text-slate-500">Students ready for the next approved step.</p>
         </article>
         <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Graduations</p>
           <p className="mt-3 text-2xl font-semibold text-slate-900">{summary.graduated}</p>
-          <p className="mt-2 text-xs text-slate-500">Highest-level students marked as graduated.</p>
+          <p className="mt-2 text-xs text-slate-500">Students who must finish and register again for the next portal.</p>
         </article>
         <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Repeats</p>
           <p className="mt-3 text-2xl font-semibold text-slate-900">{summary.repeated}</p>
-          <p className="mt-2 text-xs text-slate-500">Students flagged to repeat the current class.</p>
+          <p className="mt-2 text-xs text-slate-500">Students flagged to remain where they are.</p>
         </article>
       </div>
 
@@ -375,9 +387,11 @@ function AdminPromotions() {
                 </option>
               ))}
             </select>
-            {term !== 'Third Term' && (
-              <p className="mt-2 text-xs text-amber-700">Promotion only runs after Third Term.</p>
-            )}
+            <p className="mt-2 text-xs text-slate-500">
+              {requiresSessionRollover
+                ? 'Third Term promotion moves students into the next class and can open a new session.'
+                : `This promotion moves approved students into ${term === 'First Term' ? 'Second Term' : 'Third Term'}.`}
+            </p>
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Class Filter</p>
@@ -394,18 +408,20 @@ function AdminPromotions() {
               ))}
             </select>
           </div>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">New Session Name</p>
-            <input
-              value={toSessionName}
-              onChange={(event) => {
-                setSessionNameTouched(true);
-                setToSessionName(event.target.value);
-              }}
-              placeholder="2026/2027"
-              className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
-            />
-          </div>
+          {requiresSessionRollover && (
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">New Session Name</p>
+              <input
+                value={toSessionName}
+                onChange={(event) => {
+                  setSessionNameTouched(true);
+                  setToSessionName(event.target.value);
+                }}
+                placeholder="2026/2027"
+                className="mt-2 w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm"
+              />
+            </div>
+          )}
           <div className="flex items-end">
             <button
               type="button"
@@ -413,7 +429,7 @@ function AdminPromotions() {
               disabled={submitting || !canRunPromotion}
               className="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
             >
-              {submitting ? 'Promoting...' : 'Run Promotion'}
+              {submitting ? 'Saving...' : requiresSessionRollover ? 'Run Class Promotion' : 'Run Term Promotion'}
             </button>
           </div>
         </div>
@@ -446,7 +462,11 @@ function AdminPromotions() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-heading text-2xl text-primary">Eligible Students</h2>
-            <p className="mt-2 text-sm text-slate-600">These students will move to the next class level in the new session.</p>
+            <p className="mt-2 text-sm text-slate-600">
+              {requiresSessionRollover
+                ? 'These students are lined up for the next class or graduation point.'
+                : 'These students are ready to move into the next term once you confirm the list.'}
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700">
@@ -502,31 +522,25 @@ function AdminPromotions() {
                     <p className="text-xs text-slate-500">{buildStudentCode(row)}</p>
                   </td>
                   <td className="px-4 py-3">{row.classLabel}</td>
-                  <td className="px-4 py-3">{row.nextClassLabel}</td>
+                  <td className="px-4 py-3">{row.nextStepLabel || row.nextClassLabel}</td>
                   <td className="px-4 py-3">
-                    <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1">
-                      <button
-                        type="button"
-                        onClick={() => setDecisions((prev) => ({ ...prev, [row.studentId]: 'promote' }))}
-                        className={`rounded-lg px-3 py-1 text-xs font-semibold ${
-                          (decisions[row.studentId] || 'promote') === 'promote'
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : 'text-slate-600'
-                        }`}
-                      >
-                        Mark Promote
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDecisions((prev) => ({ ...prev, [row.studentId]: 'repeat' }))}
-                        className={`rounded-lg px-3 py-1 text-xs font-semibold ${
-                          decisions[row.studentId] === 'repeat'
-                            ? 'bg-amber-100 text-amber-700'
-                            : 'text-slate-600'
-                        }`}
-                      >
-                        Mark Repeat
-                      </button>
+                    <div className="flex flex-wrap gap-3 text-xs text-slate-700">
+                      <label className="inline-flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={(decisions[row.studentId] || 'promote') === 'promote'}
+                          onChange={() => setDecisions((prev) => ({ ...prev, [row.studentId]: 'promote' }))}
+                        />
+                        Promote
+                      </label>
+                      <label className="inline-flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={decisions[row.studentId] === 'repeat'}
+                          onChange={() => setDecisions((prev) => ({ ...prev, [row.studentId]: 'repeat' }))}
+                        />
+                        Repeat
+                      </label>
                     </div>
                   </td>
                   <td className="px-4 py-3 text-xs text-slate-600">
@@ -553,7 +567,11 @@ function AdminPromotions() {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-heading text-2xl text-primary">Repeated Students</h2>
-            <p className="mt-2 text-sm text-slate-600">These students will remain in the same class for the new session.</p>
+            <p className="mt-2 text-sm text-slate-600">
+              {requiresSessionRollover
+                ? 'These students will stay in the same class in the new session.'
+                : 'These students will remain in the same term and class for now.'}
+            </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
@@ -609,29 +627,23 @@ function AdminPromotions() {
                   <td className="px-4 py-3">{row.classLabel}</td>
                   <td className="px-4 py-3 text-xs text-slate-600">{row.parentEmail || '—'}</td>
                   <td className="px-4 py-3">
-                    <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1">
-                      <button
-                        type="button"
-                        onClick={() => setDecisions((prev) => ({ ...prev, [row.studentId]: 'repeat' }))}
-                        className={`rounded-lg px-3 py-1 text-xs font-semibold ${
-                          (decisions[row.studentId] || 'repeat') === 'repeat'
-                            ? 'bg-amber-100 text-amber-700'
-                            : 'text-slate-600'
-                        }`}
-                      >
-                        Mark Repeat
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDecisions((prev) => ({ ...prev, [row.studentId]: 'promote' }))}
-                        className={`rounded-lg px-3 py-1 text-xs font-semibold ${
-                          decisions[row.studentId] === 'promote'
-                            ? 'bg-emerald-100 text-emerald-700'
-                            : 'text-slate-600'
-                        }`}
-                      >
-                        Mark Promote
-                      </button>
+                    <div className="flex flex-wrap gap-3 text-xs text-slate-700">
+                      <label className="inline-flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={(decisions[row.studentId] || 'repeat') === 'repeat'}
+                          onChange={() => setDecisions((prev) => ({ ...prev, [row.studentId]: 'repeat' }))}
+                        />
+                        Repeat
+                      </label>
+                      <label className="inline-flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={decisions[row.studentId] === 'promote'}
+                          onChange={() => setDecisions((prev) => ({ ...prev, [row.studentId]: 'promote' }))}
+                        />
+                        Promote
+                      </label>
                     </div>
                     <p className="mt-2 text-xs text-slate-500">
                       Current: {decisions[row.studentId] === 'promote' ? 'Promote' : 'Repeat'}

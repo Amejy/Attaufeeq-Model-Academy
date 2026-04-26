@@ -117,7 +117,12 @@ export async function listResultTokens({ status = '', search = '', limit = 200, 
       clauses.push(`token_hash = $${params.length}`);
     } else {
       params.push(`%${trimmedSearch}%`);
-      clauses.push(`token_preview ILIKE $${params.length}`);
+      clauses.push(`(
+        token_preview ILIKE $${params.length}
+        OR COALESCE(term, '') ILIKE $${params.length}
+        OR COALESCE(assigned_student_id, '') ILIKE $${params.length}
+        OR COALESCE(used_by_student_id, '') ILIKE $${params.length}
+      )`);
     }
   }
 

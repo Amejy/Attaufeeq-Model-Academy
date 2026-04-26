@@ -41,6 +41,12 @@ function formatDateTime(value) {
   }
 }
 
+function nextPromotionLabel(term = '') {
+  if (term === 'First Term') return 'Second Term';
+  if (term === 'Second Term') return 'Third Term';
+  return 'Next Class';
+}
+
 function rowStatus(row, baseline) {
   const total = Number(row.ca || 0) + Number(row.exam || 0);
 
@@ -243,7 +249,7 @@ function TeacherResults() {
   }, [classStudents]);
 
   useEffect(() => {
-    if (!canRecommendPromotion || form.term !== 'Third Term' || !form.classId || !options.sessionId) return;
+    if (!canRecommendPromotion || !form.term || !form.classId || !options.sessionId) return;
 
     let active = true;
 
@@ -621,7 +627,7 @@ function TeacherResults() {
   }
 
   async function handleSubmitPromotion() {
-    if (!form.classId || form.term !== 'Third Term') return;
+    if (!form.classId || !form.term) return;
     setPromotionStatus({ error: '', success: '' });
     if (!hasSession) {
       setPromotionStatus({
@@ -647,7 +653,7 @@ function TeacherResults() {
         }
       });
 
-      setPromotionStatus({ error: '', success: 'Promotion recommendations sent to admin for review.' });
+      setPromotionStatus({ error: '', success: `Promotion recommendations for ${nextPromotionLabel(form.term)} have been sent to admin.` });
     } catch (err) {
       setPromotionStatus({ error: err.message || 'Unable to submit promotion recommendations.', success: '' });
     } finally {
@@ -948,13 +954,12 @@ function TeacherResults() {
         </div>
       </form>
 
-      {form.term === 'Third Term' && (
-        <section className="mt-8 rounded-[28px] border border-emerald-900/10 bg-white/95 p-5 shadow-sm">
+      <section className="mt-8 rounded-[28px] border border-emerald-900/10 bg-white/95 p-5 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h2 className="font-heading text-2xl text-primary">Promotion Recommendations</h2>
               <p className="mt-2 max-w-2xl text-sm text-slate-600">
-                Lead teachers can flag students to repeat or advance. Admin reviews the list before running promotion.
+                Lead teachers can flag each student to repeat or move forward. Admin reviews the list before final promotion.
               </p>
             </div>
             <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-right">
@@ -1018,16 +1023,28 @@ function TeacherResults() {
                           <div className="mt-1 text-xs text-slate-500">{buildStudentCode(student)}</div>
                         </td>
                         <td className="px-4 py-3">
-                          <select
-                            value={promotionDecisions[student.id] || 'promote'}
-                            onChange={(event) =>
-                              setPromotionDecisions((prev) => ({ ...prev, [student.id]: event.target.value }))
-                            }
-                            className="rounded-xl border border-slate-300 px-3 py-2 text-xs"
-                          >
-                            <option value="promote">Promote</option>
-                            <option value="repeat">Repeat</option>
-                          </select>
+                          <div className="flex flex-wrap gap-3 text-xs text-slate-700">
+                            <label className="inline-flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={(promotionDecisions[student.id] || 'promote') === 'promote'}
+                                onChange={() =>
+                                  setPromotionDecisions((prev) => ({ ...prev, [student.id]: 'promote' }))
+                                }
+                              />
+                              Promote
+                            </label>
+                            <label className="inline-flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={promotionDecisions[student.id] === 'repeat'}
+                                onChange={() =>
+                                  setPromotionDecisions((prev) => ({ ...prev, [student.id]: 'repeat' }))
+                                }
+                              />
+                              Repeat
+                            </label>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1049,13 +1066,12 @@ function TeacherResults() {
                   disabled={actionBusy || !hasSession || !classStudents.length}
                   className="rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {promotionSaving ? 'Sending...' : 'Send Recommendations to Admin'}
+                  {promotionSaving ? 'Sending...' : `Send ${nextPromotionLabel(form.term)} Recommendations`}
                 </button>
               </div>
             </>
           )}
         </section>
-      )}
 
       <section className="mt-8 rounded-[28px] border border-emerald-900/10 bg-white/95 p-5 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">

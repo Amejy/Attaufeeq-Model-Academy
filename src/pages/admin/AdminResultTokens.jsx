@@ -122,6 +122,55 @@ function AdminResultTokens() {
     }
   }
 
+  function printTokens() {
+    const printableTokens = tokens.filter((token) => token.status !== 'used');
+    if (!printableTokens.length) {
+      setError('No printable tokens are available in this list yet.');
+      setSuccess('');
+      return;
+    }
+
+    const printWindow = window.open('', '_blank', 'width=960,height=720');
+    if (!printWindow) {
+      setError('Allow pop-ups to print token slips from this page.');
+      setSuccess('');
+      return;
+    }
+
+    const cards = printableTokens.map((token) => `
+      <article class="card">
+        <p class="school">ATTAUFEEQ Result Token</p>
+        <p class="token">${token.token || token.tokenPreview || 'Token'}</p>
+        <p class="meta">Term: ${token.term || 'Any term'}</p>
+        <p class="meta">Status: ${token.status}</p>
+      </article>
+    `).join('');
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Result Tokens</title>
+          <style>
+            body { font-family: Arial, sans-serif; margin: 24px; color: #0f172a; }
+            .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+            .card { border: 1px solid #cbd5e1; border-radius: 12px; padding: 16px; }
+            .school { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; color: #475569; }
+            .token { margin: 0 0 10px; font-size: 24px; font-weight: 700; letter-spacing: 0.18em; }
+            .meta { margin: 4px 0 0; font-size: 12px; color: #475569; }
+          </style>
+        </head>
+        <body>
+          <div class="grid">${cards}</div>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+    setSuccess(`Prepared ${printableTokens.length} token slips for printing.`);
+    setError('');
+  }
+
   const hasTokens = tokens.length > 0;
   const summaryCards = useMemo(() => ([
     { label: 'Total Tokens', value: stats.total ?? 0 },
@@ -134,15 +183,24 @@ function AdminResultTokens() {
     <PortalLayout
       role="admin"
       title="Result Token System"
-      subtitle="Generate, track, and export term-specific result tokens (single-use)."
+      subtitle="Generate token slips in bulk, print them for sale, and track which ones have been used."
       actions={
-        <button
-          type="button"
-          onClick={loadTokens}
-          className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700"
-        >
-          Refresh
-        </button>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={printTokens}
+            className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700"
+          >
+            Print Tokens
+          </button>
+          <button
+            type="button"
+            onClick={loadTokens}
+            className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700"
+          >
+            Refresh
+          </button>
+        </div>
       }
     >
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -201,14 +259,14 @@ function AdminResultTokens() {
             {saving ? 'Generating...' : 'Generate Tokens'}
           </button>
         </form>
-        <p className="mt-2 text-xs text-slate-500">Each token is valid for one student and one term only.</p>
+        <p className="mt-2 text-xs text-slate-500">Each token can be generated in bulk, printed, sold, and used once for the selected term.</p>
       </section>
 
       <section className="mt-6 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-heading text-2xl text-primary">Token Inventory</h2>
-            <p className="mt-2 text-sm text-slate-600">Search, filter, and export issued tokens.</p>
+            <p className="mt-2 text-sm text-slate-600">Search, filter, print, and export token stock without assigning each one first.</p>
           </div>
           <button
             type="button"
@@ -254,7 +312,7 @@ function AdminResultTokens() {
               <tr>
                 <th className="px-4 py-3">Token</th>
                 <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Assigned</th>
+                <th className="px-4 py-3">Reserved For</th>
                 <th className="px-4 py-3">Term</th>
                 <th className="px-4 py-3">Usage</th>
                 <th className="px-4 py-3">Created</th>

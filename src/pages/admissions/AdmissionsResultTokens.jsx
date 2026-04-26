@@ -208,7 +208,7 @@ function AdmissionsResultTokens() {
     <PortalLayout
       role="admissions"
       title="Result Token & Card Manager"
-      subtitle="Assign tokens, track usage, and generate printable result cards."
+      subtitle="Sell tokens quickly, reserve one for a student when needed, and print a clean token slip on the spot."
       actions={
         <button
           type="button"
@@ -234,7 +234,7 @@ function AdmissionsResultTokens() {
       </section>
 
       <section className="mt-6 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="font-heading text-2xl text-primary">Assign Token to Student</h2>
+        <h2 className="font-heading text-2xl text-primary">Reserve Token for Student</h2>
         <form onSubmit={assignToken} className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1.2fr,1fr,auto]">
           <input
             list="active-token-list"
@@ -264,9 +264,12 @@ function AdmissionsResultTokens() {
             disabled={assigning}
             className="rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {assigning ? 'Assigning...' : 'Assign Token'}
+            {assigning ? 'Saving...' : 'Reserve Token'}
           </button>
         </form>
+        <p className="mt-3 text-xs text-slate-500">
+          You do not have to reserve every token here. Any unused token can still be sold directly and will bind itself to the first student who uses it.
+        </p>
         {!activeTokens.length && (
           <p className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
             No active tokens available yet. Ask admin to generate tokens first.

@@ -8,6 +8,7 @@ import { clearUnsubmittedResults, listResults, markResultsClearedForTeacher, pub
 import { findUserById } from '../repositories/userRepository.js';
 import { findChildForParent, findStudentByUser, findTeacherByUser, findChildrenForParent } from '../utils/portalScope.js';
 import { institutionEquals, normalizeInstitution } from '../utils/institution.js';
+import { normalizeTerm } from '../utils/academicProgression.js';
 import { resolveStudentByIdentifier } from '../utils/studentCode.js';
 import { filterCountableActiveStudents } from '../utils/studentLifecycle.js';
 import {
@@ -750,7 +751,7 @@ resultsRouter.post('/teacher/clear-published', requireAuth, requireRole('teacher
 resultsRouter.get('/teacher/promotion-recommendations', requireAuth, requireRole('teacher'), async (req, res) => {
   const teacher = findTeacherByUser(req.user);
   const classId = String(req.query.classId || '');
-  const term = String(req.query.term || '');
+  const term = normalizeTerm(req.query.term || '');
   const activeSession = await ensureActiveAcademicSession();
   const sessionId = req.query.sessionId ? String(req.query.sessionId) : activeSession?.id || '';
 
@@ -775,7 +776,7 @@ resultsRouter.get('/teacher/promotion-recommendations', requireAuth, requireRole
 resultsRouter.post('/teacher/promotion-recommendations', requireAuth, requireRole('teacher'), async (req, res) => {
   const teacher = findTeacherByUser(req.user);
   const classId = String(req.body?.classId || '').trim();
-  const term = String(req.body?.term || '').trim();
+  const term = normalizeTerm(req.body?.term || '');
   const decisions = Array.isArray(req.body?.decisions) ? req.body.decisions : [];
   const rawSessionId = String(req.body?.sessionId || '').trim();
   const activeSession = await ensureActiveAcademicSession();
@@ -785,9 +786,6 @@ resultsRouter.post('/teacher/promotion-recommendations', requireAuth, requireRol
   if (!sessionId) return res.status(400).json({ message: 'Active academic session is required.' });
   if (!classId || !term || !Array.isArray(decisions)) {
     return res.status(400).json({ message: 'classId, term, and decisions are required.' });
-  }
-  if (term !== 'Third Term') {
-    return res.status(400).json({ message: 'Promotion recommendations are only accepted after Third Term.' });
   }
 
   const leadOk = await canLeadPromotion(teacher.id, classId, term);
