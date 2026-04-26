@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import ErrorState from '../components/ErrorState';
+import PublicSectionFrame from '../components/public/PublicSectionFrame';
 import { apiFetch, apiJson } from '../utils/publicApi';
 
 const PROGRAM_INSTITUTIONS = {
@@ -18,6 +20,11 @@ const ADMISSION_DOC_MIMES = new Set([
 ]);
 const ADMISSION_DOC_EXTENSIONS = new Set(['pdf', 'jpg', 'jpeg', 'png', 'webp', 'doc', 'docx']);
 const MAX_ADMISSION_DOC_SIZE = 20 * 1024 * 1024;
+
+function formatWindow(startDate, endDate) {
+  if (!startDate || !endDate) return 'Window has not been published yet.';
+  return `${new Date(startDate).toLocaleString()} to ${new Date(endDate).toLocaleString()}.`;
+}
 
 function getFileExtension(fileName = '') {
   const parts = String(fileName).trim().toLowerCase().split('.');
@@ -355,102 +362,109 @@ function Admissions() {
     form.studentEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(form.studentEmail || '').trim())
       ? 'Email format is incorrect.'
       : '';
+  const programCards = [
+    {
+      key: 'modern',
+      title: 'ATTAUFEEQ Model Academy',
+      label: 'Model School',
+      description: 'Full academic curriculum, structured class placement, and digital campus access.',
+      open: modernOpen
+    },
+    {
+      key: 'madrasa',
+      title: 'Madrastul ATTAUFEEQ',
+      label: 'Madrasa Program',
+      description: 'Quran recitation, memorization tracking, and Islamic studies pathway.',
+      open: madrasaOpen
+    },
+    {
+      key: 'memorization',
+      title: 'Quran Memorization Academy',
+      label: 'Quran Memorization',
+      description: 'Focused hifz pathway with dedicated memorization goals and revision cycles.',
+      open: memorizationOpen
+    }
+  ];
 
   return (
-    <main className="section-wrap py-14">
-      <h1 className="break-words font-heading text-4xl text-primary">Admissions</h1>
-      <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-700">
-        Submit your child&apos;s application and choose the exact class requested for placement after full admission confirmation.
-      </p>
-
+    <PublicSectionFrame
+      eyebrow="Admissions"
+      title="Admissions Portal"
+      description="Submit your child's application and choose the exact program and class needed for placement."
+      image="/images/schoolwebsite4.png"
+      imageAlt="Admissions portal"
+      actions={(
+        <>
+          <Link to="/modern-academy" className="rounded-full border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-700">
+            School Website
+          </Link>
+          <Link to="/madrastul-attaufiq" className="rounded-full border border-slate-300 bg-slate-50 px-6 py-3 text-sm font-semibold text-slate-700">
+            Madrasa Website
+          </Link>
+        </>
+      )}
+      metrics={[
+        { label: 'Programs', value: '3', note: 'Modern school, madrasa, and memorization routes.' },
+        { label: 'Class Match', value: 'Exact', note: 'Applicants choose the intended class before submission.' },
+        { label: 'Documents', value: 'Optional', note: 'PDF, Word, and image uploads are supported.' }
+      ]}
+    >
       {!periodOpen ? (
-        <section className="glass-panel mt-8 max-w-4xl p-8">
+        <section className="mt-8 rounded-[30px] border border-slate-200 bg-white p-8 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Admissions Locked</p>
           <h2 className="mt-3 break-words font-heading text-3xl text-primary">The admissions portal is currently unavailable.</h2>
           <p className="mt-4 text-sm leading-8 text-slate-700">
             Admin has not opened the public admission window yet. This page stays inaccessible for applications until the admission period is enabled.
           </p>
-          <div className="mt-6 rounded-[24px] border border-amber-200 bg-amber-50 p-5 text-amber-900">
-            <p className="font-semibold">Admission window status: closed</p>
-            <p className="mt-2 text-sm">
-              {modernPeriod.startDate && modernPeriod.endDate
-                ? `ATTAUFEEQ Model Academy window: ${new Date(modernPeriod.startDate).toLocaleString()} to ${new Date(modernPeriod.endDate).toLocaleString()}.`
-                : 'ATTAUFEEQ Model Academy window has not been published yet.'}
-            </p>
-            <p className="mt-2 text-sm">
-              {madrasaPeriod.startDate && madrasaPeriod.endDate
-                ? `Madrastul ATTAUFEEQ window: ${new Date(madrasaPeriod.startDate).toLocaleString()} to ${new Date(madrasaPeriod.endDate).toLocaleString()}.`
-                : 'Madrastul ATTAUFEEQ window has not been published yet.'}
-            </p>
-            <p className="mt-2 text-sm">
-              {memorizationPeriod.startDate && memorizationPeriod.endDate
-                ? `Quran Memorization window: ${new Date(memorizationPeriod.startDate).toLocaleString()} to ${new Date(memorizationPeriod.endDate).toLocaleString()}.`
-                : 'Quran Memorization window has not been published yet.'}
-            </p>
+          <div className="mt-6 grid gap-4 lg:grid-cols-3">
+            <div className="rounded-[24px] border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
+              <p className="font-semibold">ATTAUFEEQ Model Academy</p>
+              <p className="mt-2">{formatWindow(modernPeriod.startDate, modernPeriod.endDate)}</p>
+            </div>
+            <div className="rounded-[24px] border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
+              <p className="font-semibold">Madrastul ATTAUFEEQ</p>
+              <p className="mt-2">{formatWindow(madrasaPeriod.startDate, madrasaPeriod.endDate)}</p>
+            </div>
+            <div className="rounded-[24px] border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900">
+              <p className="font-semibold">Quran Memorization</p>
+              <p className="mt-2">{formatWindow(memorizationPeriod.startDate, memorizationPeriod.endDate)}</p>
+            </div>
           </div>
         </section>
       ) : (
       <>
         {!program ? (
-          <section className="glass-panel mt-8 p-6 sm:p-8">
+          <section className="mt-8 rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:p-8">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Choose Program</p>
             <h2 className="mt-3 break-words font-heading text-3xl text-primary">Select the admissions pathway</h2>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-700">
               Pick the exact program to unlock the right form. Requirements differ for ATTAUFEEQ Model Academy, Madrasa, and Quran Memorization applicants.
             </p>
 
-            <div className="admissions-select mt-6">
-              <button
-                type="button"
-                className={`admissions-card ${modernOpen ? '' : 'opacity-60 cursor-not-allowed'}`}
-                onClick={() => modernOpen && setProgram('modern')}
-                disabled={!modernOpen}
-              >
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Model School</p>
-                <h3 className="mt-2 font-heading text-2xl text-primary">ATTAUFEEQ Model Academy</h3>
-                <p className="mt-2 text-sm text-slate-600">
-                  Full academic curriculum, structured class placement, and digital campus access.
-                </p>
-                {!modernOpen && (
-                  <p className="mt-3 text-xs font-semibold uppercase tracking-[0.2em] text-amber-600">Currently closed</p>
-                )}
-              </button>
-
-              <button
-                type="button"
-                className={`admissions-card ${madrasaOpen ? '' : 'opacity-60 cursor-not-allowed'}`}
-                onClick={() => madrasaOpen && setProgram('madrasa')}
-                disabled={!madrasaOpen}
-              >
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Madrasa Program</p>
-                <h3 className="mt-2 font-heading text-2xl text-primary">Madrastul ATTAUFEEQ</h3>
-                <p className="mt-2 text-sm text-slate-600">
-                  Quran recitation, memorization tracking, and Islamic studies pathway.
-                </p>
-                {!madrasaOpen && (
-                  <p className="mt-3 text-xs font-semibold uppercase tracking-[0.2em] text-amber-600">Currently closed</p>
-                )}
-              </button>
-
-              <button
-                type="button"
-                className={`admissions-card ${memorizationOpen ? '' : 'opacity-60 cursor-not-allowed'}`}
-                onClick={() => memorizationOpen && setProgram('memorization')}
-                disabled={!memorizationOpen}
-              >
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Quran Memorization</p>
-                <h3 className="mt-2 font-heading text-2xl text-primary">Quran Memorization Academy</h3>
-                <p className="mt-2 text-sm text-slate-600">
-                  Focused hifz pathway with dedicated memorization goals and revision cycles.
-                </p>
-                {!memorizationOpen && (
-                  <p className="mt-3 text-xs font-semibold uppercase tracking-[0.2em] text-amber-600">Currently closed</p>
-                )}
-              </button>
+            <div className="mt-6 grid gap-5 lg:grid-cols-3">
+              {programCards.map((card) => (
+                <button
+                  key={card.key}
+                  type="button"
+                  className={`rounded-[28px] border p-6 text-left shadow-[0_18px_50px_rgba(15,23,42,0.06)] transition ${
+                    card.open ? 'border-slate-200 bg-slate-50 hover:-translate-y-1 hover:bg-white' : 'cursor-not-allowed border-slate-200 bg-slate-100 opacity-70'
+                  }`}
+                  onClick={() => card.open && setProgram(card.key)}
+                  disabled={!card.open}
+                >
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{card.label}</p>
+                  <h3 className="mt-2 break-words font-heading text-2xl text-primary">{card.title}</h3>
+                  <p className="mt-3 text-sm leading-7 text-slate-600">{card.description}</p>
+                  <p className={`mt-4 text-xs font-semibold uppercase tracking-[0.2em] ${card.open ? 'text-emerald-700' : 'text-amber-700'}`}>
+                    {card.open ? 'Now accepting applications' : 'Currently closed'}
+                  </p>
+                </button>
+              ))}
             </div>
           </section>
         ) : (
-          <form onSubmit={handleSubmit} className="admissions-form mt-8 grid gap-4 sm:grid-cols-2">
+          <section className="mt-8 grid gap-6 lg:grid-cols-[1.1fr,0.9fr]">
+            <form onSubmit={handleSubmit} className="admissions-form grid gap-4 rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:grid-cols-2 sm:p-8">
             <div className="status-banner sm:col-span-2 flex flex-wrap items-center justify-between gap-3 text-sm">
               <p className="break-words font-semibold">
                 Selected program: {selectedProgramLabel}
@@ -742,7 +756,37 @@ function Admissions() {
                 {loading ? 'Submitting...' : 'Submit Application'}
               </button>
             </div>
-          </form>
+            </form>
+
+            <div className="grid gap-6">
+              <article className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Application Notes</p>
+                <div className="mt-4 grid gap-3">
+                  <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-700">
+                    Guardian and student email addresses are used for portal access updates and password delivery.
+                  </div>
+                  <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-700">
+                    Class options are filtered by the exact institution connected to the selected program.
+                  </div>
+                  <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-700">
+                    Optional supporting documents can include PDF, Word, JPG, PNG, or WEBP files up to 20MB each.
+                  </div>
+                </div>
+              </article>
+
+              <article className="rounded-[30px] border border-slate-200 bg-primary p-6 text-white shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/70">Current Window</p>
+                <h3 className="mt-3 break-words font-heading text-3xl">{selectedProgramLabel}</h3>
+                <p className="mt-3 text-sm leading-8 text-white/85">
+                  {program === 'modern'
+                    ? formatWindow(modernPeriod.startDate, modernPeriod.endDate)
+                    : program === 'madrasa'
+                      ? formatWindow(madrasaPeriod.startDate, madrasaPeriod.endDate)
+                      : formatWindow(memorizationPeriod.startDate, memorizationPeriod.endDate)}
+                </p>
+              </article>
+            </div>
+          </section>
         )}
       </>
       )}
@@ -758,7 +802,7 @@ function Admissions() {
         </div>
       )}
       {success && <p className="status-banner mt-4 text-sm">{success}</p>}
-    </main>
+    </PublicSectionFrame>
   );
 }
 

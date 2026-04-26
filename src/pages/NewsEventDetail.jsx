@@ -1,5 +1,6 @@
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
+import PublicSectionFrame from '../components/public/PublicSectionFrame';
 import SmartImage from '../components/SmartImage';
 import { SkeletonBlock } from '../components/Skeleton';
 import { apiJson } from '../utils/publicApi';
@@ -44,14 +45,21 @@ function NewsEventDetail() {
   }, [slugOrId]);
 
   return (
-    <main className="section-wrap py-14">
-      <Link to={returnTo} className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">
-        Back to News
-      </Link>
-
+    <PublicSectionFrame
+      eyebrow="News Detail"
+      title={item?.title || 'Loading story'}
+      description={item?.excerpt || 'Read the full update, view media, and return to the public news feed when you are done.'}
+      image={item?.images?.[0] || DEFAULT_IMAGES.gallery}
+      imageAlt={item?.title || 'News detail'}
+      actions={(
+        <Link to={returnTo} className="rounded-full border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-700">
+          Back to News
+        </Link>
+      )}
+    >
       {error && <p className="mt-6 text-sm text-red-600">{error}</p>}
       {loading && (
-        <article className="glass-card mt-6 p-6">
+        <article className="mt-6 rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
           <SkeletonBlock className="h-3 w-40 rounded-full" />
           <SkeletonBlock className="mt-4 h-12 w-3/4 rounded-[24px]" />
           <SkeletonBlock className="mt-6 h-72 w-full rounded-[28px]" />
@@ -62,12 +70,10 @@ function NewsEventDetail() {
       )}
 
       {!loading && !error && item && (
-        <article className="glass-card mt-6 p-6">
+        <article className="mt-6 rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:p-8">
           <p className="text-xs uppercase tracking-wide text-slate-500">
             {item.category} | {new Date(item.publishDate || item.createdAt).toLocaleDateString()} | {item.institution}
           </p>
-          <h1 className="mt-3 break-words font-heading text-4xl text-primary">{item.title}</h1>
-          {item.excerpt && <p className="mt-4 text-lg text-slate-700">{item.excerpt}</p>}
 
           {Array.isArray(item.images) && item.images.length > 0 && (
             <div className="mt-6 grid gap-3 md:grid-cols-2">
@@ -105,7 +111,7 @@ function NewsEventDetail() {
           </div>
         </article>
       )}
-    </main>
+    </PublicSectionFrame>
   );
 }
 
