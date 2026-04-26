@@ -95,6 +95,8 @@ function HeaderLink({ to, label, compact = false, onClick }) {
   return (
     <NavLink
       to={to}
+      title={label}
+      aria-label={label}
       onClick={onClick}
       className={({ isActive }) =>
         compact
@@ -102,7 +104,7 @@ function HeaderLink({ to, label, compact = false, onClick }) {
           : `nav-pill-link ${isActive ? 'nav-pill-link--active' : ''}`
       }
     >
-      {label}
+      <span className={compact ? 'text-label-nowrap' : 'text-label-nowrap'}>{label}</span>
     </NavLink>
   );
 }
@@ -144,6 +146,28 @@ function Navbar() {
             links: section.links.filter((link) => link.to !== '/admissions')
           })),
     [admissionsAvailable]
+  );
+
+  const mobileMegaLinks = useMemo(
+    () =>
+      megaSectionsForDisplay.flatMap((section) =>
+        section.links.map((link) => ({
+          key: `${section.title}-${link.to}`,
+          ...link
+        }))
+      ),
+    [megaSectionsForDisplay]
+  );
+
+  const mobileMadrasaLinks = useMemo(
+    () =>
+      madrasaMegaSectionsForDisplay.flatMap((section) =>
+        section.links.map((link) => ({
+          key: `${section.title}-${link.to}`,
+          ...link
+        }))
+      ),
+    [madrasaMegaSectionsForDisplay]
   );
 
   useEffect(() => {
@@ -233,8 +257,8 @@ function Navbar() {
             </div>
             <div className="min-w-0">
               <p className="nav-brand-label">{landingLabel(branding)}</p>
-              <h1 className="nav-brand-title break-words">{branding.name}</h1>
-              <p className="nav-brand-subtitle break-words">{branding.navSubtitle}</p>
+              <h1 className="nav-brand-title text-label-clamp" title={branding.name}>{branding.name}</h1>
+              <p className="nav-brand-subtitle text-label-clamp" title={branding.navSubtitle}>{branding.navSubtitle}</p>
             </div>
           </div>
 
@@ -287,6 +311,7 @@ function Navbar() {
                               key={`${section.title}-${link.to}`}
                               to={link.to}
                               className="nav-mega-link"
+                              title={`${link.label}${link.description ? ` - ${link.description}` : ''}`}
                               onClick={() => setMegaOpen(false)}
                             >
                               <span>{link.label}</span>
@@ -341,6 +366,7 @@ function Navbar() {
                               key={`${section.title}-${link.to}`}
                               to={link.to}
                               className="nav-mega-link"
+                              title={`${link.label}${link.description ? ` - ${link.description}` : ''}`}
                               onClick={() => setMadrasaMegaOpen(false)}
                             >
                               <span>{link.label}</span>
@@ -394,17 +420,17 @@ function Navbar() {
                         initials(user?.fullName || user?.email || 'U')
                       )}
                     </div>
-                    <div className="hidden text-left lg:block">
-                      <p className="text-sm font-semibold text-slate-900">{user?.fullName || 'Portal User'}</p>
-                      <p className="text-[11px] uppercase tracking-[0.2em] text-slate-500">{user?.role} workspace</p>
+                    <div className="hidden min-w-0 text-left lg:block">
+                      <p className="text-truncate-1 text-sm font-semibold text-slate-900" title={user?.fullName || 'Portal User'}>{user?.fullName || 'Portal User'}</p>
+                      <p className="text-label-nowrap text-[11px] uppercase tracking-[0.2em] text-slate-500" title={`${user?.role || 'portal'} workspace`}>{user?.role} workspace</p>
                     </div>
                   </button>
                 </Tooltip>
 
                 {profileOpen && (
                   <div className="nav-profile-panel">
-                    <p className="text-sm font-semibold text-slate-900">{user?.fullName || 'Portal User'}</p>
-                    <p className="mt-1 text-xs text-slate-500">{user?.email}</p>
+                    <p className="text-wrap-safe text-sm font-semibold text-slate-900">{user?.fullName || 'Portal User'}</p>
+                    <p className="text-wrap-safe mt-1 text-xs text-slate-500">{user?.email}</p>
                     <div className="mt-4 grid gap-2">
                       <NavLink to={`/portal/${user?.role}`} className="nav-panel-primary">
                         Open Dashboard
@@ -494,35 +520,31 @@ function Navbar() {
               <div>
                 <p className="nav-mobile-label">School Section</p>
                 <div className="mt-3 grid gap-2">
-                  {megaSections.flatMap((section) =>
-                    section.links.map((link) => (
-                      <NavLink
-                        key={`${section.title}-${link.to}`}
-                        to={link.to}
-                        className="nav-pill-link"
-                        onClick={() => setIsOpen(false)}
-                      >
-                        {link.label}
-                      </NavLink>
-                    ))
-                  )}
+                  {mobileMegaLinks.map((link) => (
+                    <NavLink
+                      key={link.key}
+                      to={link.to}
+                      className="nav-pill-link"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      {link.label}
+                    </NavLink>
+                  ))}
                 </div>
               </div>
               <div>
                 <p className="nav-mobile-label">Madrasa Section</p>
                 <div className="mt-3 grid gap-2">
-                  {madrasaMegaSections.flatMap((section) =>
-                    section.links.map((link) => (
-                      <NavLink
-                        key={`${section.title}-${link.to}`}
-                        to={link.to}
-                        className="nav-pill-link"
-                        onClick={() => setIsOpen(false)}
-                      >
-                        {link.label}
-                      </NavLink>
-                    ))
-                  )}
+                  {mobileMadrasaLinks.map((link) => (
+                    <NavLink
+                      key={link.key}
+                      to={link.to}
+                      className="nav-pill-link"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      {link.label}
+                    </NavLink>
+                  ))}
                 </div>
               </div>
 

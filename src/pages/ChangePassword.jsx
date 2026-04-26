@@ -50,9 +50,7 @@ function ChangePassword() {
         updateUser(data.user);
       }
       setSuccess('Password updated. Redirecting to your dashboard...');
-      window.setTimeout(() => {
-        navigate(`/portal/${data.user?.role || user?.role || 'student'}`, { replace: true });
-      }, 700);
+      navigate(`/portal/${data.user?.role || user?.role || 'student'}`, { replace: true });
     } catch (err) {
       setError(err.message || 'Unable to change password.');
     } finally {

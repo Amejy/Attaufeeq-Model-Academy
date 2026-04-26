@@ -42,11 +42,11 @@ function MetricCard({ label, value, note, accent = 'linear-gradient(135deg, #0f5
   return (
     <article className="glass-card dashboard-tile floating-card relative overflow-hidden p-4 sm:p-5">
       <div className="absolute inset-x-4 top-0 h-1 rounded-full sm:inset-x-5" style={{ background: accent }} />
-      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">{label}</p>
-      <p className="mt-3 break-words font-heading text-2xl text-primary sm:mt-4 sm:text-4xl">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">{label}</p>
+      <p className="mt-3 break-words font-heading text-[1.85rem] leading-none text-primary sm:mt-4 sm:text-[2.5rem]">
         <AnimatedCounter value={value} />
       </p>
-      {note && <p className="mt-2 text-sm leading-5 text-slate-600 sm:mt-3 sm:leading-6">{note}</p>}
+      {note && <p className="mt-2.5 text-sm leading-6 text-slate-600 sm:mt-3">{note}</p>}
     </article>
   );
 }
@@ -54,9 +54,9 @@ function MetricCard({ label, value, note, accent = 'linear-gradient(135deg, #0f5
 function Panel({ title, eyebrow, children }) {
   return (
     <section className="glass-card admin-surface p-4 sm:p-6">
-      {eyebrow && <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">{eyebrow}</p>}
-      <h2 className="mt-2 font-heading text-xl text-primary sm:text-2xl">{title}</h2>
-      <div className="mt-4 sm:mt-5">{children}</div>
+      {eyebrow && <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">{eyebrow}</p>}
+      <h2 className="mt-2 font-heading text-[1.35rem] leading-tight text-primary sm:text-[1.7rem]">{title}</h2>
+      <div className="mt-5 sm:mt-6">{children}</div>
     </section>
   );
 }
@@ -68,7 +68,7 @@ function ActionGrid({ actions }) {
         <Link
           key={action.label}
           to={action.to}
-          className="surface-outline interactive-card rounded-[22px] px-3 py-3 text-sm font-semibold text-slate-700 shadow-sm sm:px-4 sm:py-4"
+          className="surface-outline interactive-card rounded-[22px] px-3.5 py-3.5 text-sm font-semibold text-slate-700 sm:px-4 sm:py-4"
         >
           {action.label}
         </Link>
@@ -95,11 +95,11 @@ function DetailListItem({ item }) {
   const badge = normalizeBadge(item.badge);
 
   return (
-    <article className="surface-outline dashboard-tile rounded-[22px] px-3 py-3 sm:px-4 sm:py-4">
+    <article className="surface-outline dashboard-tile rounded-[22px] px-3.5 py-3.5 sm:px-4 sm:py-4">
       <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-slate-900">{item.title}</p>
-          {item.description && <p className="mt-2 text-sm leading-5 text-slate-600 sm:leading-6">{item.description}</p>}
+          {item.description && <p className="mt-2 text-sm leading-6 text-slate-600">{item.description}</p>}
         </div>
         {badge && (
           <span className="max-w-full whitespace-normal break-words rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-800 sm:text-[11px]">

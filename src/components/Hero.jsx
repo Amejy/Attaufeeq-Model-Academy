@@ -35,37 +35,37 @@ function Hero() {
               />
               <div>
                 <p className="hero-logo-badge__label">Official Crest</p>
-                <p className="hero-logo-badge__name break-words">{branding.name}</p>
+                <p className="hero-logo-badge__name text-label-clamp" title={branding.name}>{branding.name}</p>
               </div>
             </div>
-            <p className="inline-flex rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.26em] text-white/80">
+            <p className="inline-flex max-w-full rounded-full border border-white/20 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.22em] text-white/80 sm:tracking-[0.26em]">
               {home.heroBadge || 'ATTAUFEEQ Model Academy'}
             </p>
-            <h1 className="mt-6 max-w-3xl break-words font-heading text-4xl leading-tight md:text-5xl lg:text-6xl">
+            <h1 className="mt-6 max-w-3xl break-words font-heading text-3xl leading-tight sm:text-4xl md:text-5xl lg:text-6xl">
               {home.heroTitle}
             </h1>
-            <p className="mt-4 text-lg font-medium text-white/88">{branding.motto}</p>
-            <p className="mt-6 max-w-2xl text-sm leading-8 text-white/85 sm:text-base">
+            <p className="mt-4 text-base font-medium text-white/88 sm:text-lg">{branding.motto}</p>
+            <p className="mt-6 max-w-2xl text-sm leading-7 text-white/85 sm:text-base sm:leading-8">
               {home.heroDescription || branding.intro}
             </p>
 
             <div className="mt-8 flex flex-wrap gap-3">
               {admissionsAvailable ? (
-                <Link to="/admissions" className="rounded-full bg-white px-6 py-3 text-sm font-semibold text-primary hover:bg-emerald-50">
+                <Link to="/admissions" className="w-full rounded-full bg-white px-6 py-3 text-center text-sm font-semibold text-primary hover:bg-emerald-50 sm:w-auto">
                   Apply Now
                 </Link>
               ) : (
-                <span className="rounded-full border border-white/40 bg-white/12 px-6 py-3 text-sm font-semibold text-white/82">
+                <span className="w-full rounded-full border border-white/40 bg-white/12 px-6 py-3 text-center text-sm font-semibold text-white/82 sm:w-auto">
                   Admissions Closed
                 </span>
               )}
-              <Link to="/login" className="rounded-full border border-white/50 bg-white/10 px-6 py-3 text-sm font-semibold text-white hover:bg-white/15">
+              <Link to="/login" className="w-full rounded-full border border-white/50 bg-white/10 px-6 py-3 text-center text-sm font-semibold text-white hover:bg-white/15 sm:w-auto">
                 Parent/Student
               </Link>
-              <Link to="/staff-access" className="rounded-full border border-white/50 bg-white/10 px-6 py-3 text-sm font-semibold text-white hover:bg-white/15">
+              <Link to="/staff-access" className="w-full rounded-full border border-white/50 bg-white/10 px-6 py-3 text-center text-sm font-semibold text-white hover:bg-white/15 sm:w-auto">
                 Staff
               </Link>
-              <Link to="/contact" className="rounded-full border border-white/50 bg-white/10 px-6 py-3 text-sm font-semibold text-white hover:bg-white/15">
+              <Link to="/contact" className="w-full rounded-full border border-white/50 bg-white/10 px-6 py-3 text-center text-sm font-semibold text-white hover:bg-white/15 sm:w-auto">
                 Contact Us
               </Link>
             </div>

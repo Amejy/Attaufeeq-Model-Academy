@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Link, NavLink } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import PageHeader from './PageHeader';
 import SmartImage from './SmartImage';
@@ -91,6 +91,7 @@ function initials(name = '') {
 function PortalLayout({ role, title, subtitle, children, actions = null }) {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
+  const location = useLocation();
   const avatarUrl = user?.avatarUrl || user?.profile?.avatarUrl || '';
 
   const navItems = useMemo(() => {
@@ -102,10 +103,21 @@ function PortalLayout({ role, title, subtitle, children, actions = null }) {
 
   const institutionLabel = user?.scope?.institutionLabel || user?.profile?.institution || '';
 
+  useEffect(() => {
+    setOpen(false);
+  }, [location.pathname, location.search]);
+
+  useEffect(() => {
+    document.body.style.overflow = open ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [open]);
+
   return (
-    <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top,rgba(13,148,136,0.12),transparent_42%),radial-gradient(circle_at_bottom,rgba(245,158,11,0.14),transparent_40%)]">
-      <div className="mx-auto flex w-full max-w-[1600px] gap-4 px-3 py-4 sm:gap-5 sm:px-6 sm:py-6 lg:px-8">
-        <aside className="gradient-shell hidden w-80 shrink-0 overflow-hidden rounded-[34px] p-5 text-white shadow-[0_28px_80px_rgba(8,37,26,0.22)] lg:block">
+    <main className="min-h-screen overflow-x-clip bg-[radial-gradient(circle_at_top,rgba(13,148,136,0.1),transparent_42%),radial-gradient(circle_at_bottom,rgba(245,158,11,0.12),transparent_40%)]">
+      <div className="mx-auto flex w-full max-w-[1600px] gap-4 px-3 py-4 sm:gap-6 sm:px-6 sm:py-6 lg:px-8">
+        <aside className="gradient-shell hidden w-[21.5rem] shrink-0 overflow-hidden rounded-[34px] p-5 text-white shadow-[0_24px_56px_rgba(8,37,26,0.18),0_8px_20px_rgba(8,37,26,0.12)] lg:block">
           <div className="flex items-center gap-3">
             <div className="flex min-w-0 flex-1 items-center gap-3 rounded-[26px] border border-white/12 bg-white/10 p-4 backdrop-blur-md">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/18 text-sm font-bold">
@@ -115,32 +127,37 @@ function PortalLayout({ role, title, subtitle, children, actions = null }) {
                   initials(user?.fullName || 'U')
                 )}
               </div>
-              <div className="min-w-0">
-                <p className="truncate text-lg font-bold">{user?.fullName || 'User'}</p>
-                <p className="text-[11px] uppercase tracking-[0.2em] text-white/70">{role} portal</p>
+              <div className="min-w-0 flex-1">
+                <Tooltip text={user?.fullName || 'User'} className="block min-w-0">
+                  <p className="text-truncate-2 text-lg font-bold leading-tight">{user?.fullName || 'User'}</p>
+                </Tooltip>
+                <p className="text-label-nowrap mt-1 text-[11px] uppercase tracking-[0.2em] text-white/70">{role} portal</p>
               </div>
             </div>
             <ThemeToggle />
           </div>
 
           {institutionLabel && (
-            <p className="mt-4 inline-flex rounded-full border border-white/18 bg-white/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/80">
-              {institutionLabel}
-            </p>
+            <Tooltip text={institutionLabel} className="mt-4 inline-flex max-w-full">
+              <p className="text-label-nowrap inline-flex max-w-full rounded-full border border-white/18 bg-white/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/80">
+                {institutionLabel}
+              </p>
+            </Tooltip>
           )}
 
-          <nav className="mt-6 space-y-2">
+          <nav className="mt-6 space-y-2.5">
             {navItems.map((item) => (
               <NavLink
                 key={item.to}
                 to={item.to}
+                title={item.label}
                 className={({ isActive }) =>
                   `block rounded-2xl px-4 py-3 text-sm font-semibold transition ${
-                    isActive ? 'bg-white text-primary shadow-lg' : 'bg-white/8 text-white/86 hover:bg-white/14'
+                    isActive ? 'bg-white text-primary shadow-[0_16px_34px_rgba(255,255,255,0.2)]' : 'bg-white/8 text-white/86 hover:bg-white/14'
                   }`
                 }
               >
-                <span className="block break-words">{item.label}</span>
+                <span className="text-label-nowrap block">{item.label}</span>
               </NavLink>
             ))}
           </nav>
@@ -155,11 +172,17 @@ function PortalLayout({ role, title, subtitle, children, actions = null }) {
         </aside>
 
         <div className="min-w-0 flex-1">
-          <div className="mb-4 flex flex-wrap items-start justify-between gap-3 rounded-[24px] border border-white/50 bg-white/74 p-3 shadow-[0_18px_40px_rgba(8,37,26,0.08)] backdrop-blur-xl sm:items-center sm:rounded-[28px] sm:p-4 lg:hidden">
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-3 rounded-[24px] border border-white/50 bg-white/74 p-3.5 shadow-[0_16px_34px_rgba(15,23,42,0.08)] backdrop-blur-xl sm:items-center sm:rounded-[28px] sm:p-4 lg:hidden">
             <div className="min-w-0 flex-1">
               <p className="text-xs uppercase tracking-[0.22em] text-slate-500">{role} portal</p>
-              <p className="break-words text-sm font-semibold text-primary sm:text-base">{user?.fullName || 'User'}</p>
-              {institutionLabel && <p className="mt-1 break-words text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">{institutionLabel}</p>}
+              <Tooltip text={user?.fullName || 'User'} className="block min-w-0">
+                <p className="text-truncate-1 text-sm font-semibold text-primary sm:text-base">{user?.fullName || 'User'}</p>
+              </Tooltip>
+              {institutionLabel && (
+                <Tooltip text={institutionLabel} className="mt-1 block min-w-0">
+                  <p className="text-truncate-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">{institutionLabel}</p>
+                </Tooltip>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <div className="h-10 w-10 overflow-hidden rounded-full border border-slate-200 bg-white/80">
@@ -186,12 +209,13 @@ function PortalLayout({ role, title, subtitle, children, actions = null }) {
           </div>
 
           {open && (
-            <div className="mb-4 glass-panel p-3 sm:p-4 lg:hidden">
+            <div className="mb-4 glass-panel p-3.5 sm:p-4 lg:hidden">
               <nav className="space-y-2">
                 {navItems.map((item) => (
                   <NavLink
                     key={item.to}
                     to={item.to}
+                    title={item.label}
                     onClick={() => setOpen(false)}
                     className={({ isActive }) =>
                       `block rounded-2xl px-3 py-2.5 text-sm font-semibold transition sm:px-4 sm:py-3 ${
@@ -199,7 +223,7 @@ function PortalLayout({ role, title, subtitle, children, actions = null }) {
                       }`
                     }
                   >
-                    <span className="block break-words">{item.label}</span>
+                    <span className="text-label-clamp block">{item.label}</span>
                   </NavLink>
                 ))}
               </nav>
@@ -213,7 +237,7 @@ function PortalLayout({ role, title, subtitle, children, actions = null }) {
             </div>
           )}
 
-          <section className="glass-panel relative overflow-hidden p-4 sm:p-7">
+          <section className="glass-panel relative overflow-hidden p-4 sm:p-7 lg:p-8">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(15,81,50,0.08),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(217,179,84,0.12),transparent_30%)]" />
             <div className="relative">
               <PageHeader role={role} title={title} subtitle={subtitle} actions={actions} />

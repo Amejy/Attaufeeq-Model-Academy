@@ -32,15 +32,15 @@ function Footer() {
                 alt={`${branding.name || 'School'} logo`}
                 className="footer-logo"
               />
-              <p className="break-words text-xs font-semibold uppercase tracking-[0.24em] text-white/80">{schoolName}</p>
+              <p className="text-label-clamp text-xs font-semibold uppercase tracking-[0.24em] text-white/80" title={schoolName}>{schoolName}</p>
             </div>
-            <h3 className="mt-2 max-w-sm break-words font-heading text-lg leading-tight sm:text-xl">{footerHeading}</h3>
+            <h3 className="text-wrap-safe mt-2 max-w-sm font-heading text-lg leading-tight sm:text-xl">{footerHeading}</h3>
             <p className="mt-2 max-w-md text-sm leading-6 text-white/80">{branding.motto}</p>
             <div className="mt-4 flex flex-wrap gap-2">
-              <Link to="/login" className="rounded-full border border-white/40 bg-white/90 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-primary hover:bg-white">
+              <Link to="/login" className="w-full rounded-full border border-white/40 bg-white/90 px-4 py-2 text-center text-xs font-semibold uppercase tracking-[0.14em] text-primary hover:bg-white sm:w-auto">
                 Parent/Student
               </Link>
-              <Link to="/staff-access" className="rounded-full border border-white/40 bg-white/12 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-white hover:bg-white/18">
+              <Link to="/staff-access" className="w-full rounded-full border border-white/40 bg-white/12 px-4 py-2 text-center text-xs font-semibold uppercase tracking-[0.14em] text-white hover:bg-white/18 sm:w-auto">
                 Staff
               </Link>
             </div>

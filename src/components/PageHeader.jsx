@@ -110,7 +110,7 @@ function PageHeader({ role = '', title, subtitle = '', actions = null }) {
   }
 
   return (
-    <div className="relative mb-5 sm:mb-6">
+    <div className="relative mb-6 sm:mb-7">
       <div className="page-header-toolbar">
         <Tooltip text={backLabel}>
           <button
@@ -140,12 +140,12 @@ function PageHeader({ role = '', title, subtitle = '', actions = null }) {
         </nav>
       </div>
 
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="break-words font-heading text-2xl text-primary sm:text-4xl">{title}</h1>
-          {subtitle && <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 sm:leading-7">{subtitle}</p>}
+          <h1 className="break-words font-heading text-[1.9rem] leading-tight text-primary sm:text-[2.65rem]">{title}</h1>
+          {subtitle && <p className="mt-2.5 max-w-3xl text-sm leading-7 text-slate-600 sm:text-[0.95rem]">{subtitle}</p>}
         </div>
-        {actions && <div className="flex w-full flex-wrap justify-start gap-2 sm:w-auto sm:justify-end">{actions}</div>}
+        {actions && <div className="flex w-full flex-wrap justify-start gap-2.5 sm:w-auto sm:justify-end">{actions}</div>}
       </div>
     </div>
   );

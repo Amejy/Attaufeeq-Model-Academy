@@ -50,7 +50,7 @@ function ChildScopePanel({ children = [], activeChildId = '', onChange, heading 
             >
               <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between">
                 <div className="min-w-0">
-                  <p className="break-words text-base font-semibold sm:text-lg">{child.fullName}</p>
+                  <p className="text-truncate-2 text-base font-semibold sm:text-lg" title={child.fullName}>{child.fullName}</p>
                   <p className="mt-1 text-xs uppercase tracking-[0.18em] text-slate-500">{child.classLabel || child.level || 'Class pending'}</p>
                 </div>
                 <div className="flex flex-row flex-wrap gap-2 sm:flex-col sm:items-end">

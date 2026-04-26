@@ -1,4 +1,19 @@
 import { useEffect, useState } from 'react';
+import { resolveApiBaseUrl } from '../utils/apiBase';
+
+const API_BASE_URL = resolveApiBaseUrl();
+
+function resolveImageSrc(src) {
+  const value = String(src || '').trim();
+  if (!value) return '';
+  if (/^https?:\/\//i.test(value) || value.startsWith('data:') || value.startsWith('blob:')) {
+    return value;
+  }
+  if (value.startsWith('/api/')) {
+    return API_BASE_URL ? `${API_BASE_URL}${value.replace(/^\/api/, '')}` : value;
+  }
+  return value;
+}
 
 function SmartImage({
   src,
@@ -8,18 +23,22 @@ function SmartImage({
   loading = 'lazy',
   ...rest
 }) {
-  const [currentSrc, setCurrentSrc] = useState(src || fallbackSrc || '');
+  const [currentSrc, setCurrentSrc] = useState(resolveImageSrc(src) || resolveImageSrc(fallbackSrc) || '');
   const [hidden, setHidden] = useState(false);
 
   useEffect(() => {
-    const nextSrc = src || fallbackSrc || '';
+    const nextSrc = resolveImageSrc(src) || resolveImageSrc(fallbackSrc) || '';
+    if (nextSrc === currentSrc && !hidden) {
+      return undefined;
+    }
+
     const frameId = window.requestAnimationFrame(() => {
       setCurrentSrc(nextSrc);
       setHidden(false);
     });
 
     return () => window.cancelAnimationFrame(frameId);
-  }, [src, fallbackSrc]);
+  }, [src, fallbackSrc, currentSrc, hidden]);
 
   if (!currentSrc || hidden) {
     return null;

@@ -134,8 +134,8 @@ function ForgotPassword() {
               className="login-logo"
             />
             <div className="min-w-0">
-              <p className="login-logo__label break-words">{schoolName}</p>
-              <p className="login-logo__motto break-words">{branding.motto}</p>
+              <p className="login-logo__label text-label-clamp" title={schoolName}>{schoolName}</p>
+              <p className="login-logo__motto text-label-clamp" title={branding.motto}>{branding.motto}</p>
             </div>
           </div>
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">Account Recovery</p>

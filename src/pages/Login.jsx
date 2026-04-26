@@ -146,8 +146,8 @@ function Login({ variant = 'family', defaultRole = '' }) {
               className="login-logo"
             />
             <div className="min-w-0">
-              <p className="login-logo__label break-words">{schoolName}</p>
-              <p className="login-logo__motto break-words">{branding.motto}</p>
+              <p className="login-logo__label text-label-clamp" title={schoolName}>{schoolName}</p>
+              <p className="login-logo__motto text-label-clamp" title={branding.motto}>{branding.motto}</p>
             </div>
           </div>
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">{variantConfig.heroLabel}</p>
@@ -156,7 +156,7 @@ function Login({ variant = 'family', defaultRole = '' }) {
 
           <div className="mt-6 rounded-[24px] border border-white/60 bg-white/65 p-4 sm:mt-8 sm:rounded-[28px] sm:p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Current URL</p>
-            <p className="mt-2 break-all text-base font-semibold text-slate-900 sm:mt-3 sm:text-lg">{location.pathname}</p>
+            <p className="text-wrap-safe mt-2 text-base font-semibold text-slate-900 sm:mt-3 sm:text-lg">{location.pathname}</p>
             <p className="mt-2 text-sm leading-6 text-slate-600 sm:leading-7">{variantConfig.heroNote}</p>
           </div>
 

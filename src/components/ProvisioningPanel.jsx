@@ -17,7 +17,7 @@ function ProvisioningPanel({ title = 'Portal Access Ready', description = '', re
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{record.label}</p>
-                <p className="mt-2 break-all text-lg font-semibold text-slate-900">{record.email}</p>
+                <p className="text-wrap-safe mt-2 text-lg font-semibold text-slate-900" title={record.email}>{record.email}</p>
               </div>
               <span className={`rounded-full px-3 py-1 text-xs font-semibold ${record.reused ? 'bg-slate-100 text-slate-700' : 'bg-emerald-100 text-emerald-700'}`}>
                 {record.reused ? 'Existing account linked' : 'New account'}
@@ -31,7 +31,7 @@ function ProvisioningPanel({ title = 'Portal Access Ready', description = '', re
               </div>
               <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Temporary password</p>
-                <p className="mt-2 break-all text-sm font-medium text-slate-800">{record.password || 'Existing password remains active'}</p>
+                <p className="text-wrap-safe mt-2 text-sm font-medium text-slate-800" title={record.password || 'Existing password remains active'}>{record.password || 'Existing password remains active'}</p>
               </div>
             </div>
 

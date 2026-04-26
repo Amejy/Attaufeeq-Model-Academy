@@ -5,6 +5,8 @@ import { resolveApiBaseUrl } from '../utils/apiBase';
 const AuthContext = createContext(null);
 const API_BASE_URL = resolveApiBaseUrl();
 const AUTH_SESSION_FLAG = 'auth-active';
+const AUTH_TOKEN_KEY = 'auth-token';
+const AUTH_USER_KEY = 'auth-user';
 
 function decodeTokenPayload(token) {
   try {
@@ -51,6 +53,40 @@ function shouldBootstrapSession() {
   return window.location.pathname.startsWith('/portal') || readSessionFlag();
 }
 
+function isTokenUsable(token) {
+  const payload = decodeTokenPayload(token);
+  if (!payload?.exp) return Boolean(token);
+  return payload.exp * 1000 > Date.now() + 5_000;
+}
+
+function readStoredSession() {
+  try {
+    const token = sessionStorage.getItem(AUTH_TOKEN_KEY);
+    const rawUser = sessionStorage.getItem(AUTH_USER_KEY);
+    if (!token || !rawUser || !isTokenUsable(token)) return null;
+    return {
+      token,
+      user: JSON.parse(rawUser)
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredSession(token, user) {
+  try {
+    if (token && user) {
+      sessionStorage.setItem(AUTH_TOKEN_KEY, token);
+      sessionStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
+    } else {
+      sessionStorage.removeItem(AUTH_TOKEN_KEY);
+      sessionStorage.removeItem(AUTH_USER_KEY);
+    }
+  } catch {
+    // ignore storage failures
+  }
+}
+
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
@@ -63,14 +99,23 @@ export function AuthProvider({ children }) {
     setToken(nextToken);
     setUser(nextUser);
     tokenRef.current = nextToken;
+    writeStoredSession(nextToken, nextUser);
   }, []);
 
   useEffect(() => {
     let cancelled = false;
+    const cachedSession = readStoredSession();
+
+    if (cachedSession) {
+      persistSession(cachedSession.token, cachedSession.user);
+      setProfileReady(true);
+    }
 
     async function bootstrapSession() {
       if (!shouldBootstrapSession()) {
-        setProfileReady(true);
+        if (!cachedSession && !cancelled) {
+          setProfileReady(true);
+        }
         return;
       }
 
@@ -87,7 +132,7 @@ export function AuthProvider({ children }) {
       } catch {
         // ignore boot-time refresh failures
       } finally {
-        if (!cancelled) {
+        if (!cancelled && !cachedSession) {
           setProfileReady(true);
         }
       }
@@ -112,7 +157,11 @@ export function AuthProvider({ children }) {
   }, [persistSession]);
 
   const updateUser = useCallback((nextUser) => {
-    setUser((previous) => (typeof nextUser === 'function' ? nextUser(previous) : nextUser));
+    setUser((previous) => {
+      const resolved = typeof nextUser === 'function' ? nextUser(previous) : nextUser;
+      writeStoredSession(tokenRef.current, resolved);
+      return resolved;
+    });
   }, []);
 
   const logout = useCallback(async (options = {}) => {
@@ -130,6 +179,7 @@ export function AuthProvider({ children }) {
     setUser(null);
     setProfileReady(true);
     writeSessionFlag(false);
+    writeStoredSession(null, null);
     if (!preserveSessionFlag) {
       setSessionExpired(false);
       try {
@@ -261,6 +311,7 @@ export function AuthProvider({ children }) {
     }
 
     let cancelled = false;
+    const requestToken = token;
 
     async function hydrateScope() {
       setProfileReady(false);
@@ -269,7 +320,7 @@ export function AuthProvider({ children }) {
           headers: { Authorization: `Bearer ${token}` }
         });
         const data = await response.json();
-        if (!response.ok || cancelled) return;
+        if (!response.ok || cancelled || tokenRef.current !== requestToken) return;
 
         updateUser((previous) => ({
           ...(previous || {}),
