@@ -1,207 +1,188 @@
 import { Link } from 'react-router-dom';
 import { useSiteContent } from '../context/SiteContentContext';
+import FeatureCard from '../components/FeatureCard';
 import useAdmissionPeriod from '../hooks/useAdmissionPeriod';
-import SmartImage from '../components/SmartImage';
-import { DEFAULT_IMAGES } from '../utils/defaultImages';
+import { Grid, Section } from '../components/layout/LayoutPrimitives';
+import { getInstitutionImageFallback } from '../utils/defaultImages';
 
-function buildSectionCards(admissionsAvailable) {
-  return [
+function normalizeText(value, fallback = '') {
+  const normalized = String(value || '').trim();
+  return normalized || fallback;
+}
+
+function buildFeatureItems(landing, branding) {
+  const stats = Array.isArray(landing.stats) ? landing.stats : [];
+  const institutions = Array.isArray(landing.institutions) ? landing.institutions : [];
+  const snapshotItems = Array.isArray(landing.snapshotItems) ? landing.snapshotItems : [];
+
+  const statItems = stats.map((item, index) => ({
+    key: `stat-${item.title || index}`,
+    title: normalizeText(item.title, `Highlight ${index + 1}`),
+    description: normalizeText(item.text, `Metric: ${item.value || 'N/A'}`),
+    iconLabel: normalizeText(item.value, `H${index + 1}`),
+    ctaLabel: 'Open',
+    ctaTo: '/login',
+    featured: index === 0,
+    accent: index === 0 ? 'gold' : 'emerald',
+    className: index === 0 ? 'lg:col-span-2 lg:row-span-2 min-h-[18rem]' : 'min-h-[15rem]'
+  }));
+
+  const institutionItems = institutions.map((item, index) => ({
+    key: `institution-${item.title || index}`,
+    title: normalizeText(item.title, `School Track ${index + 1}`),
+    description: normalizeText(item.description, 'Program overview container.'),
+    image: item.image || getInstitutionImageFallback(item.to || item.title),
+    imageAlt: item.title,
+    ctaLabel: 'Learn more',
+    ctaTo: item.to || '/',
+    featured: index === 0 && stats.length === 0,
+    accent: 'sky',
+    className: index === 0 ? 'min-h-[16rem]' : 'min-h-[15rem]'
+  }));
+
+  const snapshotFeatureItems = snapshotItems.map((item, index) => ({
+    key: `snapshot-${item}-${index}`,
+    title: `Portal Flow ${index + 1}`,
+    description: normalizeText(item, 'Portal activity container.'),
+    iconLabel: 'PT',
+    ctaLabel: 'Open',
+    ctaTo: '/login',
+    featured: index === 0,
+    accent: 'slate',
+    className: index === 0 ? 'lg:row-span-2 min-h-[18rem]' : 'min-h-[14rem]'
+  }));
+
+  const fallbackItems = [
     {
-      id: 'school',
-      title: 'School Section',
-      subtitle: 'ATTAUFEEQ Model Academy',
-      tone: 'from-emerald-900 via-emerald-800 to-emerald-700',
-      image: DEFAULT_IMAGES.students,
-      items: [
-        { label: 'School Website', to: '/modern-academy' },
-        { label: 'About School', to: '/about' },
-        { label: 'Check Result', to: '/result-checker' },
-        { label: 'School Announcements', to: '/news' }
-      ]
+      key: 'fallback-portal',
+      title: `${normalizeText(branding.name, 'School')} Portal`,
+      description: 'Core school access point for parents, students, and staff.',
+      iconLabel: 'SP',
+      ctaLabel: 'Open',
+      ctaTo: '/login',
+      featured: true,
+      accent: 'gold',
+      className: 'lg:col-span-2 lg:row-span-2 min-h-[18rem]'
     },
     {
-      id: 'madrasa',
-      title: 'Madrasa Section',
-      subtitle: 'Madrastul ATTAUFEEQ',
-      tone: 'from-slate-900 via-slate-800 to-slate-700',
-      image: DEFAULT_IMAGES.madrasa,
-      items: [
-        { label: 'Madrasa Website', to: '/madrastul-attaufiq' },
-        { label: 'Madrasa Results', to: '/result-checker?institution=Madrastul%20ATTAUFEEQ' },
-        { label: 'Madrasa News', to: '/news?institution=Madrastul%20ATTAUFEEQ' },
-        { label: 'Madrasa Events', to: '/news?institution=Madrastul%20ATTAUFEEQ&category=event' },
-        { label: 'Admission Information', to: admissionsAvailable ? '/admissions' : '/admissions' }
-      ]
+      key: 'fallback-admissions',
+      title: 'Admissions',
+      description: 'Application entry and enrollment information container.',
+      iconLabel: 'AD',
+      ctaLabel: 'Learn more',
+      ctaTo: '/admissions',
+      accent: 'emerald',
+      className: 'min-h-[15rem]'
+    },
+    {
+      key: 'fallback-academics',
+      title: 'Academics',
+      description: 'Curriculum, classes, and learning updates container.',
+      iconLabel: 'AC',
+      ctaLabel: 'Explore',
+      ctaTo: '/academics',
+      featured: true,
+      accent: 'sky',
+      className: 'lg:row-span-2 min-h-[18rem]'
+    },
+    {
+      key: 'fallback-news',
+      title: 'News & Events',
+      description: 'Announcements and school activity container.',
+      iconLabel: 'NE',
+      ctaLabel: 'Open',
+      ctaTo: '/news',
+      accent: 'slate',
+      className: 'min-h-[14rem]'
     }
   ];
+
+  return [...statItems, ...institutionItems, ...snapshotFeatureItems].slice(0, 6).length
+    ? [...statItems, ...institutionItems, ...snapshotFeatureItems].slice(0, 6)
+    : fallbackItems;
 }
 
 function Landing() {
-  const { siteContent } = useSiteContent();
   const { isLoading, periodOpen } = useAdmissionPeriod();
+  const { siteContent } = useSiteContent();
   const admissionsAvailable = !isLoading && periodOpen;
   const branding = siteContent.branding || {};
   const landing = siteContent.landing || {};
-  const sectionCards =
-    Array.isArray(landing.institutions) && landing.institutions.length
-      ? landing.institutions.map((institution, index) => ({
-          id: institution.title || `institution-${index}`,
-          title: institution.badge || 'Section',
-          subtitle: institution.title,
-          tone: institution.accent || (index === 0 ? 'from-emerald-900 via-emerald-800 to-emerald-700' : 'from-slate-900 via-slate-800 to-amber-600'),
-          image: institution.image || (index === 0 ? DEFAULT_IMAGES.students : DEFAULT_IMAGES.madrasa),
-          items:
-            index === 0
-              ? [
-                  { label: 'School Website', to: institution.to || '/modern-academy' },
-                  { label: 'About School', to: '/about' },
-                  { label: 'Check Result', to: '/result-checker' },
-                  { label: 'School Announcements', to: '/news' }
-                ]
-              : [
-                  { label: 'Madrasa Website', to: institution.to || '/madrastul-attaufiq' },
-                  { label: 'Madrasa Results', to: '/result-checker?institution=Madrastul%20ATTAUFEEQ' },
-                  { label: 'Madrasa News', to: '/news?institution=Madrastul%20ATTAUFEEQ' },
-                  { label: 'Madrasa Events', to: '/news?institution=Madrastul%20ATTAUFEEQ&category=event' },
-                  { label: 'Admission Information', to: '/admissions' }
-                ],
-          description: institution.description
-        }))
-      : buildSectionCards(admissionsAvailable);
-  const snapshotItems = Array.isArray(landing.snapshotItems) ? landing.snapshotItems : [];
+  const featureItems = buildFeatureItems(landing, branding);
+  const heading = normalizeText(landing.title, branding.name || 'School Portal');
+  const description = normalizeText(
+    landing.description,
+    `${normalizeText(branding.name, 'The school')} brings admissions, communication, and portal access into one organized experience.`
+  );
 
   return (
-    <main className="section-wrap py-8 sm:py-10">
-      <section className="overflow-hidden rounded-[32px] border border-slate-200 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.08)]">
-        <div className="grid lg:grid-cols-[1.05fr,0.95fr]">
-          <div className="px-6 py-8 sm:px-10 sm:py-12">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
-              {landing.badge || 'Digital Campus'}
-            </p>
-            <h1 className="mt-3 max-w-4xl break-words font-heading text-4xl leading-tight text-primary sm:text-5xl">
-              {landing.title || 'A clearer public system for school and madrasa access'}
-            </h1>
-            <p className="mt-5 max-w-2xl text-sm leading-8 text-slate-700 sm:text-base">
-              {landing.description || `${branding.name || 'ATTAUFEEQ'} now opens with two focused public tracks. Each section leads directly into the exact pages families need without extra clutter.`}
-            </p>
-
-            <div className="mt-8 grid gap-4 sm:grid-cols-3">
-              {(landing.stats || []).slice(0, 3).map((item) => (
-                <article key={item.title} className="rounded-[24px] border border-slate-200 bg-slate-50 px-4 py-4">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">{item.title}</p>
-                  <p className="mt-2 font-heading text-3xl text-primary">{item.value}</p>
-                  <p className="mt-2 text-sm text-slate-600">{item.text}</p>
-                </article>
-              ))}
-            </div>
-
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link to="/modern-academy" className="rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white">
-                Open School Section
-              </Link>
-              <Link to="/madrastul-attaufiq" className="rounded-full border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-700">
-                Open Madrasa Section
-              </Link>
-              <Link to="/login" className="rounded-full border border-slate-300 bg-slate-50 px-6 py-3 text-sm font-semibold text-slate-700">
-                Parent / Student Portal
-              </Link>
-            </div>
-
-            {!admissionsAvailable && (
-              <p className="mt-4 text-sm text-amber-700">
-                Admission routes stay visible here, but new applications reopen only when admin enables the window.
+    <main className="overflow-x-clip pb-12 pt-4 sm:pt-6">
+      <Section className="pt-6 sm:pt-8 lg:pt-10">
+        <Grid className="items-center gap-8 lg:grid-cols-2 lg:gap-12">
+          <div className="min-w-0 space-y-6">
+            <div className="space-y-4">
+              <p className="text-sm font-medium text-slate-600">
+                {normalizeText(landing.badge, 'School Portal')}
               </p>
-            )}
-          </div>
-
-          <div className="relative min-h-[320px] lg:min-h-full">
-            <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(15,81,50,0.24),rgba(217,179,84,0.16))]" />
-            <SmartImage
-              src={DEFAULT_IMAGES.campus}
-              fallbackSrc={DEFAULT_IMAGES.campus}
-              alt="ATTAUFEEQ campus"
-              className="h-full w-full object-cover"
-              loading="eager"
-            />
-          </div>
-        </div>
-      </section>
-
-      <section className="mt-8 grid gap-6 lg:grid-cols-[0.9fr,1.1fr]">
-        <article className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.08)] sm:p-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">
-            {landing.snapshotTitle || 'Why This Hub Works'}
-          </p>
-          <h2 className="mt-3 max-w-2xl break-words font-heading text-3xl text-primary">
-            Families should land once and know exactly where to go next.
-          </h2>
-          <p className="mt-4 text-sm leading-8 text-slate-700">
-            This entry point keeps the school website, madrasa website, results, admissions, and updates clearly separated while still feeling like one trusted institution.
-          </p>
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            {snapshotItems.slice(0, 4).map((item) => (
-              <div key={item} className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-semibold text-slate-700">
-                {item}
-              </div>
-            ))}
-          </div>
-        </article>
-
-        <article className="overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
-          <SmartImage
-            src={DEFAULT_IMAGES.community}
-            fallbackSrc={DEFAULT_IMAGES.community}
-            alt="School community"
-            className="h-64 w-full object-cover"
-          />
-          <div className="grid gap-4 p-6 sm:p-8">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Public Access</p>
-              <h2 className="mt-3 break-words font-heading text-3xl text-primary">School identity first, portal access when needed.</h2>
+              <h1 className="max-w-3xl text-4xl font-semibold leading-tight text-slate-900 sm:text-5xl">
+                {heading}
+              </h1>
+              <p className="max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
+                {description}
+              </p>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Link to="/news" className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-semibold text-slate-800 transition hover:border-emerald-200 hover:bg-white">
-                Browse updates
-              </Link>
-              <Link to="/result-checker" className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-semibold text-slate-800 transition hover:border-emerald-200 hover:bg-white">
-                Open result checker
+
+            <div className="flex flex-wrap gap-3">
+              <Link
+                to={admissionsAvailable ? '/admissions' : '/login'}
+                className="inline-flex items-center justify-center rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-900"
+              >
+                {admissionsAvailable ? 'Start Admission' : 'Open Portal'}
               </Link>
             </div>
           </div>
-        </article>
-      </section>
 
-      <section className="mt-8 grid gap-6 lg:grid-cols-2">
-        {sectionCards.map((section) => (
-          <article key={section.id} className="overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
-            <div className={`grid gap-0 lg:grid-cols-[0.9fr,1.1fr] bg-gradient-to-br ${section.tone}`}>
-              <div className="px-6 py-8 text-white sm:px-8">
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/70">{section.title}</p>
-                <h2 className="mt-3 break-words font-heading text-4xl">{section.subtitle}</h2>
-                {section.description ? <p className="mt-3 max-w-md text-sm leading-7 text-white/82">{section.description}</p> : null}
+          <div className="min-w-0">
+            <div className="flex min-h-[280px] w-full items-center justify-center overflow-hidden rounded-2xl border border-dashed border-slate-300 p-6 sm:min-h-[340px]">
+              <div className="flex h-full w-full items-center justify-center rounded-xl border border-slate-200 px-6 py-10 text-center text-sm text-slate-500">
+                Placeholder image / illustration container
               </div>
-              <SmartImage
-                src={section.image}
-                fallbackSrc={section.image}
-                alt={section.subtitle}
-                className="h-64 w-full object-cover lg:h-full"
+            </div>
+          </div>
+        </Grid>
+      </Section>
+
+      <Section>
+        <div className="space-y-6">
+          <div className="max-w-2xl space-y-3">
+            <p className="text-sm font-medium text-slate-600">Features</p>
+            <h2 className="text-3xl font-semibold leading-tight text-slate-900 sm:text-4xl">
+              Clean blocks for the main school portal sections
+            </h2>
+            <p className="text-base leading-7 text-slate-600">
+              This grid is intentionally lightweight so we can style each area in the next pass without changing the page structure.
+            </p>
+          </div>
+
+          <Grid className="auto-rows-[minmax(11rem,auto)] gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {featureItems.map((item) => (
+              <FeatureCard
+                key={item.key}
+                title={item.title}
+                description={item.description}
+                image={item.image}
+                imageAlt={item.imageAlt}
+                iconLabel={item.iconLabel}
+                ctaLabel={item.ctaLabel}
+                ctaTo={item.ctaTo}
+                featured={item.featured}
+                accent={item.accent}
+                className={item.className}
               />
-            </div>
-            <div className="grid gap-3 px-6 py-6 sm:px-8">
-              {section.items.map((item) => (
-                <Link
-                  key={`${section.id}-${item.label}`}
-                  to={item.to}
-                  className="flex items-center justify-between rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm font-semibold text-slate-800 transition hover:border-emerald-200 hover:bg-white"
-                >
-                  <span>{item.label}</span>
-                  <span className="text-primary">Open</span>
-                </Link>
-              ))}
-            </div>
-          </article>
-        ))}
-      </section>
+            ))}
+          </Grid>
+        </div>
+      </Section>
     </main>
   );
 }

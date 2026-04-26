@@ -1,24 +1,16 @@
-import { Link, useLocation } from 'react-router-dom';
-import { useMemo, useState } from 'react';
-import PublicSectionFrame from '../components/public/PublicSectionFrame';
+import { useState } from 'react';
 import ResultCard from '../components/ResultCard';
 import { apiJson } from '../utils/publicApi';
 
 const TERM_OPTIONS = ['First Term', 'Second Term', 'Third Term'];
 
 function ResultChecker() {
-  const location = useLocation();
   const [studentIdentifier, setStudentIdentifier] = useState('');
   const [term, setTerm] = useState('First Term');
   const [token, setToken] = useState('');
   const [payload, setPayload] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const institution = useMemo(() => new URLSearchParams(location.search).get('institution') || '', [location.search]);
-  const heading = institution ? `${institution} Result Checker` : 'Check Your Result';
-  const description = institution
-    ? `Use a valid result token with the student ID or code to view published ${institution} results.`
-    : 'Enter your student ID or student code with a valid result token to view your published results.';
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -97,33 +89,17 @@ function ResultChecker() {
   }
 
   return (
-    <PublicSectionFrame
-      eyebrow="Result Checker"
-      title={heading}
-      description={description}
-      image="/images/schoolweb2.png"
-      imageAlt="Result checker"
-      actions={(
-        <>
-          <Link to="/news" className="rounded-full border border-slate-300 bg-white px-6 py-3 text-sm font-semibold text-slate-700">
-            School Updates
-          </Link>
-          <Link to="/admissions" className="rounded-full border border-slate-300 bg-slate-50 px-6 py-3 text-sm font-semibold text-slate-700">
-            Admissions
-          </Link>
-        </>
-      )}
-      metrics={[
-        { label: 'Terms', value: '3', note: 'Results can be checked term by term.' },
-        { label: 'Token', value: 'Secure', note: 'First access is protected with a valid result token.' },
-        { label: 'Output', value: 'Printable', note: 'Published cards can be opened and printed immediately.' }
-      ]}
-    >
-      <section className="mt-8 grid gap-6 lg:grid-cols-[0.95fr,1.05fr]">
-        <article className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:p-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Lookup Form</p>
-          <h2 className="mt-3 break-words font-heading text-3xl text-primary">Enter student details and token.</h2>
-          <form onSubmit={handleSubmit} className="mt-6 grid gap-3">
+    <section className="section-wrap py-16 sm:py-20">
+      <div className="glass-panel mx-auto max-w-5xl p-6 sm:p-8">
+          <div className="flex flex-col gap-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Result Checker</p>
+            <h1 className="break-words font-heading text-3xl text-primary sm:text-4xl">Check Your Result</h1>
+            <p className="text-sm text-slate-600">
+              Enter your student ID or student code with a valid result token to view your published results.
+            </p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="mt-6 grid gap-3 sm:grid-cols-2">
             <input
               value={studentIdentifier}
               onChange={(e) => setStudentIdentifier(e.target.value)}
@@ -144,76 +120,67 @@ function ResultChecker() {
               value={token}
               onChange={(e) => setToken(e.target.value.toUpperCase())}
               placeholder="Result Token (required only for first-time access)"
-              className="rounded-2xl border border-slate-300 px-4 py-3 text-sm"
+              className="rounded-2xl border border-slate-300 px-4 py-3 text-sm sm:col-span-2"
             />
             <button
               type="submit"
               disabled={loading}
-              className="rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+              className="rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 sm:col-span-2"
             >
               {loading ? 'Checking...' : 'Check Result'}
             </button>
           </form>
+
           {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
-        </article>
 
-        <article className="rounded-[30px] border border-slate-200 bg-white p-6 shadow-[0_18px_50px_rgba(15,23,42,0.06)] sm:p-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">What You Will See</p>
-          <div className="mt-4 grid gap-3">
-            <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-700">Student identity and class details</div>
-            <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-700">Remaining token usage after successful access</div>
-            <div className="rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-4 text-sm text-slate-700">A printable published report card when results are available</div>
-          </div>
+          {payload && (
+            <div className="mt-8 space-y-4">
+              {student && (
+              <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm">
+                  <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Student Details</p>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <div>
+                      <p className="text-sm text-slate-600">Name</p>
+                      <p className="break-words font-semibold text-slate-900">{student.fullName}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-600">Class</p>
+                      <p className="font-semibold text-slate-900">{student.classLabel || student.classId || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-600">Institution</p>
+                      <p className="font-semibold text-slate-900">{student.institution || '—'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-slate-600">Remaining Uses</p>
+                      <p className="font-semibold text-slate-900">{remainingUses ?? '—'}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
-          {student && (
-            <div className="mt-6 rounded-[24px] border border-slate-200 bg-slate-50 p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Student Details</p>
-              <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                <div>
-                  <p className="text-sm text-slate-600">Name</p>
-                  <p className="break-words font-semibold text-slate-900">{student.fullName}</p>
+              {holdReason && (
+                <div className="rounded-[24px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                  {holdReason}
                 </div>
-                <div>
-                  <p className="text-sm text-slate-600">Class</p>
-                  <p className="font-semibold text-slate-900">{student.classLabel || student.classId || '—'}</p>
+              )}
+
+              {!holdReason && reportCard && (
+                <div className="space-y-3">
+                  <ResultCard reportCard={reportCard} />
+                  <button
+                    type="button"
+                    onClick={() => printResultCard(document.getElementById('result-card-print'))}
+                    className="rounded-2xl border border-slate-300 bg-white/80 px-4 py-3 text-sm font-semibold text-slate-700"
+                  >
+                    Download PDF
+                  </button>
                 </div>
-                <div>
-                  <p className="text-sm text-slate-600">Institution</p>
-                  <p className="font-semibold text-slate-900">{student.institution || '—'}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-slate-600">Remaining Uses</p>
-                  <p className="font-semibold text-slate-900">{remainingUses ?? '—'}</p>
-                </div>
-              </div>
+              )}
             </div>
           )}
-        </article>
-      </section>
-
-      {payload && (
-        <section className="mt-8 space-y-4">
-          {holdReason && (
-            <div className="rounded-[24px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
-              {holdReason}
-            </div>
-          )}
-
-          {!holdReason && reportCard && (
-            <div className="space-y-3">
-              <ResultCard reportCard={reportCard} />
-              <button
-                type="button"
-                onClick={() => printResultCard(document.getElementById('result-card-print'))}
-                className="rounded-2xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700"
-              >
-                Download PDF
-              </button>
-            </div>
-          )}
-        </section>
-      )}
-    </PublicSectionFrame>
+      </div>
+    </section>
   );
 }
 

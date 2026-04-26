@@ -1,6 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
-import PublicSectionFrame from '../components/public/PublicSectionFrame';
 import SmartImage from '../components/SmartImage';
 import { NewsCardSkeleton } from '../components/Skeleton';
 import { apiJson } from '../utils/publicApi';
@@ -45,18 +44,6 @@ function NewsEvents() {
     () => sortedItems.filter((item) => !Array.isArray(item.videos) || item.videos.length === 0),
     [sortedItems]
   );
-  const pageTitle = institutionFilter
-    ? `${institutionFilter} News & Events`
-    : 'News & Events';
-  const pageDescription = institutionFilter
-    ? `Follow announcements, ceremonies, activities, and school stories from ${institutionFilter}.`
-    : 'Follow school announcements, activities, examination schedules, holiday notices, and achievements.';
-  const filterLinks = [
-    { label: 'All Updates', to: '/news', active: !institutionFilter && !categoryFilter },
-    { label: 'Madrasa News', to: '/news?institution=Madrastul%20ATTAUFEEQ', active: institutionFilter === 'Madrastul ATTAUFEEQ' && !categoryFilter },
-    { label: 'Events', to: institutionFilter ? `/news?institution=${encodeURIComponent(institutionFilter)}&category=event` : '/news?category=event', active: categoryFilter === 'event' },
-    { label: 'Articles', to: institutionFilter ? `/news?institution=${encodeURIComponent(institutionFilter)}` : '/news', active: false }
-  ];
 
   useEffect(() => {
     let isCurrent = true;
@@ -90,31 +77,15 @@ function NewsEvents() {
   }, [institutionFilter, categoryFilter]);
 
   return (
-    <PublicSectionFrame
-      eyebrow="School Feed"
-      title={pageTitle}
-      description={pageDescription}
-      image={institutionFilter ? DEFAULT_IMAGES.madrasa : DEFAULT_IMAGES.galleryWide}
-      imageAlt="School updates"
-      actions={(
-        <>
-          {filterLinks.slice(0, 3).map((link) => (
-            <Link
-              key={link.label}
-              to={link.to}
-              className={`rounded-full px-6 py-3 text-sm font-semibold ${link.active ? 'bg-primary text-white' : 'border border-slate-300 bg-white text-slate-700'}`}
-            >
-              {link.label}
-            </Link>
-          ))}
-        </>
-      )}
-      metrics={[
-        { label: 'Posts', value: String(items.length), note: 'Published updates currently visible on the public site.' },
-        { label: 'Videos', value: String(videoItems.length), note: 'Ceremonies, highlights, and motion-based updates.' },
-        { label: 'Articles', value: String(articleItems.length), note: 'Announcements, schedules, and full stories.' }
-      ]}
-    >
+    <main className="section-wrap py-14">
+      <section className="glass-panel overflow-hidden px-6 py-8 sm:px-8 sm:py-10">
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">School Feed</p>
+        <h1 className="mt-3 break-words font-heading text-4xl text-primary">News & Events</h1>
+        <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-700">
+          Follow school announcements, activities, examination schedules, holiday notices, and achievements.
+        </p>
+      </section>
+
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
       {loading && (
@@ -284,17 +255,17 @@ function NewsEvents() {
       )}
 
       {!loading && !error && !items.length && (
-        <div className="mt-8 rounded-[28px] border border-slate-200 bg-white p-5 text-sm text-slate-600 shadow-[0_18px_50px_rgba(15,23,42,0.06)]">
+        <div className="mt-8 glass-card p-5 text-sm text-slate-600">
           No published news yet. Check back soon.
         </div>
       )}
 
       <div className="mt-8">
-        <Link to="/contact" className="rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700">
+        <Link to="/contact" className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">
           Contact School
         </Link>
       </div>
-    </PublicSectionFrame>
+    </main>
   );
 }
 
