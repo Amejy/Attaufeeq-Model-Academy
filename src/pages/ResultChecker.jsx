@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import ResultCard from '../components/ResultCard';
+import { GlassPanel, PremiumHero } from '../components/public/PremiumPublic';
 import { apiJson } from '../utils/publicApi';
 
 const TERM_OPTIONS = ['First Term', 'Second Term', 'Third Term'];
@@ -89,8 +90,18 @@ function ResultChecker() {
   }
 
   return (
-    <section className="section-wrap py-16 sm:py-20">
-      <div className="glass-panel mx-auto max-w-5xl p-6 sm:p-8">
+    <main className="premium-page">
+      <PremiumHero
+        accent="school"
+        badge="Check Result"
+        title="Student Result Access"
+        kicker="School and Madrasa Results"
+        description="Use a student ID or code with a valid token to access published academic or madrasa results."
+        image="/images/schoolweb3.png"
+        imageAlt="Student result access"
+      />
+    <section className="section-wrap pb-20">
+      <GlassPanel className="mx-auto max-w-5xl p-6 sm:p-8">
           <div className="flex flex-col gap-3">
             <p className="text-xs font-semibold uppercase tracking-[0.3em] text-slate-500">Result Checker</p>
             <h1 className="break-words font-heading text-3xl text-primary sm:text-4xl">Check Your Result</h1>
@@ -179,8 +190,9 @@ function ResultChecker() {
               )}
             </div>
           )}
-      </div>
+      </GlassPanel>
     </section>
+    </main>
   );
 }
 

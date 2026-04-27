@@ -1,22 +1,11 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { defaultSiteContent } from '../data/defaultSiteContent';
 import { apiJson } from '../utils/publicApi';
 
 const SiteContentContext = createContext(null);
 
-const emptySiteContent = {
-  branding: {},
-  landing: { stats: [], snapshotItems: [], institutions: [] },
-  home: { heroStats: [], heroImages: [], highlights: [], programs: [] },
-  about: { values: [] },
-  academics: { levels: [] },
-  staff: { featuredStaff: [] },
-  gallery: { photos: [] },
-  madrasa: { modules: [] },
-  contact: {}
-};
-
-let cachedSiteContent = emptySiteContent;
+let cachedSiteContent = defaultSiteContent;
 let siteContentLoaded = false;
 let siteContentPromise = null;
 
@@ -36,7 +25,7 @@ async function fetchSiteContent({ force = false } = {}) {
 
   siteContentPromise = (async () => {
     const data = await apiJson('/site-content');
-    cachedSiteContent = data.content || emptySiteContent;
+    cachedSiteContent = data.content || defaultSiteContent;
     siteContentLoaded = true;
     return cachedSiteContent;
   })();
@@ -49,7 +38,7 @@ async function fetchSiteContent({ force = false } = {}) {
 }
 
 export function SiteContentProvider({ children }) {
-  const [siteContent, setSiteContent] = useState(() => (siteContentLoaded ? cachedSiteContent : emptySiteContent));
+  const [siteContent, setSiteContent] = useState(() => (siteContentLoaded ? cachedSiteContent : defaultSiteContent));
   const [loading, setLoading] = useState(!siteContentLoaded);
   const [error, setError] = useState('');
 
@@ -58,9 +47,10 @@ export function SiteContentProvider({ children }) {
     setError('');
     try {
       const nextContent = await fetchSiteContent({ force });
-      setSiteContent(nextContent || emptySiteContent);
+      setSiteContent(nextContent || defaultSiteContent);
     } catch (err) {
       setError(err.message || 'Unable to load site content.');
+      setSiteContent(cachedSiteContent || defaultSiteContent);
     } finally {
       setLoading(false);
     }
@@ -80,11 +70,12 @@ export function SiteContentProvider({ children }) {
       try {
         const nextContent = await fetchSiteContent();
         if (!cancelled) {
-          setSiteContent(nextContent || emptySiteContent);
+          setSiteContent(nextContent || defaultSiteContent);
         }
       } catch (err) {
         if (!cancelled) {
           setError(err.message || 'Unable to load site content.');
+          setSiteContent(cachedSiteContent || defaultSiteContent);
         }
       } finally {
         if (!cancelled) {

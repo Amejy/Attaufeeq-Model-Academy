@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import { Router } from 'express';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { createContactSubmission, listContactSubmissions } from '../repositories/contactSubmissionRepository.js';
-import { loadSiteContent, saveSiteContent } from '../services/siteContentService.js';
+import { defaultSiteContent, loadSiteContent, saveSiteContent } from '../services/siteContentService.js';
 
 const siteContentRouter = Router();
 
@@ -11,9 +11,18 @@ function isValidEmail(email) {
 }
 
 siteContentRouter.get('/', async (_req, res) => {
-  const content = await loadSiteContent();
-  res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
-  return res.json({ content });
+  try {
+    const content = await loadSiteContent();
+    res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
+    return res.json({ content });
+  } catch (error) {
+    console.error('Public site content fallback activated:', error.message || error);
+    res.setHeader('Cache-Control', 'public, max-age=15, stale-while-revalidate=30');
+    return res.json({
+      content: defaultSiteContent,
+      degraded: true
+    });
+  }
 });
 
 siteContentRouter.post('/contact', async (req, res) => {

@@ -1,9 +1,9 @@
 import { Link } from 'react-router-dom';
-import Hero from '../components/Hero';
 import FeatureCard from '../components/FeatureCard';
 import SmartImage from '../components/SmartImage';
 import { useSiteContent } from '../context/SiteContentContext';
 import useAdmissionPeriod from '../hooks/useAdmissionPeriod';
+import { GlassPanel, LiveTicker, PremiumHero, SectionIntro } from '../components/public/PremiumPublic';
 import { DEFAULT_IMAGES } from '../utils/defaultImages';
 
 function Home() {
@@ -15,68 +15,84 @@ function Home() {
   const academicPrograms = home.programs || [];
 
   return (
-    <>
-      <Hero />
-
-      <section className="section-wrap py-14">
-        <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">{home.highlightsEyebrow}</p>
-            <h2 className="mt-2 break-words font-heading text-3xl text-primary md:text-5xl">{home.highlightsTitle}</h2>
-          </div>
-          <div className="glass-card max-w-xl px-5 py-4 text-sm leading-7 text-slate-600">
-            {home.highlightsDescription}
-          </div>
+    <main className="premium-page">
+      <PremiumHero
+        accent="school"
+        badge={home.heroBadge}
+        title={home.heroTitle}
+        kicker={siteContent.branding?.motto}
+        description={home.heroDescription || siteContent.branding?.intro}
+        image={home.heroImages?.[0]?.url || DEFAULT_IMAGES.campus}
+        imageAlt={home.heroImages?.[0]?.alt || 'ATTAUFEEQ campus'}
+        stats={home.heroStats || []}
+        primaryAction={{ to: admissionsAvailable ? '/admissions' : '/contact', label: admissionsAvailable ? 'Apply Now' : 'Contact School' }}
+        secondaryAction={{ to: '/result-checker', label: 'Check Result' }}
+      >
+        <div className="mt-5 max-w-2xl">
+          <LiveTicker items={['School Website', 'About School', 'Check Result', 'School Announcements']} />
         </div>
-        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+      </PremiumHero>
+
+      <section className="section-wrap premium-band">
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <SectionIntro
+            eyebrow={home.highlightsEyebrow}
+            title={home.highlightsTitle}
+            description=""
+          />
+          {home.highlightsDescription ? (
+            <GlassPanel className="max-w-xl px-5 py-4 text-sm leading-7 text-slate-700">
+              {home.highlightsDescription}
+            </GlassPanel>
+          ) : null}
+        </div>
+        <div className="mt-8 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
           {highlights.map((item) => (
-            <FeatureCard key={item.title} {...item} />
+            <FeatureCard key={item.title} {...item} className="card-feature" />
           ))}
         </div>
       </section>
 
-      <section className="section-wrap py-8">
-        <div className="grid gap-8 lg:grid-cols-[0.95fr,1.05fr] lg:items-center">
-          <div className="glass-panel p-6 sm:p-8">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">{home.storyEyebrow}</p>
-            <h2 className="mt-3 break-words font-heading text-3xl text-primary md:text-4xl">{home.storyTitle}</h2>
+      <section className="section-wrap premium-band pt-0">
+        <GlassPanel className="premium-split-card p-6 sm:p-8">
+          <div>
+            <p className="premium-section-intro__eyebrow">{home.storyEyebrow}</p>
+            <h2 className="premium-section-intro__title text-[clamp(2rem,4vw,3rem)]">{home.storyTitle}</h2>
             <p className="mt-4 text-sm leading-8 text-slate-700">
               {home.storyText}
             </p>
             <div className="mt-6 flex flex-wrap gap-3">
-              <Link to="/about" className="glow-button rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white hover:bg-emerald-800">
+              <Link to="/about" className="premium-button premium-button--primary">
                 Learn More
               </Link>
-              <Link to="/contact" className="rounded-full border border-slate-300 bg-white/70 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-white">
+              <Link to="/contact" className="premium-button rounded-full border border-slate-300 bg-white px-5 text-slate-700">
                 Visit Campus
               </Link>
             </div>
           </div>
 
-          <div className="relative min-h-[340px]">
-            <div className="absolute inset-0 rounded-[34px] bg-gradient-to-br from-emerald-100 via-white to-amber-100" />
+          <div className="premium-media-card">
             <SmartImage
               src={home.storyImage || DEFAULT_IMAGES.campus}
               fallbackSrc={DEFAULT_IMAGES.campus}
               alt="School campus"
-              className="relative h-full min-h-[340px] w-full rounded-[34px] object-cover shadow-[0_25px_60px_rgba(8,37,26,0.16)]"
+              className="relative h-full min-h-[340px] w-full object-cover"
               loading="lazy"
             />
           </div>
-        </div>
+        </GlassPanel>
       </section>
 
-      <section className="section-wrap py-14">
-        <div className="mb-8 text-center">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">{home.programsEyebrow}</p>
-          <h2 className="mt-2 break-words font-heading text-3xl text-primary md:text-5xl">{home.programsTitle}</h2>
-          <p className="mx-auto mt-3 max-w-3xl text-sm leading-7 text-slate-600">
-            {home.programsDescription}
-          </p>
-        </div>
+      <section className="section-wrap premium-band pt-0">
+        <SectionIntro
+          eyebrow={home.programsEyebrow}
+          title={home.programsTitle}
+          description={home.programsDescription}
+          align="center"
+        />
         <div className="grid gap-6 lg:grid-cols-2">
           {academicPrograms.map((program) => (
-            <article key={program.title} className="glass-card floating-card p-5 sm:p-6">
+            <article key={program.title} className="premium-glass card-feature p-5 sm:p-6">
               <SmartImage
                 src={program.image}
                 fallbackSrc={DEFAULT_IMAGES.students}
@@ -128,7 +144,7 @@ function Home() {
           </div>
         </div>
       </section>
-    </>
+    </main>
   );
 }
 

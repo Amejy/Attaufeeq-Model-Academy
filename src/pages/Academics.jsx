@@ -1,4 +1,5 @@
 import SmartImage from '../components/SmartImage';
+import { GlassPanel, PremiumHero, SectionIntro } from '../components/public/PremiumPublic';
 import { useSiteContent } from '../context/SiteContentContext';
 import { DEFAULT_IMAGES } from '../utils/defaultImages';
 
@@ -7,41 +8,52 @@ function Academics() {
   const academics = siteContent.academics || {};
 
   return (
-    <main className="section-wrap py-14">
-      <h1 className="font-heading text-4xl text-primary">{academics.title}</h1>
-      <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-700">
-        {academics.intro}
-      </p>
+    <main className="premium-page">
+      <PremiumHero
+        accent="school"
+        badge="Academics"
+        title={academics.title}
+        kicker="School Section"
+        description={academics.intro}
+        image={academics.image || DEFAULT_IMAGES.students}
+        imageAlt="Students in class"
+      />
 
-      <section className="mt-8 grid gap-6 md:grid-cols-2 md:items-center">
+      <section className="section-wrap premium-band">
+        <SectionIntro eyebrow="Educational Levels" title={academics.levelsTitle} description="" />
+        <GlassPanel className="premium-split-card p-6 sm:p-8">
         <div>
-          <h2 className="font-heading text-2xl text-primary">{academics.levelsTitle}</h2>
-          <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-700">
+          <ul className="mt-3 list-disc space-y-2 pl-5 text-sm text-slate-700">
             {(academics.levels || []).map((level) => <li key={level}>{level}</li>)}
           </ul>
         </div>
-        <SmartImage
+        <div className="premium-media-card">
+          <SmartImage
           src={academics.image || DEFAULT_IMAGES.students}
           fallbackSrc={DEFAULT_IMAGES.students}
           alt="Students in class"
-          className="h-72 w-full rounded-xl object-cover"
+          className="h-72 w-full object-cover md:h-full"
           loading="lazy"
         />
+        </div>
+        </GlassPanel>
       </section>
 
-      <section className="mt-10 grid gap-6 md:grid-cols-2">
-        <article className="rounded-xl border border-slate-200 p-6">
+      <section className="section-wrap pb-20">
+        <div className="grid gap-6 md:grid-cols-2">
+        <GlassPanel className="p-6">
           <h2 className="font-heading text-2xl text-primary">{academics.subjectsTitle}</h2>
           <p className="mt-3 text-sm text-slate-700">
             {academics.subjectsText}
           </p>
-        </article>
-        <article className="rounded-xl border border-slate-200 p-6">
+        </GlassPanel>
+        <GlassPanel className="p-6">
           <h2 className="font-heading text-2xl text-primary">{academics.curriculumTitle}</h2>
           <p className="mt-3 text-sm leading-7 text-slate-700">
             {academics.curriculumText}
           </p>
-        </article>
+        </GlassPanel>
+        </div>
       </section>
     </main>
   );

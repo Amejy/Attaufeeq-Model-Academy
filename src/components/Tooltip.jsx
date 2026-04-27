@@ -1,7 +1,6 @@
-import { createElement, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 function Tooltip({
-  as: As = 'span',
   text,
   className = '',
   disabled = false,
@@ -43,20 +42,20 @@ function Tooltip({
     }
   }
 
-  return createElement(
-    As,
-    {
-      className: `tooltip-anchor ${className}`.trim(),
-      'data-tooltip': canShowTooltip ? tooltipText : undefined,
-      'data-tooltip-visible': visible ? 'true' : undefined,
-      title: canShowTooltip ? tooltipText : undefined,
-      onPointerDown: handlePointerDown,
-      onPointerUp: handlePointerUp,
-      onPointerCancel: clearLongPress,
-      onPointerLeave: clearLongPress,
-      ...props
-    },
-    children
+  return (
+    <span
+      className={`tooltip-anchor ${className}`.trim()}
+      data-tooltip={canShowTooltip ? tooltipText : undefined}
+      data-tooltip-visible={visible ? 'true' : undefined}
+      title={canShowTooltip ? tooltipText : undefined}
+      onPointerDown={handlePointerDown}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={clearLongPress}
+      onPointerLeave={clearLongPress}
+      {...props}
+    >
+      {children}
+    </span>
   );
 }
 

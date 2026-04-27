@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ErrorState from '../components/ErrorState';
+import { GlassPanel, LiveTicker, PremiumHero, SectionIntro } from '../components/public/PremiumPublic';
 import { apiFetch, apiJson } from '../utils/publicApi';
 
 const PROGRAM_INSTITUTIONS = {
@@ -357,14 +358,33 @@ function Admissions() {
       : '';
 
   return (
-    <main className="section-wrap py-14">
-      <h1 className="break-words font-heading text-4xl text-primary">Admissions</h1>
-      <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-700">
-        Submit your child&apos;s application and choose the exact class requested for placement after full admission confirmation.
-      </p>
+    <main className="premium-page">
+      <PremiumHero
+        accent={isMadrasa || isMemorization ? 'madrasa' : 'school'}
+        badge="Admissions"
+        title="Apply into the digital campus"
+        kicker={program ? selectedProgramLabel : 'School and Madrasa Pathways'}
+        description="Submit your child&apos;s application and choose the exact class requested for placement after full admission confirmation."
+        image={isMadrasa || isMemorization ? '/images/gallery5.png' : '/images/schoolweb2.png'}
+        imageAlt="Admissions"
+      >
+        <div className="mt-5 max-w-2xl">
+          <LiveTicker
+            accent={isMadrasa || isMemorization ? 'madrasa' : 'school'}
+            items={['ATTAUFEEQ Model Academy', 'Madrastul ATTAUFEEQ', 'Quran Memorization Academy', 'Admission Information']}
+          />
+        </div>
+      </PremiumHero>
+
+      <section className="section-wrap pb-20">
+      <SectionIntro
+        eyebrow="Admissions Flow"
+        title="Select a program, complete the form, and submit for review"
+        description="The public admissions system keeps school, madrasa, and memorization applicants separated while preserving one consistent application experience."
+      />
 
       {!periodOpen ? (
-        <section className="glass-panel mt-8 max-w-4xl p-8">
+        <GlassPanel className="mt-8 max-w-4xl p-8">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Admissions Locked</p>
           <h2 className="mt-3 break-words font-heading text-3xl text-primary">The admissions portal is currently unavailable.</h2>
           <p className="mt-4 text-sm leading-8 text-slate-700">
@@ -388,11 +408,11 @@ function Admissions() {
                 : 'Quran Memorization window has not been published yet.'}
             </p>
           </div>
-        </section>
+        </GlassPanel>
       ) : (
       <>
         {!program ? (
-          <section className="glass-panel mt-8 p-6 sm:p-8">
+          <GlassPanel className="mt-8 p-6 sm:p-8">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Choose Program</p>
             <h2 className="mt-3 break-words font-heading text-3xl text-primary">Select the admissions pathway</h2>
             <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-700">
@@ -448,9 +468,10 @@ function Admissions() {
                 )}
               </button>
             </div>
-          </section>
+          </GlassPanel>
         ) : (
-          <form onSubmit={handleSubmit} className="admissions-form mt-8 grid gap-4 sm:grid-cols-2">
+          <GlassPanel className="mt-8 p-4 sm:p-5">
+          <form onSubmit={handleSubmit} className="admissions-form grid gap-4 sm:grid-cols-2">
             <div className="status-banner sm:col-span-2 flex flex-wrap items-center justify-between gap-3 text-sm">
               <p className="break-words font-semibold">
                 Selected program: {selectedProgramLabel}
@@ -743,6 +764,7 @@ function Admissions() {
               </button>
             </div>
           </form>
+          </GlassPanel>
         )}
       </>
       )}
@@ -758,6 +780,7 @@ function Admissions() {
         </div>
       )}
       {success && <p className="status-banner mt-4 text-sm">{success}</p>}
+      </section>
     </main>
   );
 }

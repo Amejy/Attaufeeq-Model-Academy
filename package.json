@@ -8,14 +8,16 @@
     "dev:web": "vite",
     "dev:backend": "npm --prefix backend run dev",
     "build": "vite build",
-    "lint": "eslint .",
+    "lint": "eslint --cache \"src/**/*.{js,jsx}\" \"backend/**/*.{js,mjs}\" \"tests/**/*.{js,mjs}\" \"scripts/**/*.{js,mjs}\" \"*.config.js\"",
     "preview": "vite preview",
     "test:ui": "PLAYWRIGHT_BROWSERS_PATH=./.cache/ms-playwright playwright test",
     "test:ui:install": "PLAYWRIGHT_BROWSERS_PATH=./.cache/ms-playwright playwright install chromium",
     "test:ui:all": "bash ./scripts/ui-test.sh"
   },
   "dependencies": {
+    "aos": "^2.3.4",
     "exceljs": "^4.4.0",
+    "framer-motion": "^12.38.0",
     "papaparse": "^5.4.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

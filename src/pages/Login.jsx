@@ -41,6 +41,11 @@ function Login({ variant = 'family', defaultRole = '' }) {
     ? queryRole || routeRole
     : routeRole || queryRole;
   const roleHint = variantConfig.allowedRoles.includes(preferredRole) ? preferredRole : variantConfig.allowedRoles[0];
+  const roleAccessTitle = `${ROLE_LABELS[roleHint]} Access`;
+  const displayTitle = isGenericPortalRoute ? variantConfig.title : roleAccessTitle;
+  const displaySubtitle = isGenericPortalRoute
+    ? variantConfig.subtitle
+    : `Secure access for ${ROLE_LABELS[roleHint].toLowerCase()} users inside the ${variant === 'family' ? 'family portal' : 'staff operations portal'}.`;
 
   const { isAuthenticated, login, user } = useAuth();
   const { siteContent } = useSiteContent();
@@ -151,8 +156,8 @@ function Login({ variant = 'family', defaultRole = '' }) {
             </div>
           </div>
           <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">{variantConfig.heroLabel}</p>
-          <h1 className="mt-3 break-words font-heading text-3xl text-primary sm:mt-4 sm:text-5xl">{variantConfig.title}</h1>
-          <p className="mt-3 max-w-xl text-sm leading-6 text-slate-700 sm:mt-4 sm:leading-8">{variantConfig.subtitle}</p>
+          <h1 className="mt-3 break-words font-heading text-3xl text-primary sm:mt-4 sm:text-5xl">{displayTitle}</h1>
+          <p className="mt-3 max-w-xl text-sm leading-6 text-slate-700 sm:mt-4 sm:leading-8">{displaySubtitle}</p>
 
           <div className="mt-6 rounded-[24px] border border-white/60 bg-white/65 p-4 sm:mt-8 sm:rounded-[28px] sm:p-5">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Current URL</p>
@@ -177,12 +182,6 @@ function Login({ variant = 'family', defaultRole = '' }) {
             ))}
           </div>
 
-          <div className="mt-6 rounded-[24px] bg-[linear-gradient(135deg,rgba(15,81,50,0.92),rgba(217,179,84,0.85))] p-4 text-white sm:mt-8 sm:rounded-[28px] sm:p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/70">Portal Routing</p>
-            <p className="mt-2 text-sm leading-6 text-white/90 sm:mt-3 sm:leading-7">
-              Family accounts use `/login`. Admin, teacher, and admissions accounts use `/staff-access`. If an account signs in on the wrong portal, the screen blocks it and points to the correct URL.
-            </p>
-          </div>
         </section>
 
         <section className="glass-card interactive-card min-w-0 p-5 sm:p-8">
@@ -193,7 +192,7 @@ function Login({ variant = 'family', defaultRole = '' }) {
           )}
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Sign In</p>
           <h2 className="mt-2 break-words font-heading text-2xl text-primary sm:mt-3 sm:text-3xl">
-            {ROLE_LABELS[roleHint]} Access
+            Enter Credentials
           </h2>
           <p className="mt-2 text-sm leading-6 text-slate-600 sm:leading-7">
             Enter your credentials to continue into the {ROLE_LABELS[roleHint].toLowerCase()} workspace.
@@ -254,15 +253,6 @@ function Login({ variant = 'family', defaultRole = '' }) {
             </Link>
           </p>
 
-          <div className="mt-4 rounded-[24px] border border-slate-200 bg-white/70 p-4 text-xs leading-6 text-slate-600">
-            Use school-issued credentials for this portal. Family and staff accounts are separated intentionally.
-            {variant === 'staff' && (
-              <p className="mt-2">
-                Internal roles are intentionally separated from the public family login surface.
-              </p>
-            )}
-          </div>
-
           <div className="mt-5 text-sm text-slate-600">
             {variant === 'family' ? (
               <>
@@ -270,9 +260,6 @@ function Login({ variant = 'family', defaultRole = '' }) {
                 <Link to="/staff-access" className="interactive-link font-semibold text-primary hover:underline">
                   Open staff access
                 </Link>
-                <p className="mt-2">
-                  Parent accounts are created during admission registration and should use the issued login details.
-                </p>
               </>
             ) : (
               <>

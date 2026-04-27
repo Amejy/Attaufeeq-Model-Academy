@@ -3,6 +3,13 @@ import { useSiteContent } from '../context/SiteContentContext';
 import FeatureCard from '../components/FeatureCard';
 import useAdmissionPeriod from '../hooks/useAdmissionPeriod';
 import { Grid, Section } from '../components/layout/LayoutPrimitives';
+import {
+  GlassPanel,
+  IdentityCard,
+  LiveTicker,
+  PremiumHero,
+  SectionIntro
+} from '../components/public/PremiumPublic';
 import { getInstitutionImageFallback } from '../utils/defaultImages';
 
 function normalizeText(value, fallback = '') {
@@ -24,7 +31,7 @@ function buildFeatureItems(landing, branding) {
     ctaTo: '/login',
     featured: index === 0,
     accent: index === 0 ? 'gold' : 'emerald',
-    className: index === 0 ? 'lg:col-span-2 lg:row-span-2 min-h-[18rem]' : 'min-h-[15rem]'
+    className: index === 0 ? 'lg:col-span-2 min-h-[12.25rem]' : 'min-h-[11rem]'
   }));
 
   const institutionItems = institutions.map((item, index) => ({
@@ -37,7 +44,7 @@ function buildFeatureItems(landing, branding) {
     ctaTo: item.to || '/',
     featured: index === 0 && stats.length === 0,
     accent: 'sky',
-    className: index === 0 ? 'min-h-[16rem]' : 'min-h-[15rem]'
+    className: 'min-h-[11.5rem]'
   }));
 
   const snapshotFeatureItems = snapshotItems.map((item, index) => ({
@@ -49,7 +56,7 @@ function buildFeatureItems(landing, branding) {
     ctaTo: '/login',
     featured: index === 0,
     accent: 'slate',
-    className: index === 0 ? 'lg:row-span-2 min-h-[18rem]' : 'min-h-[14rem]'
+    className: index === 0 ? 'min-h-[12.25rem]' : 'min-h-[10.75rem]'
   }));
 
   const fallbackItems = [
@@ -62,7 +69,7 @@ function buildFeatureItems(landing, branding) {
       ctaTo: '/login',
       featured: true,
       accent: 'gold',
-      className: 'lg:col-span-2 lg:row-span-2 min-h-[18rem]'
+      className: 'lg:col-span-2 min-h-[12.25rem]'
     },
     {
       key: 'fallback-admissions',
@@ -72,7 +79,7 @@ function buildFeatureItems(landing, branding) {
       ctaLabel: 'Learn more',
       ctaTo: '/admissions',
       accent: 'emerald',
-      className: 'min-h-[15rem]'
+      className: 'min-h-[11rem]'
     },
     {
       key: 'fallback-academics',
@@ -83,7 +90,7 @@ function buildFeatureItems(landing, branding) {
       ctaTo: '/academics',
       featured: true,
       accent: 'sky',
-      className: 'lg:row-span-2 min-h-[18rem]'
+      className: 'min-h-[12.25rem]'
     },
     {
       key: 'fallback-news',
@@ -93,7 +100,7 @@ function buildFeatureItems(landing, branding) {
       ctaLabel: 'Open',
       ctaTo: '/news',
       accent: 'slate',
-      className: 'min-h-[14rem]'
+      className: 'min-h-[10.75rem]'
     }
   ];
 
@@ -116,73 +123,89 @@ function Landing() {
   );
 
   return (
-    <main className="overflow-x-clip pb-12 pt-4 sm:pt-6">
-      <Section className="pt-6 sm:pt-8 lg:pt-10">
-        <Grid className="items-center gap-8 lg:grid-cols-2 lg:gap-12">
-          <div className="min-w-0 space-y-6">
-            <div className="space-y-4">
-              <p className="text-sm font-medium text-slate-600">
-                {normalizeText(landing.badge, 'School Portal')}
-              </p>
-              <h1 className="max-w-3xl text-4xl font-semibold leading-tight text-slate-900 sm:text-5xl">
-                {heading}
-              </h1>
-              <p className="max-w-2xl text-base leading-7 text-slate-600 sm:text-lg">
-                {description}
-              </p>
-            </div>
+    <main className="premium-page overflow-x-clip">
+      <PremiumHero
+        badge={normalizeText(landing.badge, 'School Portal')}
+        title={heading}
+        kicker={branding.motto}
+        description={description}
+        image={getInstitutionImageFallback('campus')}
+        imageAlt={branding.name || 'School campus'}
+        stats={(landing.stats || []).slice(0, 3)}
+        primaryAction={{ to: admissionsAvailable ? '/admissions' : '/login', label: admissionsAvailable ? 'Start Admission' : 'Open Portal' }}
+        secondaryAction={{ to: '/news', label: 'View Updates' }}
+      />
 
-            <div className="flex flex-wrap gap-3">
-              <Link
-                to={admissionsAvailable ? '/admissions' : '/login'}
-                className="inline-flex items-center justify-center rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-900"
-              >
-                {admissionsAvailable ? 'Start Admission' : 'Open Portal'}
-              </Link>
-            </div>
-          </div>
+      <section className="section-wrap premium-band">
+        <SectionIntro
+          eyebrow="Two Learning Tracks"
+          title="Choose the live campus experience you want to enter"
+          description="The school and madrasa pathways stay visually connected while each keeps its own identity, tone, and entry flow."
+          align="center"
+        />
+        <div className="premium-grid premium-grid--2">
+          {(landing.institutions || []).slice(0, 2).map((item, index) => (
+            <IdentityCard
+              key={item.title}
+              title={item.title}
+              badge={item.badge}
+              description={item.description}
+              to={item.to || '/'}
+              image={item.image || getInstitutionImageFallback(item.title)}
+              imageAlt={item.title}
+              accent={index === 0 ? 'school' : 'madrasa'}
+            />
+          ))}
+        </div>
+      </section>
 
-          <div className="min-w-0">
-            <div className="flex min-h-[280px] w-full items-center justify-center overflow-hidden rounded-2xl border border-dashed border-slate-300 p-6 sm:min-h-[340px]">
-              <div className="flex h-full w-full items-center justify-center rounded-xl border border-slate-200 px-6 py-10 text-center text-sm text-slate-500">
-                Placeholder image / illustration container
-              </div>
-            </div>
-          </div>
+      <section className="section-wrap pb-6">
+        <LiveTicker items={landing.snapshotItems || []} />
+      </section>
+
+      <Section className="premium-band pt-10">
+        <SectionIntro
+          eyebrow="Portal Features"
+          title={normalizeText(landing.snapshotTitle, 'Fast, calm, high-trust school experience')}
+          description="The public-facing sections now present admissions, academics, results, announcements, and family access as one modern system."
+        />
+
+        <Grid className="auto-rows-[minmax(11rem,auto)] gap-5 md:grid-cols-2 xl:grid-cols-3">
+          {featureItems.map((item) => (
+            <FeatureCard
+              key={item.key}
+              title={item.title}
+              description={item.description}
+              image={item.image}
+              imageAlt={item.imageAlt}
+              iconLabel={item.iconLabel}
+              ctaLabel={item.ctaLabel}
+              ctaTo={item.ctaTo}
+              featured={item.featured}
+              accent={item.accent}
+              className={`${item.className || ''} card-feature`}
+            />
+          ))}
         </Grid>
       </Section>
 
-      <Section>
-        <div className="space-y-6">
-          <div className="max-w-2xl space-y-3">
-            <p className="text-sm font-medium text-slate-600">Features</p>
-            <h2 className="text-3xl font-semibold leading-tight text-slate-900 sm:text-4xl">
-              Clean blocks for the main school portal sections
+      <section className="section-wrap pb-20">
+        <GlassPanel className="premium-split-card p-6 sm:p-8">
+          <div>
+            <p className="premium-section-intro__eyebrow">Unified Access</p>
+            <h2 className="premium-section-intro__title text-[clamp(1.8rem,4vw,2.8rem)]">
+              Admissions, updates, and student access all move through one polished system
             </h2>
-            <p className="text-base leading-7 text-slate-600">
-              This grid is intentionally lightweight so we can style each area in the next pass without changing the page structure.
+            <p className="premium-section-intro__description">
+              Families can move from public information to portal actions without losing context, while staff keeps the school and madrasa flows clearly separated.
             </p>
           </div>
-
-          <Grid className="auto-rows-[minmax(11rem,auto)] gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {featureItems.map((item) => (
-              <FeatureCard
-                key={item.key}
-                title={item.title}
-                description={item.description}
-                image={item.image}
-                imageAlt={item.imageAlt}
-                iconLabel={item.iconLabel}
-                ctaLabel={item.ctaLabel}
-                ctaTo={item.ctaTo}
-                featured={item.featured}
-                accent={item.accent}
-                className={item.className}
-              />
-            ))}
-          </Grid>
-        </div>
-      </Section>
+          <div className="flex flex-wrap gap-3">
+            <Link to="/modern-academy" className="premium-button premium-button--primary">Open School Website</Link>
+            <Link to="/madrastul-attaufiq" className="premium-button rounded-full border border-slate-300 bg-white px-6 text-slate-800">Open Madrasa Website</Link>
+          </div>
+        </GlassPanel>
+      </section>
     </main>
   );
 }

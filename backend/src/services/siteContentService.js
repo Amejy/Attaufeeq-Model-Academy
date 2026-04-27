@@ -4,6 +4,8 @@ import { deleteCacheByPrefix, setCacheJson, withCache } from './cacheService.js'
 
 const SITE_CONTENT_KEY = 'public_site_content';
 const SITE_CONTENT_CACHE_KEY = 'site-content:public';
+const LEGACY_HIGHLIGHTS_DESCRIPTION =
+  'Every card, section, and CTA now carries the same premium visual language so the school feels intentional instead of generic.';
 
 export const defaultSiteContent = {
   branding: {
@@ -35,7 +37,7 @@ export const defaultSiteContent = {
         title: 'ATTAUFEEQ Model Academy',
         description:
           'Western academic education with strong exam preparation, confidence-building instruction, and a disciplined growth culture.',
-        image: '/images/classroom.jpg',
+        image: '/images/schoolweb2.png',
         to: '/modern-academy',
         badge: 'Model Track',
         accent: 'from-emerald-950 via-emerald-800 to-amber-500'
@@ -44,7 +46,7 @@ export const defaultSiteContent = {
         title: 'Madrastul ATTAUFEEQ',
         description:
           "Qur'an memorization, Tajweed, Arabic, and strong Islamic values delivered in a calm, focused learning environment.",
-        image: '/images/islamic-class.jpg',
+        image: '/images/gallery5.png',
         to: '/madrastul-attaufiq',
         badge: 'Madrasa Track',
         accent: 'from-slate-900 via-amber-700 to-yellow-400'
@@ -62,41 +64,40 @@ export const defaultSiteContent = {
       { value: '24/7', title: 'Access', text: 'News, access, records' }
     ],
     heroImages: [
-      { url: '/images/hero-school.jpg', alt: 'ATTAUFEEQ school environment' },
-      { url: '/images/students.jpg', alt: 'Students learning in class' },
-      { url: '/images/campus.jpg', alt: 'School campus and facilities' }
+      { url: '/images/schoolwebsite1.png', alt: 'ATTAUFEEQ school environment' },
+      { url: '/images/schoolweb3.png', alt: 'Students learning in class' },
+      { url: '/images/schoolwebsite1.png', alt: 'School campus and facilities' }
     ],
     highlightsEyebrow: 'School Highlights',
     highlightsTitle: 'A brighter, stronger public presence',
-    highlightsDescription:
-      'Every card, section, and CTA now carries the same premium visual language so the school feels intentional instead of generic.',
+    highlightsDescription: '',
     highlights: [
       {
         title: 'Academic Excellence',
         text: 'Our students consistently perform well in WAEC and NECO examinations.',
-        image: '/images/students.jpg'
+        image: '/images/schoolweb3.png'
       },
       {
         title: 'Qualified Teachers',
         text: 'Our experienced teachers are dedicated to delivering quality education.',
-        image: '/images/classroom.jpg'
+        image: '/images/schoolweb2.png'
       },
       {
         title: 'Modern Facilities',
         text: 'The school provides well-equipped classrooms and learning environments.',
-        image: '/images/campus.jpg'
+        image: '/images/schoolwebsite1.png'
       },
       {
         title: 'Islamic Education',
         text: 'Students receive strong Islamic training through Madrastul ATTAUFEEQ.',
-        image: '/images/islamic-class.jpg'
+        image: '/images/gallery5.png'
       }
     ],
     storyEyebrow: 'School Story',
     storyTitle: 'Education with structure, confidence, and values',
     storyText:
       'ATTAUFEEQ Model Academy was founded with the vision of providing a balanced education that combines academic excellence with strong moral and Islamic values.',
-    storyImage: '/images/campus.jpg',
+    storyImage: '/images/schoolwebsite1.png',
     programsEyebrow: 'Academic Programs',
     programsTitle: 'Two institutions. One polished digital identity.',
     programsDescription:
@@ -107,14 +108,14 @@ export const defaultSiteContent = {
         description:
           'Western academic education in Mathematics, English, Science, Social Studies, and Technology using national standards and exam preparation pathways.',
         standards: ['WAEC', 'NECO', 'National Education Standards'],
-        image: '/images/classroom.jpg'
+        image: '/images/schoolweb2.png'
       },
       {
         title: 'Madrastul ATTAUFEEQ',
         description:
           "Islamic education with Qur'an memorization, Tajweed, Arabic language, and foundational Islamic studies.",
         standards: ['Quran Memorization', 'Tajweed', 'Arabic Language'],
-        image: '/images/islamic-class.jpg'
+        image: '/images/gallery5.png'
       }
     ],
     ctaEyebrow: 'Ready to join?',
@@ -124,7 +125,7 @@ export const defaultSiteContent = {
   },
   about: {
     title: 'About Us',
-    historyTitle: 'School History',
+    historyTitle: 'History of ATTAUFEEQ Model Academy',
     historyText:
       'ATTAUFEEQ Model Academy was established with the goal of providing a comprehensive educational system that blends modern academic knowledge with Islamic moral values. The school has continued to expand while maintaining high standards of discipline and excellence.',
     historySections: [
@@ -170,9 +171,9 @@ export const defaultSiteContent = {
         bullets: []
       }
     ],
-    signLabel: 'Sign',
-    signatureImage: '/images/admin-signature.svg',
-    image: '/images/campus.jpg',
+    signLabel: '',
+    signatureImage: '',
+    image: '/images/schoolwebsite1.png',
     visionTitle: 'Vision',
     visionText:
       'To become a leading educational institution that develops intellectually capable, morally upright, and socially responsible students.',
@@ -188,7 +189,7 @@ export const defaultSiteContent = {
       'ATTAUFEEQ Model Academy provides structured learning pathways across nursery, primary, secondary, and madrasa programs to support all-round student development.',
     levelsTitle: 'Educational Levels',
     levels: ['Nursery School', 'Primary School', 'Secondary School', 'Madrasa Program'],
-    image: '/images/students.jpg',
+    image: '/images/schoolweb3.png',
     subjectsTitle: 'Subjects Offered',
     subjectsText:
       'Mathematics, English Language, Basic Science, Computer Studies, Social Studies, Arabic Language, and Islamic Studies.',
@@ -206,11 +207,11 @@ export const defaultSiteContent = {
     title: 'Gallery',
     description: 'School life, classes, and student activities.',
     photos: [
-      { url: '/images/hero-school.jpg', alt: 'School gallery hero view' },
-      { url: '/images/students.jpg', alt: 'Students learning in class' },
-      { url: '/images/classroom.jpg', alt: 'Classroom session' },
-      { url: '/images/campus.jpg', alt: 'School campus' },
-      { url: '/images/islamic-class.jpg', alt: 'Islamic learning session' }
+      { url: '/images/schoolwebsite1.png', alt: 'School gallery hero view' },
+      { url: '/images/schoolweb3.png', alt: 'Students learning in class' },
+      { url: '/images/schoolweb2.png', alt: 'Classroom session' },
+      { url: '/images/schoolwebsite1.png', alt: 'School campus' },
+      { url: '/images/gallery5.png', alt: 'Islamic learning session' }
     ]
   },
   madrasa: {
@@ -218,7 +219,7 @@ export const defaultSiteContent = {
     title: 'Madrastul ATTAUFEEQ',
     description:
       "A dedicated Islamic learning environment supporting Qur'anic excellence, moral training, and spiritual growth for every learner.",
-    image: '/images/islamic-class.jpg',
+    image: '/images/gallery5.png',
     modulesTitle: 'Madrasa Learning Modules',
     modulesSubtitle: 'Core components designed for academic and spiritual depth.',
     modules: [
@@ -261,6 +262,9 @@ function normalizeSchoolNameText(value = '') {
 
 function cleanText(value, fallback = '') {
   const normalized = typeof value === 'string' ? normalizeSchoolNameText(value.trim()) : '';
+  if (normalized === LEGACY_HIGHLIGHTS_DESCRIPTION) {
+    return '';
+  }
   return normalized || fallback;
 }
 

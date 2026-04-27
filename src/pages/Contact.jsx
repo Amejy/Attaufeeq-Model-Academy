@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import ErrorState from '../components/ErrorState';
+import { GlassPanel, PremiumHero, SectionIntro } from '../components/public/PremiumPublic';
 import { useSiteContent } from '../context/SiteContentContext';
 import { apiJson } from '../utils/publicApi';
 
@@ -57,10 +58,25 @@ function Contact() {
   }
 
   return (
-    <main className="section-wrap py-14">
-      <h1 className="break-words font-heading text-4xl text-primary">{contact.title}</h1>
+    <main className="premium-page">
+      <PremiumHero
+        accent="school"
+        badge="Contact"
+        title={contact.title}
+        kicker="Speak with the school"
+        description={contact.formDescription}
+        image="/images/schoolweb4.png"
+        imageAlt="School contact"
+      />
+
+      <section className="section-wrap premium-band">
+        <SectionIntro
+          eyebrow="Reach Out"
+          title={contact.infoTitle}
+          description="Questions about admissions, portal access, academics, or school life can come through the contact channels below."
+        />
       <div className="mt-8 grid gap-8 md:grid-cols-2">
-        <section className="glass-card interactive-card min-w-0 overflow-hidden p-6 sm:p-7">
+        <GlassPanel className="interactive-card min-w-0 overflow-hidden p-6 sm:p-7">
           <h2 className="break-words font-heading text-2xl text-primary">{contact.infoTitle}</h2>
           <div className="mt-5 space-y-4 text-sm leading-7 text-slate-700">
             <div className="status-banner">
@@ -106,8 +122,8 @@ function Contact() {
               </div>
             </div>
           </div>
-        </section>
-        <section className="glass-card interactive-card min-w-0 overflow-hidden p-6 sm:p-7">
+        </GlassPanel>
+        <GlassPanel className="interactive-card min-w-0 overflow-hidden p-6 sm:p-7">
           <h2 className="break-words font-heading text-2xl text-primary">{contact.formTitle}</h2>
           <p className="mt-2 text-sm text-slate-600">{contact.formDescription}</p>
           <form className="mt-5 space-y-4" onSubmit={handleSubmit}>
@@ -163,10 +179,12 @@ function Contact() {
               {submitting ? 'Sending...' : (contact.submitLabel || 'Send Message')}
             </button>
           </form>
-        </section>
+        </GlassPanel>
       </div>
+      </section>
 
-      <section className="interactive-card mt-10 rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="section-wrap pb-20">
+      <GlassPanel className="interactive-card p-6">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="font-heading text-2xl text-primary">Our Location</h2>
           <p className="mt-3 text-sm leading-7 text-slate-600">{SCHOOL_ADDRESS}</p>
@@ -189,11 +207,12 @@ function Contact() {
             href={DIRECTIONS_URL}
             target="_blank"
             rel="noreferrer"
-            className="interactive-button inline-flex w-full items-center justify-center rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white sm:w-auto"
+            className="premium-button premium-button--primary w-full sm:w-auto"
           >
             Get Directions
           </a>
         </div>
+      </GlassPanel>
       </section>
     </main>
   );

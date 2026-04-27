@@ -85,11 +85,14 @@ function PasswordField({
           placeholder={placeholder}
           autoComplete={autoComplete}
         />
-        <Tooltip text={`${showPassword ? 'Hide' : 'Show'} ${label.toLowerCase()}`}>
+        <Tooltip
+          text={`${showPassword ? 'Hide' : 'Show'} ${label.toLowerCase()}`}
+          className="password-field__toggle"
+        >
           <button
             type="button"
             onClick={onToggleVisibility}
-            className="interactive-button absolute inset-y-1.5 right-2 inline-flex items-center justify-center rounded-full px-3 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800"
+            className="interactive-button password-field__toggle-button"
             aria-label={`${showPassword ? 'Hide' : 'Show'} ${label.toLowerCase()}`}
             title={`${showPassword ? 'Hide' : 'Show'} ${label.toLowerCase()}`}
           >

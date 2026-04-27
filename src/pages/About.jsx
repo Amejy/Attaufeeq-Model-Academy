@@ -1,4 +1,5 @@
 import SmartImage from '../components/SmartImage';
+import { GlassPanel, PremiumHero, SectionIntro } from '../components/public/PremiumPublic';
 import { useSiteContent } from '../context/SiteContentContext';
 import { DEFAULT_IMAGES } from '../utils/defaultImages';
 
@@ -8,15 +9,25 @@ function About() {
   const historySections = Array.isArray(about.historySections) ? about.historySections : [];
 
   return (
-    <main className="section-wrap py-14">
-      <h1 className="font-heading text-4xl text-primary">{about.title}</h1>
-      <div className="mt-8 grid gap-8 lg:grid-cols-[1.4fr_0.8fr] lg:items-start">
+    <main className="premium-page">
+      <PremiumHero
+        accent="school"
+        badge="About School"
+        title={about.title}
+        kicker={about.historyTitle}
+        description={about.historyText}
+        image={about.image || DEFAULT_IMAGES.campus}
+        imageAlt="ATTAUFEEQ campus"
+      />
+
+      <section className="section-wrap premium-band">
+        <SectionIntro eyebrow="Our Story" title={about.historyTitle} description="" />
+        <div className="grid gap-8 lg:grid-cols-[1.4fr_0.8fr] lg:items-start">
         <div>
-          <h2 className="font-heading text-2xl text-primary">{about.historyTitle}</h2>
           {historySections.length ? (
             <div className="mt-4 space-y-6">
               {historySections.map((section) => (
-                <section key={section.title || section.paragraphs?.[0]} className="rounded-xl border border-slate-200 bg-white p-5">
+                <GlassPanel key={section.title || section.paragraphs?.[0]} className="p-5">
                   {section.title && <h3 className="font-heading text-xl text-primary">{section.title}</h3>}
                   <div className="mt-3 space-y-3 text-sm leading-7 text-slate-700">
                     {(section.paragraphs || []).map((paragraph) => (
@@ -30,11 +41,11 @@ function About() {
                       ))}
                     </ul>
                   )}
-                </section>
+                </GlassPanel>
               ))}
 
               {(about.signLabel || about.signatureImage) && (
-                <section className="rounded-xl border border-slate-200 bg-white p-5">
+                <GlassPanel className="p-5">
                   {about.signLabel && <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">{about.signLabel}</p>}
                   {about.signatureImage && (
                     <SmartImage
@@ -45,7 +56,7 @@ function About() {
                       loading="lazy"
                     />
                   )}
-                </section>
+                </GlassPanel>
               )}
             </div>
           ) : (
@@ -58,27 +69,31 @@ function About() {
           src={about.image || DEFAULT_IMAGES.campus}
           fallbackSrc={DEFAULT_IMAGES.campus}
           alt="ATTAUFEEQ campus"
-          className="h-72 w-full rounded-xl object-cover lg:sticky lg:top-24"
+          className="h-72 w-full rounded-[28px] object-cover shadow-[0_20px_50px_rgba(8,_112,_184,_0.07)] lg:sticky lg:top-24"
           loading="lazy"
         />
-      </div>
+        </div>
+      </section>
 
-      <div className="mt-10 grid gap-6 md:grid-cols-2">
-        <section className="rounded-xl border border-slate-200 p-6">
+      <section className="section-wrap pb-10">
+        <div className="grid gap-6 md:grid-cols-2">
+        <GlassPanel className="p-6">
           <h2 className="font-heading text-2xl text-primary">{about.visionTitle}</h2>
           <p className="mt-3 text-sm leading-7 text-slate-700">
             {about.visionText}
           </p>
-        </section>
-        <section className="rounded-xl border border-slate-200 p-6">
+        </GlassPanel>
+        <GlassPanel className="p-6">
           <h2 className="font-heading text-2xl text-primary">{about.missionTitle}</h2>
           <p className="mt-3 text-sm leading-7 text-slate-700">
             {about.missionText}
           </p>
-        </section>
-      </div>
+        </GlassPanel>
+        </div>
+      </section>
 
-      <section className="mt-10 rounded-xl bg-muted p-6">
+      <section className="section-wrap pb-20">
+      <GlassPanel className="p-6">
         <h2 className="font-heading text-2xl text-primary">{about.valuesTitle}</h2>
         <div className="mt-4 flex flex-wrap gap-2">
           {(about.values || []).map((value) => (
@@ -87,6 +102,7 @@ function About() {
             </span>
           ))}
         </div>
+      </GlassPanel>
       </section>
     </main>
   );

@@ -1,7 +1,9 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useEffect, useMemo, useState } from 'react';
 import SmartImage from '../components/SmartImage';
+import { LiveTicker, PremiumHero, SectionIntro } from '../components/public/PremiumPublic';
 import { NewsCardSkeleton } from '../components/Skeleton';
+import { defaultNewsEvents } from '../data/defaultNewsEvents';
 import { apiJson } from '../utils/publicApi';
 import { DEFAULT_IMAGES } from '../utils/defaultImages';
 const CATEGORY_ICONS = {
@@ -15,6 +17,19 @@ const CATEGORY_ICONS = {
   program: '✧',
   default: '◦'
 };
+
+function normalizeFilter(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function getFallbackNews({ institutionFilter = '', categoryFilter = '' } = {}) {
+  const institution = normalizeFilter(institutionFilter);
+  const category = normalizeFilter(categoryFilter);
+
+  return defaultNewsEvents
+    .filter((item) => (institution ? normalizeFilter(item.institution) === institution : true))
+    .filter((item) => (category ? normalizeFilter(item.category) === category : true));
+}
 
 function NewsEvents() {
   const location = useLocation();
@@ -62,7 +77,11 @@ function NewsEvents() {
         setItems(data.news || []);
       } catch (err) {
         if (!isCurrent) return;
-        setError(err.message || 'Unable to load news/events.');
+        const fallbackItems = getFallbackNews({ institutionFilter, categoryFilter });
+        setItems(fallbackItems);
+        if (!fallbackItems.length) {
+          setError(err.message || 'Unable to load news/events.');
+        }
       } finally {
         if (isCurrent) {
           setLoading(false);
@@ -77,32 +96,42 @@ function NewsEvents() {
   }, [institutionFilter, categoryFilter]);
 
   return (
-    <main className="section-wrap py-14">
-      <section className="glass-panel overflow-hidden px-6 py-8 sm:px-8 sm:py-10">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">School Feed</p>
-        <h1 className="mt-3 break-words font-heading text-4xl text-primary">News & Events</h1>
-        <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-700">
-          Follow school announcements, activities, examination schedules, holiday notices, and achievements.
-        </p>
-      </section>
-
-      {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
-
-      {loading && (
-        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, index) => <NewsCardSkeleton key={index} />)}
+    <main className="premium-page">
+      <PremiumHero
+        accent={institutionFilter ? 'madrasa' : 'school'}
+        badge="School Feed"
+        title="News & Events"
+        kicker={institutionFilter || 'Live campus updates'}
+        description="Follow school announcements, activities, examination schedules, holiday notices, achievements, and madrasa events in one flowing feed."
+        image={sortedItems[0]?.images?.[0] || DEFAULT_IMAGES.gallery}
+        imageAlt="School updates"
+      >
+        <div className="mt-5 max-w-2xl">
+          <LiveTicker
+            accent={institutionFilter ? 'madrasa' : 'school'}
+            items={['Announcements', 'Events', 'Results', 'Campus Updates', 'Madrasa News']}
+          />
         </div>
-      )}
+      </PremiumHero>
 
-      {!loading && !error && (
-        <div className="mt-8 space-y-10">
+      <section className="section-wrap premium-band pt-10">
+        {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
+
+        {loading && (
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, index) => <NewsCardSkeleton key={index} />)}
+          </div>
+        )}
+
+        {!loading && !error && (
+          <div className="mt-8 space-y-10">
           <section>
             <div className="flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Video Updates</p>
-                <h2 className="mt-2 break-words font-heading text-3xl text-primary">News Videos</h2>
-                <p className="mt-2 text-sm text-slate-600">Campus highlights, ceremonies, and short updates in motion.</p>
-              </div>
+              <SectionIntro
+                eyebrow="Video Updates"
+                title="News Videos"
+                description="Campus highlights, ceremonies, and short updates in motion."
+              />
               <span className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600">
                 {videoItems.length} video post{videoItems.length === 1 ? '' : 's'}
               </span>
@@ -176,11 +205,11 @@ function NewsEvents() {
 
           <section>
             <div className="flex flex-wrap items-end justify-between gap-3">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Written Updates</p>
-                <h2 className="mt-2 break-words font-heading text-3xl text-primary">News Articles</h2>
-                <p className="mt-2 text-sm text-slate-600">Announcements, events, and detailed stories.</p>
-              </div>
+              <SectionIntro
+                eyebrow="Written Updates"
+                title="News Articles"
+                description="Announcements, events, and detailed stories."
+              />
               <span className="rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-semibold text-slate-600">
                 {articleItems.length} article{articleItems.length === 1 ? '' : 's'}
               </span>
@@ -251,20 +280,21 @@ function NewsEvents() {
               )}
             </div>
           </section>
-        </div>
-      )}
+          </div>
+        )}
 
-      {!loading && !error && !items.length && (
-        <div className="mt-8 glass-card p-5 text-sm text-slate-600">
-          No published news yet. Check back soon.
-        </div>
-      )}
+        {!loading && !error && !items.length && (
+          <div className="mt-8 glass-card p-5 text-sm text-slate-600">
+            No published news yet. Check back soon.
+          </div>
+        )}
 
-      <div className="mt-8">
-        <Link to="/contact" className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">
+        <div className="mt-8">
+        <Link to="/contact" className="premium-button rounded-full border border-slate-300 bg-white px-6 text-slate-700">
           Contact School
         </Link>
-      </div>
+        </div>
+      </section>
     </main>
   );
 }

@@ -109,12 +109,44 @@ function HeaderLink({ to, label, compact = false, onClick }) {
   );
 }
 
+function LogoLightbox({ src, alt, onClose }) {
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    function handleKeydown(event) {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    }
+
+    window.addEventListener('keydown', handleKeydown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', handleKeydown);
+    };
+  }, [onClose]);
+
+  return (
+    <div className="image-lightbox" role="dialog" aria-modal="true" aria-label={alt || 'School logo preview'}>
+      <button type="button" className="image-lightbox__backdrop" onClick={onClose} aria-label="Close logo preview" />
+      <div className="image-lightbox__panel image-lightbox__panel--logo">
+        <button type="button" className="image-lightbox__close" onClick={onClose} aria-label="Close logo preview">
+          Close
+        </button>
+        <SmartImage src={src} fallbackSrc="/images/logo.png" alt={alt} className="nav-logo-lightbox__image" loading="eager" />
+      </div>
+    </div>
+  );
+}
+
 function Navbar() {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [megaOpen, setMegaOpen] = useState(false);
   const [madrasaMegaOpen, setMadrasaMegaOpen] = useState(false);
+  const [logoPreviewOpen, setLogoPreviewOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const { isAuthenticated, user, logout } = useAuth();
   const avatarUrl = user?.avatarUrl || user?.profile?.avatarUrl || '';
@@ -246,7 +278,12 @@ function Navbar() {
 
         <div className="nav-command-row">
           <div className="nav-brand-block">
-            <div className="nav-brand-mark">
+            <button
+              type="button"
+              className="nav-brand-mark"
+              onClick={() => setLogoPreviewOpen(true)}
+              aria-label={`View ${branding.name || 'school'} logo`}
+            >
               <SmartImage
                 src={brandLogo}
                 fallbackSrc="/images/logo.png"
@@ -254,7 +291,8 @@ function Navbar() {
                 className="nav-brand-logo"
               />
               <span className="nav-brand-initials">AT</span>
-            </div>
+              <span className="nav-brand-zoom">View</span>
+            </button>
             <div className="min-w-0">
               <p className="nav-brand-label">{landingLabel(branding)}</p>
               <h1 className="nav-brand-title text-label-clamp" title={branding.name}>{branding.name}</h1>
@@ -608,6 +646,13 @@ function Navbar() {
           </div>
         </div>
       </div>
+      {logoPreviewOpen ? (
+        <LogoLightbox
+          src={brandLogo}
+          alt={`${branding.name || 'School'} logo`}
+          onClose={() => setLogoPreviewOpen(false)}
+        />
+      ) : null}
     </header>
   );
 }

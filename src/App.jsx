@@ -1,5 +1,7 @@
 import { Suspense, lazy, useEffect } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import AOS from 'aos';
+import 'aos/dist/aos.css';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ParticleField from './components/ParticleField';
@@ -8,6 +10,7 @@ import BackToTopButton from './components/BackToTopButton';
 import ProtectedRoute from './components/ProtectedRoute';
 import useAdmissionPeriod from './hooks/useAdmissionPeriod';
 import { SkeletonBlock } from './components/Skeleton';
+import Login from './pages/Login';
 
 const Home = lazy(() => import('./pages/Home'));
 const Landing = lazy(() => import('./pages/Landing'));
@@ -20,7 +23,6 @@ const Gallery = lazy(() => import('./pages/Gallery'));
 const Contact = lazy(() => import('./pages/Contact'));
 const NewsEvents = lazy(() => import('./pages/NewsEvents'));
 const NewsEventDetail = lazy(() => import('./pages/NewsEventDetail'));
-const Login = lazy(() => import('./pages/Login'));
 const Signup = lazy(() => import('./pages/Signup'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const PortalHome = lazy(() => import('./pages/PortalHome'));
@@ -102,6 +104,19 @@ function App() {
       window.scrollTo({ top: 0, behavior: 'auto' });
     }
   }, [location.pathname, location.search, isPortalRoute]);
+
+  useEffect(() => {
+    AOS.init({
+      duration: 800,
+      once: true,
+      easing: 'ease-out-cubic',
+      offset: 72
+    });
+  }, []);
+
+  useEffect(() => {
+    AOS.refreshHard();
+  }, [location.pathname, location.search]);
 
   return (
     <div className={`app-shell min-h-screen ${isPortalRoute ? 'app-shell--portal' : 'app-shell--public'}`}>

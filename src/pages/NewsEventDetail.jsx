@@ -1,7 +1,9 @@
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import SmartImage from '../components/SmartImage';
+import { GlassPanel, PremiumHero } from '../components/public/PremiumPublic';
 import { SkeletonBlock } from '../components/Skeleton';
+import { defaultNewsEvents } from '../data/defaultNewsEvents';
 import { apiJson } from '../utils/publicApi';
 import { DEFAULT_IMAGES } from '../utils/defaultImages';
 
@@ -29,7 +31,15 @@ function NewsEventDetail() {
         setItem(data.news || null);
       } catch (err) {
         if (!isCurrent) return;
-        setError(err.message || 'Unable to load news item.');
+        const fallbackItem =
+          defaultNewsEvents.find((entry) => entry.id === slugOrId || entry.slug === slugOrId) || null;
+
+        if (fallbackItem) {
+          setItem(fallbackItem);
+          setError('');
+        } else {
+          setError(err.message || 'Unable to load news item.');
+        }
       } finally {
         if (isCurrent) {
           setLoading(false);
@@ -44,8 +54,21 @@ function NewsEventDetail() {
   }, [slugOrId]);
 
   return (
-    <main className="section-wrap py-14">
-      <Link to={returnTo} className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700">
+    <main className="premium-page">
+      {!loading && !error && item ? (
+        <PremiumHero
+          accent={String(item.institution || '').toLowerCase().includes('madrasa') ? 'madrasa' : 'school'}
+          badge={item.category}
+          title={item.title}
+          kicker={`${new Date(item.publishDate || item.createdAt).toLocaleDateString()} • ${item.institution}`}
+          description={item.excerpt || ''}
+          image={item.images?.[0] || DEFAULT_IMAGES.gallery}
+          imageAlt={item.title}
+        />
+      ) : null}
+
+      <section className="section-wrap pb-20">
+      <Link to={returnTo} className="premium-button rounded-full border border-slate-300 bg-white px-6 text-slate-700">
         Back to News
       </Link>
 
@@ -62,7 +85,7 @@ function NewsEventDetail() {
       )}
 
       {!loading && !error && item && (
-        <article className="glass-card mt-6 p-6">
+        <GlassPanel className="mt-6 p-6">
           <p className="text-xs uppercase tracking-wide text-slate-500">
             {item.category} | {new Date(item.publishDate || item.createdAt).toLocaleDateString()} | {item.institution}
           </p>
@@ -103,8 +126,9 @@ function NewsEventDetail() {
                 <p key={index}>{paragraph}</p>
               ))}
           </div>
-        </article>
+        </GlassPanel>
       )}
+      </section>
     </main>
   );
 }
