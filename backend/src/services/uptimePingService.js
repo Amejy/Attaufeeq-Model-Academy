@@ -4,7 +4,7 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function pingOnce(signal) {
+async function pingOnce() {
   if (!env.uptimePingUrl) return;
 
   try {

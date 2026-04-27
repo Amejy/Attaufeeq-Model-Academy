@@ -4,7 +4,6 @@ import PortalLayout from '../../components/PortalLayout';
 import { ADMIN_INSTITUTIONS, institutionAccent } from '../../utils/adminInstitution';
 import { buildStudentCode } from '../../utils/studentCode';
 import ReportCardSheet from '../../components/ReportCardSheet';
-import useDebouncedValue from '../../hooks/useDebouncedValue';
 
 function AdminResultsPublish() {
   const { apiJson } = useAuth();
@@ -33,7 +32,6 @@ function AdminResultsPublish() {
   const resolveShowRows = (value) => showRowsByInstitution[value] !== false;
   const loadDataSeq = useRef(0);
   const reportCardSeq = useRef(0);
-  const debouncedPendingSearch = useDebouncedValue('', 300);
 
   const loadData = useCallback(async (next = {}) => {
     const seq = ++loadDataSeq.current;
@@ -140,8 +138,6 @@ function AdminResultsPublish() {
       }))
       .sort((a, b) => a.classLabel.localeCompare(b.classLabel) || a.studentName.localeCompare(b.studentName));
   }, [results]);
-
-  const pendingGroupsFiltered = useMemo(() => pendingGroups, [pendingGroups]);
 
   async function compilePublishedResults() {
     setCompiling(true);

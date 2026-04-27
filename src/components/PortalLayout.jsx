@@ -90,8 +90,10 @@ function initials(name = '') {
 
 function PortalLayout({ role, title, subtitle, children, actions = null }) {
   const { user } = useAuth();
-  const [open, setOpen] = useState(false);
   const location = useLocation();
+  const routeKey = `${location.pathname}${location.search}`;
+  const [mobileMenuState, setMobileMenuState] = useState({ open: false, routeKey });
+  const open = mobileMenuState.open && mobileMenuState.routeKey === routeKey;
   const avatarUrl = user?.avatarUrl || user?.profile?.avatarUrl || '';
 
   const navItems = useMemo(() => {
@@ -104,15 +106,22 @@ function PortalLayout({ role, title, subtitle, children, actions = null }) {
   const institutionLabel = user?.scope?.institutionLabel || user?.profile?.institution || '';
 
   useEffect(() => {
-    setOpen(false);
-  }, [location.pathname, location.search]);
-
-  useEffect(() => {
     document.body.style.overflow = open ? 'hidden' : '';
     return () => {
       document.body.style.overflow = '';
     };
   }, [open]);
+
+  function toggleMobileMenu() {
+    setMobileMenuState((prev) => ({
+      open: !(prev.open && prev.routeKey === routeKey),
+      routeKey
+    }));
+  }
+
+  function closeMobileMenu() {
+    setMobileMenuState({ open: false, routeKey });
+  }
 
   return (
     <main className="min-h-screen overflow-x-clip bg-[radial-gradient(circle_at_top,rgba(13,148,136,0.1),transparent_42%),radial-gradient(circle_at_bottom,rgba(245,158,11,0.12),transparent_40%)]">
@@ -198,7 +207,7 @@ function PortalLayout({ role, title, subtitle, children, actions = null }) {
               <Tooltip text={open ? 'Close navigation menu' : 'Open navigation menu'}>
                 <button
                   type="button"
-                  onClick={() => setOpen((prev) => !prev)}
+                  onClick={toggleMobileMenu}
                   className="interactive-button rounded-full border border-slate-300 bg-white/85 px-3 py-2 text-[11px] font-semibold text-slate-700 sm:px-4 sm:text-xs"
                   aria-label={open ? 'Close navigation menu' : 'Open navigation menu'}
                 >
@@ -216,7 +225,7 @@ function PortalLayout({ role, title, subtitle, children, actions = null }) {
                     key={item.to}
                     to={item.to}
                     title={item.label}
-                    onClick={() => setOpen(false)}
+                    onClick={closeMobileMenu}
                     className={({ isActive }) =>
                       `block rounded-2xl px-3 py-2.5 text-sm font-semibold transition sm:px-4 sm:py-3 ${
                         isActive ? 'bg-primary text-white' : 'bg-white/70 text-slate-700 hover:bg-white'

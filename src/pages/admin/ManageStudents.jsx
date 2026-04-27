@@ -38,8 +38,14 @@ const FIELD_ALIASES = {
 };
 
 function cleanText(value) {
-  return String(value || '')
-    .replace(/[\u0000-\u001F\u007F]/g, ' ')
+  const withoutControlChars = Array.from(String(value || ''))
+    .map((char) => {
+      const code = char.charCodeAt(0);
+      return (code <= 31 || code === 127) ? ' ' : char;
+    })
+    .join('');
+
+  return withoutControlChars
     .replace(/[“”]/g, '"')
     .replace(/[‘’]/g, "'")
     .replace(/\s+/g, ' ')
@@ -320,7 +326,7 @@ function ManageStudents({ role }) {
   const [bulkMapping, setBulkMapping] = useState({});
   const [bulkValidation, setBulkValidation] = useState({ valid: 0, invalid: 0 });
   const [bulkDuplicates, setBulkDuplicates] = useState(() => new Set());
-  const [bulkPreviewCount, setBulkPreviewCount] = useState(25);
+  const bulkPreviewCount = 25;
   const [dragActive, setDragActive] = useState(false);
   const [bulkFilter, setBulkFilter] = useState('all');
   const [bulkSearch, setBulkSearch] = useState('');
@@ -614,40 +620,6 @@ function ManageStudents({ role }) {
   const editValidationError = validateStudentRegistration(editForm);
   const canCreateStudent = Boolean(entryClasses.length && !createValidationError);
   const canSaveStudent = Boolean(editClasses.length && !editValidationError);
-
-  function downloadTemplate() {
-    const firstClass = classes?.[0];
-    const templateRows = [
-      {
-        fullName: 'Abdullah Musa',
-        classId: firstClass?.id || 'cls-001',
-        studentEmail: 'abdullah.musa.student@portal.attaufiqschools.com',
-        guardianName: 'Musa Abdullah',
-        guardianPhone: '+2348000000000',
-        guardianEmail: 'guardian@example.com',
-        className: '',
-        arm: '',
-        institution: ''
-      },
-      {
-        fullName: 'Maryam Yusuf',
-        classId: '',
-        studentEmail: '',
-        guardianName: 'Yusuf Maryam',
-        guardianPhone: '',
-        guardianEmail: 'maryam.guardian@example.com',
-        className: firstClass?.name || 'JSS 1',
-        arm: firstClass?.arm || 'A',
-        institution: firstClass?.institution || 'ATTAUFEEQ Model Academy'
-      }
-    ];
-
-    downloadCsv(
-      'students-import-template.csv',
-      ['fullName', 'classId', 'studentEmail', 'guardianName', 'guardianPhone', 'guardianEmail', 'className', 'arm', 'institution'],
-      templateRows
-    );
-  }
 
   function downloadImportErrors() {
     const invalidRows = bulkRows.filter((row) => !row._valid);

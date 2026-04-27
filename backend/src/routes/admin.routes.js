@@ -2931,7 +2931,6 @@ adminRouter.post('/admissions/:id/promote', async (req, res) => {
   const { id } = req.params;
   const admissionIndex = adminStore.admissions.findIndex((item) => item.id === id);
   const archiveIndex = (adminStore.admissionArchive || []).findIndex((item) => item.admissionId === id);
-  const fromArchive = admissionIndex === -1 && archiveIndex >= 0;
 
   if (admissionIndex === -1 && archiveIndex === -1) {
     return res.status(404).json({ message: 'Admission record not found.' });

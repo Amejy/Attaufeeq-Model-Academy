@@ -142,7 +142,7 @@ function AdmissionsResultTokens() {
         const absolute = new URL(img.getAttribute('src') || img.src, window.location.origin);
         const dataUrl = await convertToDataUrl(absolute.toString());
         img.setAttribute('src', dataUrl || absolute.toString());
-      } catch (error) {
+      } catch (_error) {
         // Fall back to absolute URL if data URL conversion fails.
         try {
           const absolute = new URL(img.getAttribute('src') || img.src, window.location.origin);

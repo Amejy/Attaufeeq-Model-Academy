@@ -179,7 +179,10 @@ function AdminPromotions() {
     });
   }, [preview.eligible]);
 
-  const eligibleRows = clearedSections.eligible ? [] : (preview.eligible || []);
+  const eligibleRows = useMemo(
+    () => (clearedSections.eligible ? [] : (preview.eligible || [])),
+    [clearedSections.eligible, preview.eligible]
+  );
   const filteredClasses = useMemo(
     () => classes.filter((item) => canonicalInstitution(item.institution) === canonicalInstitution(institution)),
     [classes, institution]
@@ -188,7 +191,10 @@ function AdminPromotions() {
     () => (clearedSections.repeated ? [] : (preview.eligible || []).filter((row) => decisions[row.studentId] === 'repeat')),
     [preview, decisions, clearedSections.repeated]
   );
-  const graduatedRows = clearedSections.graduated ? [] : (preview.graduated || []);
+  const graduatedRows = useMemo(
+    () => (clearedSections.graduated ? [] : (preview.graduated || [])),
+    [clearedSections.graduated, preview.graduated]
+  );
   const selectedSession = useMemo(
     () => sessions.find((session) => session.id === sessionId) || activeSession || null,
     [activeSession, sessionId, sessions]

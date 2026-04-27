@@ -237,7 +237,6 @@ function RoleResults({ role }) {
     }
   }
 
-  const rows = payload.results || [];
   const children = payload.children || [];
   const child = payload.child || reportCard?.student || null;
   const subjects = payload.subjects || [];

@@ -38,14 +38,6 @@ function normalizeSessionId(sessionId = '') {
   return active?.id || '';
 }
 
-function resolveEnrollmentClassId(studentId, sessionId = '') {
-  if (!studentId || !sessionId) return '';
-  const enrollment = (adminStore.studentEnrollments || []).find(
-    (entry) => entry.studentId === studentId && entry.sessionId === sessionId
-  );
-  return enrollment?.classId || '';
-}
-
 function resolveClassStudents(classId, sessionId = '') {
   if (!classId) return [];
   if (!sessionId) {

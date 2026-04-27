@@ -16,6 +16,7 @@ dist-ssr
 .vercel
 .vercel/
 test-results
+.eslintcache
 playwright-report
 coverage
 *.local

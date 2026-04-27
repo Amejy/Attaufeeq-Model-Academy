@@ -78,6 +78,7 @@ function TeacherResults() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const institution = options.institution;
   const [clearing, setClearing] = useState(false);
   const [clearingPublished, setClearingPublished] = useState(false);
   const [error, setError] = useState('');
@@ -359,10 +360,10 @@ function TeacherResults() {
       const total = Number(row.ca || 0) + Number(row.exam || 0);
       const byPerformance = matchesPerformance(total, performanceFilter);
       if (!deferredSearch) return byPerformance;
-      const searchable = `${row.fullName} ${row.studentCode || buildStudentCode({ id: row.studentId, institution: options.institution })}`.toLowerCase();
+      const searchable = `${row.fullName} ${row.studentCode || buildStudentCode({ id: row.studentId, institution })}`.toLowerCase();
       return byPerformance && searchable.includes(deferredSearch);
     });
-  }, [deferredSearch, performanceFilter, rows]);
+  }, [deferredSearch, institution, performanceFilter, rows]);
 
   const dirtyCount = useMemo(
     () =>

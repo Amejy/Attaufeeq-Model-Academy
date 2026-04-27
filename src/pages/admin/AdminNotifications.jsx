@@ -178,14 +178,14 @@ function AdminNotifications() {
     }
   }
 
-  const classLabel = (classId) => {
+  const classLabel = useCallback((classId) => {
     const found = classes.find((item) => item.id === classId);
     return found ? `${found.name} ${found.arm}` : classId;
-  };
-  const teacherLabel = (teacherId) => {
+  }, [classes]);
+  const teacherLabel = useCallback((teacherId) => {
     const found = teachers.find((item) => item.id === teacherId);
     return found ? found.fullName : teacherId;
-  };
+  }, [teachers]);
 
   const filteredNotifications = useMemo(() => {
     const query = search.trim().toLowerCase();

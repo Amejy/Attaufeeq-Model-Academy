@@ -1,4 +1,3 @@
-/* global process */
 import dotenv from 'dotenv';
 import { URL } from 'node:url';
 

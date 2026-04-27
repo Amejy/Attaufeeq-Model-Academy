@@ -44,28 +44,10 @@ function matchesSession(recordSessionId, sessionId) {
   return String(recordSessionId || '').trim() === sessionId;
 }
 
-function getActiveSessionId() {
-  const sessions = adminStore.academicSessions || [];
-  const active = sessions.find((session) => session.isActive) || sessions[0] || null;
-  return active?.id || '';
-}
-
-function normalizeSessionId(value = '') {
-  return String(value || '').trim() || getActiveSessionId();
-}
-
 function isLeadTeacherAssignment(assignment) {
   const role = String(assignment?.assignmentRole || '').trim().toLowerCase();
   if (!role) return false;
   return role === 'lead teacher' || role === 'class teacher' || role === 'form teacher' || role.includes('lead');
-}
-
-function resolveEnrollmentClassId(studentId, sessionId = '') {
-  if (!studentId || !sessionId) return '';
-  const enrollment = (adminStore.studentEnrollments || []).find(
-    (entry) => entry.studentId === studentId && entry.sessionId === sessionId
-  );
-  return enrollment?.classId || '';
 }
 
 async function ensureTokenAccess(studentId, term, sessionId) {
