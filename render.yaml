@@ -1,13 +1,14 @@
 services:
   - type: web
     name: attaufiqschools-api
-    env: node
+    runtime: node
     rootDir: backend
     plan: starter
-    buildCommand: npm install && npm run db:migrate
+    buildCommand: npm install
+    preDeployCommand: npm run db:migrate
     startCommand: npm run start
     healthCheckPath: /api/health/ready
-    autoDeploy: true
+    autoDeployTrigger: commit
     envVars:
       - key: NODE_ENV
         value: production
@@ -29,7 +30,7 @@ services:
         sync: false
       - key: REDIS_URL
         fromService:
-          type: redis
+          type: keyvalue
           name: attaufiqschools-redis
           property: connectionString
       - key: JWT_SECRET
@@ -56,12 +57,14 @@ services:
         sync: false
       - key: SENDGRID_API_KEY
         sync: false
-  - type: static
+  - type: web
     name: attaufiqschools-web
+    runtime: static
     rootDir: .
     buildCommand: npm install && npm run build
     staticPublishPath: dist
-    pullRequestPreviewsEnabled: true
+    previews:
+      generation: automatic
     routes:
       - type: rewrite
         source: /*
@@ -69,6 +72,6 @@ services:
     envVars:
       - key: VITE_API_BASE_URL
         sync: false
-  - type: redis
+  - type: keyvalue
     name: attaufiqschools-redis
     plan: starter
