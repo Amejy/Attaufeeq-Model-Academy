@@ -118,8 +118,7 @@ newsRouter.post('/admin/upload', requireAuth, requireRole('admin', 'admissions')
       visibility: 'public',
       allowedMimes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm', 'video/ogg', 'video/quicktime']
     });
-    const baseUrl = req.protocol + '://' + req.get('host') + '/api';
-    const url = `${baseUrl}/uploads/public/${saved.id}`;
+    const url = `/api/uploads/public/${saved.id}`;
     return res.status(201).json({ url, filename: saved.id });
   } catch (error) {
     return res.status(400).json({ message: error.message || 'Upload failed.' });

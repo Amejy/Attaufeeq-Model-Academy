@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import PortalLayout from '../../components/PortalLayout';
-import SmartImage from '../../components/SmartImage';
+import ResultScratchCard from '../../components/ResultScratchCard';
 import { useAuth } from '../../context/AuthContext';
 import { useSiteContent } from '../../context/SiteContentContext';
 import { buildStudentCode } from '../../utils/studentCode';
+import { buildResultCheckerUrl } from '../../utils/resultVerification';
 
 
 function AdmissionsResultTokens() {
@@ -30,6 +31,7 @@ function AdmissionsResultTokens() {
   const [success, setSuccess] = useState('');
   const tokenCardRef = useRef(null);
   const studentMap = useRef(new Map());
+  const checkerOrigin = typeof window !== 'undefined' ? window.location.origin : '';
 
   const loadTokens = useCallback(async () => {
     setError('');
@@ -154,15 +156,50 @@ function AdmissionsResultTokens() {
     }
     const styles = `
       <style>
-        body { margin: 24px; font-family: Arial, sans-serif; color: #0f172a; }
+        body { margin: 24px; font-family: Arial, sans-serif; color: #0f172a; background: #ffffff; }
+        * { box-sizing: border-box; }
+        .text-code-break { overflow-wrap: anywhere; word-break: break-word; }
+        .text-wrap-safe { overflow-wrap: break-word; word-break: normal; white-space: normal; }
         .token-card { border: 1px solid #e2e8f0; border-radius: 18px; padding: 20px; background: #f8fafc; }
-        .token-card__header { display: flex; align-items: center; gap: 14px; }
-        .token-card__logo { width: 52px; height: 52px; border-radius: 14px; border: 1px solid #e2e8f0; object-fit: cover; background: #fff; }
-        .token-card__brand h3 { margin: 0 0 4px; font-size: 16px; letter-spacing: 0.12em; text-transform: uppercase; }
-        .token-card__brand p { margin: 0; font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.2em; }
-        .token-card__meta { margin-top: 10px; font-size: 12px; color: #475569; }
-        .token-card__meta p { margin: 4px 0; }
-        .token-card .code { margin-top: 12px; font-size: 22px; font-weight: 700; letter-spacing: 0.2em; color: #0f172a; }
+        .result-scratch-card { position: relative; overflow: hidden; border-radius: 34px; border: 1px solid rgba(37, 99, 235, 0.18); background: radial-gradient(circle at 86% 26%, rgba(191, 219, 254, 0.24), transparent 25%), radial-gradient(circle at 18% 72%, rgba(226, 232, 240, 0.46), transparent 31%), linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96)); box-shadow: 0 28px 54px rgba(15, 23, 42, 0.14), inset 0 1px 0 rgba(255,255,255,0.82); }
+        .result-scratch-card::before { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at right center, rgba(59,130,246,0.08), transparent 30%), linear-gradient(120deg, transparent 58%, rgba(15,23,42,0.02) 58%, rgba(15,23,42,0.02) 59%, transparent 59%); pointer-events: none; }
+        .result-scratch-card::after { content: ""; position: absolute; inset: 0; background: radial-gradient(circle at 83% 38%, rgba(59,130,246,0.08), transparent 22%), linear-gradient(90deg, transparent 66%, rgba(148,163,184,0.16) 66%, rgba(148,163,184,0.16) 66.3%, transparent 66.3%); pointer-events: none; }
+        .result-scratch-card__hero { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 16px; padding: 24px 24px 0; }
+        .result-scratch-card__brand-block { display: flex; min-width: 0; flex: 1 1 420px; align-items: center; gap: 20px; }
+        .result-scratch-card__logo-shell { height: 100px; width: 100px; flex-shrink: 0; }
+        .result-scratch-card__logo { width: 100%; height: 100%; object-fit: contain; }
+        .result-scratch-card__title { margin: 0; color: #0f2b5b; font-size: 42px; font-weight: 800; line-height: 1.08; }
+        .result-scratch-card__school { margin: 10px 0 0; color: #5a7fb8; font-size: 20px; letter-spacing: 0.28em; text-transform: uppercase; }
+        .result-scratch-card__secure-pill { position: relative; display: inline-flex; min-width: 288px; align-items: center; gap: 12px; border-radius: 0 0 0 32px; background: linear-gradient(135deg, #08275b, #071a44); padding: 16px 22px 16px 30px; color: #f8fafc; box-shadow: 0 16px 30px rgba(8,39,91,0.18); }
+        .result-scratch-card__secure-pill::before { content: ""; position: absolute; top: 0; bottom: 0; left: -38px; width: 58px; background: linear-gradient(135deg, #08275b, #071a44); clip-path: polygon(100% 0, 0 0, 100% 100%); }
+        .result-scratch-card__secure-title { margin: 0; font-size: 15px; font-weight: 800; text-transform: uppercase; }
+        .result-scratch-card__secure-note { margin: 2px 0 0; font-size: 14px; color: rgba(255, 255, 255, 0.86); }
+        .result-scratch-card__content { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(240px, 0.75fr); gap: 24px; align-items: center; padding: 22px 24px 0; }
+        .result-scratch-card__details { display: grid; gap: 12px; }
+        .result-scratch-card__meta-row { display: grid; grid-template-columns: 68px minmax(0, 1fr); gap: 16px; align-items: center; }
+        .result-scratch-card__meta-icon { display: flex; height: 54px; width: 54px; align-items: center; justify-content: center; border-radius: 16px; background: linear-gradient(180deg, rgba(219, 234, 254, 0.96), rgba(219, 234, 254, 0.74)); color: #173f80; }
+        .result-scratch-card__meta-line { margin: 0; color: #111827; font-size: 18px; line-height: 1.45; }
+        .result-scratch-card__meta-label { color: #0b2f69; font-weight: 800; }
+        .result-scratch-card__qr-panel { position: relative; border-left: 1px solid rgba(96, 165, 250, 0.35); padding-left: 24px; }
+        .result-scratch-card__wave { position: absolute; inset: -16px -16px -16px -96px; opacity: 0.8; background: radial-gradient(circle at 15% 50%, rgba(191, 219, 254, 0.24), transparent 22%), repeating-radial-gradient(circle at 78% 52%, transparent 0 10px, rgba(191, 219, 254, 0.22) 10px 11px); pointer-events: none; }
+        .result-scratch-card__qr-shell { position: relative; margin-left: auto; max-width: 216px; border-radius: 22px; border: 1px solid rgba(226, 232, 240, 0.96); background: rgba(255, 255, 255, 0.96); padding: 16px; text-align: center; box-shadow: 0 12px 30px rgba(15,23,42,0.08); }
+        .result-scratch-card__qr-image { width: 100%; border-radius: 16px; background: #fff; object-fit: contain; }
+        .result-scratch-card__qr-caption { margin: 12px 0 0; color: #0f172a; font-size: 15px; line-height: 1.35; }
+        .result-scratch-card__scratch-band { display: grid; grid-template-columns: minmax(220px, 0.72fr) minmax(0, 1.28fr); gap: 16px; align-items: center; margin: 22px 24px 0; border: 2px solid rgba(37, 99, 235, 0.78); border-radius: 24px; padding: 16px; background: linear-gradient(180deg, rgba(255, 255, 255, 0.78), rgba(248, 250, 252, 0.94)), radial-gradient(circle at center, rgba(219, 234, 254, 0.35), transparent 42%); }
+        .result-scratch-card__scratch-guide { display: flex; align-items: center; gap: 16px; }
+        .result-scratch-card__scratch-copy-block { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; }
+        .result-scratch-card__scratch-icon-shell { display: flex; height: 78px; width: 78px; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 999px; background: linear-gradient(180deg, #e0ecff, #cfe0ff); color: #1d4f9c; }
+        .result-scratch-card__scratch-copy { margin: 0; max-width: 160px; color: #1d4f9c; font-size: 18px; line-height: 1.35; }
+        .result-scratch-card__scratch-arrow { height: 28px; width: 68px; color: #1d4f9c; }
+        .result-scratch-card__scratch-token { position: relative; overflow: hidden; border-radius: 20px; border: 1px solid rgba(148, 163, 184, 0.62); background: linear-gradient(180deg, rgba(208, 214, 224, 0.96), rgba(156, 163, 175, 0.94)), repeating-linear-gradient(0deg, rgba(255,255,255,0.09) 0 2px, rgba(148,163,184,0.08) 2px 4px), repeating-linear-gradient(135deg, rgba(255,255,255,0.08) 0 14px, rgba(148,163,184,0.08) 14px 28px); padding: 24px 22px; text-align: center; box-shadow: inset 0 1px 0 rgba(255,255,255,0.4); }
+        .result-scratch-card__scratch-token span { color: #08275b; font-family: "Merriweather", serif; font-size: 48px; font-weight: 800; letter-spacing: 0.38em; line-height: 1.15; }
+        .result-scratch-card__footer { position: relative; display: flex; flex-wrap: wrap; justify-content: space-between; gap: 16px; margin-top: 22px; background: linear-gradient(135deg, #08275b, #071a44); padding: 22px 24px 18px; }
+        .result-scratch-card__footer-note, .result-scratch-card__footer-school { margin: 0; color: rgba(255,255,255,0.95); font-size: 16px; line-height: 1.4; }
+        .result-scratch-card__footer-school { color: #f2cf70; }
+        .result-scratch-card__footer-crest { position: absolute; left: 50%; top: 0; transform: translate(-50%, -48%); width: 120px; height: 68px; display: flex; align-items: center; justify-content: center; background: linear-gradient(180deg, #0c2d63, #091e49); clip-path: polygon(50% 100%, 100% 0, 0 0); filter: drop-shadow(0 10px 18px rgba(8,39,91,0.28)); }
+        .result-scratch-card__footer-crest::before { content: ""; position: absolute; inset: 4px; background: linear-gradient(180deg, #f3c96d, #d39e33); clip-path: polygon(50% 100%, 100% 0, 0 0); }
+        .result-scratch-card__footer-crest-inner { position: relative; z-index: 1; display: flex; align-items: center; justify-content: center; width: 70px; height: 36px; border-radius: 999px 999px 0 0; color: #f7deb0; font-size: 16px; }
+        .result-scratch-card__footer-star { transform: translateY(-3px); }
       </style>
     `;
     printWindow.document.open();
@@ -204,6 +241,16 @@ function AdmissionsResultTokens() {
     }, 100);
   }
 
+  const tokenCardStudentCode = tokenCard?.student ? buildStudentCode(tokenCard.student) : '';
+  const tokenActivationUrl = tokenCard
+    ? buildResultCheckerUrl({
+        studentIdentifier: tokenCardStudentCode || tokenCard.student?.id || '',
+        term: tokenCard.token?.term || '',
+        sessionId: tokenCard.token?.sessionId || '',
+        token: tokenCard.token?.token || tokenCard.token || '',
+        origin: checkerOrigin
+      })
+    : '';
   return (
     <PortalLayout
       role="admissions"
@@ -226,15 +273,15 @@ function AdmissionsResultTokens() {
           { label: 'Active Tokens', value: stats.active ?? 0 },
           { label: 'Expired Tokens', value: stats.expired ?? 0 }
         ].map((card) => (
-          <article key={card.label} className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{card.label}</p>
-            <p className="mt-2 text-2xl font-bold text-slate-900">{card.value}</p>
+          <article key={card.label} className="dashboard-tile rounded-[24px] p-4">
+            <p className="text-wrap-safe text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">{card.label}</p>
+            <p className="text-wrap-safe mt-2 text-2xl font-bold text-slate-900">{card.value}</p>
           </article>
         ))}
       </section>
 
-      <section className="mt-6 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="font-heading text-2xl text-primary">Reserve Token for Student</h2>
+      <section className="dashboard-tile mt-6 rounded-[28px] p-5">
+        <h2 className="text-wrap-safe font-heading text-2xl text-primary">Reserve Token for Student</h2>
         <form onSubmit={assignToken} className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-[1.2fr,1fr,auto]">
           <input
             list="active-token-list"
@@ -277,27 +324,24 @@ function AdmissionsResultTokens() {
         )}
         {tokenCard && (
           <div className="mt-4 space-y-3">
-            <div ref={tokenCardRef} className="token-card rounded-[20px] border border-slate-200 bg-slate-50 px-4 py-4">
-              <div className="token-card__header flex items-center gap-3">
-                <SmartImage
-                  src={logoSrc}
-                  fallbackSrc="/images/logo.png"
-                  alt="ATTAUFEEQ logo"
-                  className="token-card__logo h-12 w-12 rounded-2xl border border-slate-200 bg-white object-cover"
-                />
-                <div className="token-card__brand">
-                  <h3>ATTAUFEEQ Result Token</h3>
-                  <p>{branding.name || 'ATTAUFEEQ Model Academy'}</p>
+            <div ref={tokenCardRef} className="token-card dashboard-tile rounded-[28px] px-5 py-5 shadow-sm">
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div className="max-w-full rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                  Student Reserved
                 </div>
+                <p className="text-code-break text-xs text-slate-500">{tokenActivationUrl}</p>
               </div>
-              <div className="token-card__meta mt-3 text-sm text-slate-600">
-                <p>Student: {tokenCard.student?.fullName || '—'}</p>
-                <p>Admission No: {tokenCard.student?.id || '—'}</p>
-                <p>Institution: {tokenCard.student?.institution || 'ATTAUFEEQ Model Academy'}</p>
-                <p>Student Code: {buildStudentCode(tokenCard.student || {})}</p>
-                <p>Term: {tokenCard.token?.term || '—'}</p>
-              </div>
-              <div className="code mt-3 text-xl font-bold tracking-[0.25em] text-slate-900">{tokenCard.token?.token || tokenCard.token}</div>
+              <ResultScratchCard
+                logoSrc={logoSrc}
+                schoolName={branding.name || 'ATTAUFEEQ MODEL ACADEMY'}
+                studentName={tokenCard.student?.fullName || '—'}
+                admissionNo={tokenCard.student?.id || '—'}
+                institution={tokenCard.student?.institution || 'Model Academy'}
+                studentCode={tokenCardStudentCode || '—'}
+                term={tokenCard.token?.term || '—'}
+                sessionId={tokenCard.token?.sessionId || ''}
+                token={tokenCard.token?.token || tokenCard.token || ''}
+              />
             </div>
             <button
               type="button"
@@ -310,7 +354,7 @@ function AdmissionsResultTokens() {
         )}
       </section>
 
-      <section className="mt-6 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="dashboard-tile mt-6 rounded-[28px] p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-heading text-2xl text-primary">Pick Student (Copy ID / Code)</h2>
@@ -373,7 +417,7 @@ function AdmissionsResultTokens() {
                   <td className="px-4 py-3">{student.classLabel || student.level || '—'}</td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-slate-700">{student.id}</span>
+                      <span className="text-code-break text-xs font-semibold text-slate-700">{student.id}</span>
                       <button
                         type="button"
                         onClick={() => {
@@ -390,7 +434,7 @@ function AdmissionsResultTokens() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-slate-700">{buildStudentCode(student)}</span>
+                      <span className="text-code-break text-xs font-semibold text-slate-700">{buildStudentCode(student)}</span>
                       <button
                         type="button"
                         onClick={() => {
@@ -427,7 +471,7 @@ function AdmissionsResultTokens() {
         </div>
       </section>
 
-      <section className="mt-6 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="dashboard-tile mt-6 rounded-[28px] p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-heading text-2xl text-primary">Token Inventory</h2>
@@ -466,13 +510,13 @@ function AdmissionsResultTokens() {
           <table className="min-w-full text-sm">
             <thead className="bg-slate-50 text-left">
               <tr>
-                <th className="px-4 py-3">Token</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Assigned</th>
-                <th className="px-4 py-3">Institution</th>
-                <th className="px-4 py-3">Term</th>
-                <th className="px-4 py-3">Usage</th>
-                <th className="px-4 py-3">Created</th>
+                <th className="px-4 py-3 whitespace-nowrap">Token</th>
+                <th className="px-4 py-3 whitespace-nowrap">Status</th>
+                <th className="px-4 py-3 whitespace-nowrap">Assigned</th>
+                <th className="px-4 py-3 whitespace-nowrap">Institution</th>
+                <th className="px-4 py-3 whitespace-nowrap">Term</th>
+                <th className="px-4 py-3 whitespace-nowrap">Usage</th>
+                <th className="px-4 py-3 whitespace-nowrap">Created</th>
               </tr>
             </thead>
             <tbody>
@@ -485,21 +529,42 @@ function AdmissionsResultTokens() {
               )}
               {showTokenRows && tokens.length > 0 && tokens.map((token) => (
                 <tr key={token.id} className="border-t border-slate-100">
-                  <td className="px-4 py-3 font-semibold text-slate-800">{token.token}</td>
-                  <td className="px-4 py-3">{token.status}</td>
+                  <td className="text-code-break px-4 py-3 font-semibold tracking-[0.08em] text-slate-800">{token.token}</td>
                   <td className="px-4 py-3">
+                    <span className="inline-flex whitespace-nowrap rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-slate-700">
+                      {token.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-slate-700">
                     {token.assignedStudentId
-                      ? `${studentMap.current.get(token.assignedStudentId) || 'Student'} (${token.assignedStudentId})`
+                      ? (
+                        <div className="min-w-0">
+                          <p className="text-wrap-safe font-medium text-slate-800">
+                            {studentMap.current.get(token.assignedStudentId) || 'Student'}
+                          </p>
+                          <p className="text-code-break mt-1 text-xs text-slate-500">{token.assignedStudentId}</p>
+                        </div>
+                      )
                       : '—'}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 text-slate-700">
                     {token.assignedStudentId
                       ? (students.find((student) => student.id === token.assignedStudentId)?.institution || 'ATTAUFEEQ Model Academy')
                       : '—'}
                   </td>
-                  <td className="px-4 py-3">{token.term || '—'}</td>
-                  <td className="px-4 py-3">{token.usedCount}/{token.maxUses}</td>
-                  <td className="px-4 py-3">{token.createdAt ? new Date(token.createdAt).toLocaleString() : '—'}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-slate-700">{token.term || '—'}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-slate-700">{token.usedCount}/{token.maxUses}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-slate-700">
+                    {token.createdAt
+                      ? new Intl.DateTimeFormat('en-NG', {
+                        day: '2-digit',
+                        month: 'short',
+                        year: 'numeric',
+                        hour: 'numeric',
+                        minute: '2-digit'
+                      }).format(new Date(token.createdAt))
+                      : '—'}
+                  </td>
                 </tr>
               ))}
               {showTokenRows && !tokens.length && (
@@ -512,7 +577,7 @@ function AdmissionsResultTokens() {
         </div>
       </section>
 
-      <section className="mt-6 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+      <section className="dashboard-tile mt-6 rounded-[28px] p-5">
         <h2 className="font-heading text-2xl text-primary">Result Card Delivery</h2>
         <p className="mt-2 text-sm text-slate-600">
           Result cards are generated when a student uses a valid token on the Result Checker page.

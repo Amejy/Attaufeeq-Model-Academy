@@ -225,7 +225,7 @@ function AdminNotifications() {
       title="Notifications"
       subtitle="Send announcements to specific portal roles."
     >
-      <form onSubmit={sendNotification} className="admin-surface mt-6 grid gap-3 p-4 sm:grid-cols-4">
+      <form onSubmit={sendNotification} className="admin-surface mt-6 grid gap-3 p-4 lg:grid-cols-2 2xl:grid-cols-4">
         <input value={form.title} onChange={(e) => setForm((prev) => ({ ...prev, title: e.target.value }))} placeholder="Title" className="form-field text-sm sm:col-span-2" required />
         <select
           value={form.roleTarget}
@@ -245,7 +245,7 @@ function AdminNotifications() {
         <button
           type="submit"
           disabled={!canSendNotification}
-          className="interactive-button rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+          className="interactive-button w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
         >
           {sending ? 'Sending...' : 'Send'}
         </button>
@@ -312,7 +312,7 @@ function AdminNotifications() {
       )}
 
       <div className="admin-surface mt-6 p-4">
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 lg:grid-cols-3">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -349,7 +349,7 @@ function AdminNotifications() {
               setRoleFilter('all');
               setSortOrder('recent');
             }}
-            className="interactive-button rounded-2xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600"
+            className="interactive-button w-full rounded-2xl border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 sm:w-auto"
           >
             Clear filters
           </button>
@@ -377,7 +377,7 @@ function AdminNotifications() {
         )}
         {showRows && filteredNotifications.map((item) => (
           <article key={item.id} className="admin-surface interactive-card p-4">
-            <p className="text-xs uppercase text-slate-500">
+            <p className="text-wrap-safe text-xs uppercase text-slate-500">
               {item.recipientEmail
                 ? `Direct: ${item.recipientEmail}`
                 : item.teacherId
@@ -386,14 +386,14 @@ function AdminNotifications() {
                     ? `Class Teachers: ${classLabel(item.classId)}`
                     : item.roleTarget}
             </p>
-            <h3 className="mt-1 font-semibold text-primary">{item.title}</h3>
-            <p className="mt-1 text-sm text-slate-700">{item.message}</p>
+            <h3 className="text-wrap-safe mt-1 font-semibold text-primary">{item.title}</h3>
+            <p className="text-wrap-safe mt-1 text-sm text-slate-700">{item.message}</p>
             <div className="mt-3">
               <button
                 type="button"
                 disabled={deletingId === item.id}
                 onClick={() => deleteNotification(item.id)}
-                className="interactive-button rounded-2xl border border-red-300 px-3 py-2 text-xs text-red-600 disabled:cursor-not-allowed disabled:opacity-60"
+                className="interactive-button w-full rounded-2xl border border-red-300 px-3 py-2 text-xs text-red-600 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               >
                 {deletingId === item.id ? 'Deleting...' : 'Delete'}
               </button>

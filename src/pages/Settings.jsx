@@ -295,11 +295,11 @@ function Settings() {
       title="Settings"
       subtitle="Manage your password and profile image. Changes apply immediately across your portal."
     >
-      <div className="grid gap-6 xl:grid-cols-[0.86fr,1.14fr]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,0.95fr),minmax(0,1.05fr)] 2xl:gap-7">
         <div className="space-y-6">
           <section className="glass-card interactive-card p-5 sm:p-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Account Overview</p>
-            <div className="mt-4 flex flex-wrap items-center gap-4">
+            <p className="text-wrap-safe text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 sm:tracking-[0.22em]">Account Overview</p>
+            <div className="mt-4 grid gap-4 md:grid-cols-[auto,minmax(0,1fr)] md:items-center">
               <div className="h-20 w-20 overflow-hidden rounded-[24px] border border-slate-200 bg-slate-100 shadow-sm">
                 {avatarUrl ? (
                   <SmartImage key={avatarPreviewKey} src={avatarUrl} alt="Profile avatar" className="h-full w-full object-cover" />
@@ -310,8 +310,8 @@ function Settings() {
                 )}
               </div>
               <div className="min-w-0 flex-1">
-                <h2 className="break-words font-heading text-2xl text-primary">{user?.fullName || 'Portal User'}</h2>
-                <p className="mt-1 text-sm text-slate-600">{user?.email || 'No email assigned yet'}</p>
+                <h2 className="text-wrap-safe font-heading text-[clamp(1.35rem,4vw,2rem)] leading-tight text-primary">{user?.fullName || 'Portal User'}</h2>
+                <p className="text-wrap-safe mt-1 text-sm text-slate-600">{user?.email || 'No email assigned yet'}</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   <span className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-emerald-800">
                     {roleLabel}
@@ -323,20 +323,20 @@ function Settings() {
               </div>
             </div>
 
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <div className="mt-5 grid gap-3 xl:grid-cols-2">
               {accountFacts.map((item) => (
-                <div key={item.label} className="rounded-[22px] border border-slate-200/80 bg-white/80 px-4 py-3 shadow-sm">
-                  <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">{item.label}</p>
-                  <p className="mt-2 break-words text-sm font-semibold text-slate-800">{item.value}</p>
+                <div key={item.label} className="min-w-0 rounded-[22px] border border-slate-200/80 bg-white/80 px-4 py-3 shadow-sm">
+                  <p className="text-wrap-safe text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500 sm:tracking-[0.18em]">{item.label}</p>
+                  <p className={`${item.label === 'Student code' ? 'text-code-break' : 'text-wrap-safe'} mt-2 text-sm font-semibold text-slate-800`}>{item.value}</p>
                 </div>
               ))}
             </div>
           </section>
 
           <section className="glass-card interactive-card p-5 sm:p-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Security Check</p>
-            <h2 className="mt-2 font-heading text-2xl text-primary">Password readiness</h2>
-            <p className="mt-2 text-sm text-slate-600">
+            <p className="text-wrap-safe text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 sm:tracking-[0.22em]">Security Check</p>
+            <h2 className="text-wrap-safe mt-2 font-heading text-[clamp(1.25rem,3.8vw,2rem)] text-primary">Password readiness</h2>
+            <p className="text-wrap-safe mt-2 text-sm text-slate-600">
               Review these cues before saving a new password so the update goes through on the first try.
             </p>
 
@@ -349,14 +349,14 @@ function Settings() {
               {passwordChecks.map((item) => (
                 <div
                   key={item.label}
-                  className={`flex items-center justify-between gap-3 rounded-[20px] border px-4 py-3 text-sm ${
+                  className={`flex flex-col items-start justify-between gap-2 rounded-[20px] border px-4 py-3 text-sm md:flex-row md:items-center ${
                     item.passed
                       ? 'border-emerald-200 bg-emerald-50/90 text-emerald-900'
                       : 'border-slate-200 bg-white/80 text-slate-600'
                   }`}
                 >
-                  <span>{item.label}</span>
-                  <span className="text-xs font-semibold uppercase tracking-[0.16em]">
+                  <span className="min-w-0 flex-1 text-wrap-safe text-wrap-pretty">{item.label}</span>
+                  <span className="shrink-0 text-xs font-semibold uppercase tracking-[0.16em]">
                     {item.passed ? 'Ready' : 'Pending'}
                   </span>
                 </div>
@@ -367,13 +367,13 @@ function Settings() {
 
         <div className="space-y-6">
           <section className="glass-card interactive-card p-5 sm:p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Profile Image</p>
-          <h2 className="mt-2 font-heading text-2xl text-primary">Update your avatar</h2>
-          <p className="mt-2 text-sm text-slate-600">
+          <p className="text-wrap-safe text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 sm:tracking-[0.22em]">Profile Image</p>
+          <h2 className="text-wrap-safe mt-2 font-heading text-[clamp(1.25rem,3.8vw,2rem)] text-primary">Update your avatar</h2>
+          <p className="text-wrap-safe mt-2 text-sm text-slate-600">
             Upload a clear headshot. This will show across your dashboard instantly.
           </p>
 
-          <div className="mt-5 flex flex-wrap items-center gap-5">
+          <div className="mt-5 grid gap-5 xl:grid-cols-[140px,minmax(0,1fr)] xl:items-center">
             <button
               type="button"
               onMouseEnter={() => setAvatarHover(true)}
@@ -382,13 +382,13 @@ function Settings() {
               onBlur={() => setAvatarHover(false)}
               onClick={triggerAvatarPicker}
               disabled={avatarBusy}
-              className="group relative h-28 w-28 overflow-hidden rounded-[28px] border border-slate-200 bg-slate-100 shadow-sm"
+              className="group relative mx-auto h-32 w-32 overflow-hidden rounded-[28px] border border-slate-200 bg-slate-100 shadow-sm lg:mx-0"
               aria-label={avatarUrl ? 'Change profile photo' : 'Upload profile photo'}
             >
               {avatarUrl ? (
                 <SmartImage key={avatarPreviewKey} src={avatarUrl} alt="Profile avatar preview" className="h-full w-full object-cover" />
               ) : (
-                <div className="flex h-full w-full items-center justify-center text-lg font-semibold text-slate-500">
+                <div className="flex h-full w-full items-center justify-center text-2xl font-semibold text-slate-500">
                   {getInitials(user?.fullName || user?.email || 'User')}
                 </div>
               )}
@@ -398,13 +398,13 @@ function Settings() {
                 </span>
               </div>
             </button>
-            <div className="min-w-0 flex-1 space-y-3">
-              <div className="flex flex-wrap gap-2">
+            <div className="min-w-0 space-y-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
                 <button
                   type="button"
                   onClick={triggerAvatarPicker}
                   disabled={avatarBusy}
-                  className="interactive-button"
+                  className="interactive-button w-full sm:w-auto"
                 >
                   {avatarBusy ? 'Uploading...' : avatarUrl ? 'Change Photo' : 'Upload Photo'}
                 </button>
@@ -412,12 +412,12 @@ function Settings() {
                   type="button"
                   onClick={handleAvatarRemove}
                   disabled={avatarBusy || !avatarUrl}
-                  className="interactive-button border-red-200 text-red-700"
+                  className="interactive-button w-full border-red-200 text-red-700 sm:w-auto"
                 >
                   Remove Photo
                 </button>
               </div>
-              <p className="text-xs text-slate-500">Only JPG, JPEG, PNG, GIF, or WebP files up to 4MB.</p>
+              <p className="text-wrap-safe text-xs text-slate-500">Only JPG, JPEG, PNG, GIF, or WebP files up to 4MB.</p>
               <input
                 ref={fileInputRef}
                 type="file"
@@ -432,9 +432,9 @@ function Settings() {
           </section>
 
           <section className="glass-card interactive-card p-5 sm:p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Password</p>
-          <h2 className="mt-2 font-heading text-2xl text-primary">Change your password</h2>
-          <p className="mt-2 text-sm text-slate-600">
+          <p className="text-wrap-safe text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 sm:tracking-[0.22em]">Password</p>
+          <h2 className="text-wrap-safe mt-2 font-heading text-[clamp(1.25rem,3.8vw,2rem)] text-primary">Change your password</h2>
+          <p className="text-wrap-safe mt-2 text-sm text-slate-600">
             Use at least 10 characters and keep it private.
           </p>
 
@@ -487,7 +487,7 @@ function Settings() {
             <button
               type="submit"
               disabled={!canSubmitPassword || passwordBusy}
-              className="interactive-button"
+              className="interactive-button w-full sm:w-auto"
             >
               {passwordBusy ? 'Saving...' : 'Update Password'}
             </button>
@@ -497,11 +497,11 @@ function Settings() {
       </div>
 
       {role === 'admin' && (
-        <section className="glass-card interactive-card mt-6 flex flex-wrap items-center justify-between gap-4 p-5 sm:p-6">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Admin Tools</p>
-            <h2 className="mt-2 font-heading text-2xl text-primary">Refresh portal data</h2>
-            <p className="mt-2 text-sm text-slate-600">
+        <section className="glass-card interactive-card mt-6 flex flex-col items-start justify-between gap-4 p-5 sm:p-6 lg:flex-row lg:items-center">
+          <div className="min-w-0">
+            <p className="text-wrap-safe text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 sm:tracking-[0.22em]">Admin Tools</p>
+            <h2 className="text-wrap-safe mt-2 font-heading text-[clamp(1.25rem,3.8vw,2rem)] text-primary">Refresh portal data</h2>
+            <p className="text-wrap-safe mt-2 text-sm text-slate-600">
               Reload assignments, classes, and dashboards from the database without a server restart.
             </p>
             {refreshError && <ErrorState compact title="Refresh failed" message={refreshError} className="mt-3" onRetry={handleRefreshPortal} />}
@@ -511,23 +511,23 @@ function Settings() {
             type="button"
             onClick={handleRefreshPortal}
             disabled={refreshBusy}
-            className="interactive-button border-emerald-200 text-emerald-800"
+            className="interactive-button w-full border-emerald-200 text-emerald-800 sm:w-auto"
           >
             {refreshBusy ? 'Refreshing...' : 'Refresh Portal'}
           </button>
         </section>
       )}
 
-      <section className="glass-card interactive-card mt-6 flex flex-wrap items-center justify-between gap-4 p-5 sm:p-6">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">Session</p>
-          <h2 className="mt-2 font-heading text-2xl text-primary">Sign out safely</h2>
-          <p className="mt-2 text-sm text-slate-600">Log out of your portal on this device.</p>
+      <section className="glass-card interactive-card mt-6 flex flex-col items-start justify-between gap-4 p-5 sm:p-6 lg:flex-row lg:items-center">
+        <div className="min-w-0">
+          <p className="text-wrap-safe text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 sm:tracking-[0.22em]">Session</p>
+          <h2 className="text-wrap-safe mt-2 font-heading text-[clamp(1.25rem,3.8vw,2rem)] text-primary">Sign out safely</h2>
+          <p className="text-wrap-safe mt-2 text-sm text-slate-600">Log out of your portal on this device.</p>
         </div>
         <button
           type="button"
           onClick={logout}
-          className="interactive-button border-red-200 text-red-700"
+          className="interactive-button w-full border-red-200 text-red-700 sm:w-auto"
         >
           Logout
         </button>

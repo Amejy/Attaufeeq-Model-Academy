@@ -25,14 +25,14 @@ function Footer() {
       <div className="gradient-shell overflow-hidden rounded-[26px] px-4 py-5 text-white sm:px-6 sm:py-6">
         <div className="grid gap-5 md:grid-cols-[1.1fr,0.85fr,0.9fr]">
           <div>
-            <div className="footer-logo-row">
+            <div className="footer-logo-row items-start sm:items-center">
               <SmartImage
                 src={brandLogo}
                 fallbackSrc="/images/logo.png"
                 alt={`${branding.name || 'School'} logo`}
                 className="footer-logo"
               />
-              <p className="text-label-clamp text-xs font-semibold uppercase tracking-[0.24em] text-white/80" title={schoolName}>{schoolName}</p>
+              <p className="text-label-clamp min-w-0 text-xs font-semibold uppercase tracking-[0.24em] text-white/80" title={schoolName}>{schoolName}</p>
             </div>
             <h3 className="text-wrap-safe mt-2 max-w-sm font-heading text-lg leading-tight sm:text-xl">{footerHeading}</h3>
             <p className="mt-2 max-w-md text-sm leading-6 text-white/80">{branding.motto}</p>

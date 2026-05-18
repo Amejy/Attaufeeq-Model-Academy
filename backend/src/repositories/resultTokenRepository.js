@@ -378,6 +378,45 @@ export async function getTokenState({ tokenValue } = {}) {
   };
 }
 
+export async function getAssignedResultToken({
+  studentId = '',
+  term = '',
+  sessionId = '',
+  includeToken = true
+} = {}) {
+  const student = String(studentId || '').trim();
+  const normalizedTerm = String(term || '').trim();
+  const normalizedSessionId = String(sessionId || '').trim();
+  if (!student || !normalizedTerm) return null;
+
+  const params = [student, normalizedTerm];
+  let sessionClause = '';
+  if (normalizedSessionId) {
+    params.push(normalizedSessionId);
+    sessionClause = `AND COALESCE(session_id, '') = $${params.length}`;
+  }
+
+  const result = await query(
+    `SELECT *
+     FROM result_tokens
+     WHERE assigned_student_id = $1
+       AND LOWER(COALESCE(term, '')) = LOWER($2)
+       ${sessionClause}
+     ORDER BY assigned_at DESC NULLS LAST, created_at DESC
+     LIMIT 1`,
+    params
+  );
+
+  const row = result.rows[0];
+  if (!row) return null;
+  const tokenRow = mapTokenRow(row, { includeToken });
+  return {
+    ...tokenRow,
+    status: computeStatus(tokenRow),
+    remainingUses: Math.max(0, tokenRow.maxUses - tokenRow.usedCount)
+  };
+}
+
 export async function assignResultToken({ tokenId = '', tokenValue = '', studentId = '', assignedByUserId = '' } = {}) {
   const id = String(tokenId || '').trim();
   const token = String(tokenValue || '').trim().toUpperCase();

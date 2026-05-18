@@ -10,6 +10,9 @@ const LABEL_OVERRIDES = {
   student: 'Student',
   admissions: 'Admissions',
   'result-tokens': 'Result Tokens',
+  'scratch-card': 'Scratch Card',
+  'receipt-upload': 'Receipt Upload',
+  fees: 'School Fees',
   'teacher-assignments': 'Assignments',
   'admissions-access': 'Admissions Access',
   settings: 'Settings',
@@ -142,8 +145,8 @@ function PageHeader({ role = '', title, subtitle = '', actions = null }) {
 
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div className="min-w-0">
-          <h1 className="break-words font-heading text-[1.9rem] leading-tight text-primary sm:text-[2.65rem]">{title}</h1>
-          {subtitle && <p className="mt-2.5 max-w-3xl text-sm leading-7 text-slate-600 sm:text-[0.95rem]">{subtitle}</p>}
+          <h1 className="text-wrap-safe font-heading text-[clamp(1.55rem,4.8vw,2.65rem)] leading-tight text-primary">{title}</h1>
+          {subtitle && <p className="text-wrap-safe mt-2.5 max-w-3xl text-sm leading-6 text-slate-600 sm:text-[0.95rem] sm:leading-7">{subtitle}</p>}
         </div>
         {actions && <div className="flex w-full flex-wrap justify-start gap-2.5 sm:w-auto sm:justify-end">{actions}</div>}
       </div>

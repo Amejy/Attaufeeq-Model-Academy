@@ -33,6 +33,7 @@ const initialStore = {
   results: [],
   feePlans: [],
   payments: [],
+  paymentRequests: [],
   notifications: [],
   madrasaRecords: [],
   messageThreads: [],
@@ -86,6 +87,12 @@ function normalizeStore(store) {
   normalized.payments = (normalized.payments || []).map((payment) => ({
     ...payment,
     sessionId: payment.sessionId || activeSessionId
+  }));
+
+  normalized.paymentRequests = (normalized.paymentRequests || []).map((request) => ({
+    ...request,
+    sessionId: request.sessionId || activeSessionId,
+    status: request.status || 'pending'
   }));
 
   normalized.attendanceRecords = (normalized.attendanceRecords || []).map((record) => ({

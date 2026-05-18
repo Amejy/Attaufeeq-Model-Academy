@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import SmartImage from './SmartImage';
 import { useSiteContent } from '../context/SiteContentContext';
+import { buildQrCodeUrl, buildResultCheckerUrl, buildVerificationCode } from '../utils/resultVerification';
+import { buildStudentCode } from '../utils/studentCode';
 
 function initials(name = '') {
   return String(name)
@@ -26,6 +28,19 @@ function ResultCard({ reportCard }) {
   const logoSrc = branding.logoUrl || '/images/logo.png';
   const signature = about.signatureImage || '';
   const signLabel = about.signLabel || 'Authorized Signature';
+  const studentCode = buildStudentCode(student, { institution: reportCard?.institution });
+  const verificationLink = buildResultCheckerUrl({
+    studentIdentifier: studentCode || student.id || '',
+    term: reportCard?.term || '',
+    sessionId: reportCard?.sessionId || '',
+    origin: typeof window !== 'undefined' ? window.location.origin : ''
+  });
+  const verificationCode = buildVerificationCode({
+    studentIdentifier: studentCode || student.id || '',
+    term: reportCard?.term || '',
+    sessionId: reportCard?.sessionId || ''
+  });
+  const qrCodeUrl = buildQrCodeUrl(verificationLink, 200);
 
   const remarks = useMemo(() => {
     const grade = reportCard?.overallGrade || '';
@@ -86,6 +101,20 @@ function ResultCard({ reportCard }) {
             <p>Institution</p>
             <h3>{reportCard.institution}</h3>
           </div>
+          <div>
+            <p>Verification Code</p>
+            <h3 className="text-code-break">{verificationCode}</h3>
+          </div>
+        </div>
+        <div className="result-card__verification">
+          <div className="result-card__verification-box">
+            <SmartImage src={qrCodeUrl} alt="Result verification QR code" className="result-card__verification-qr" />
+          </div>
+          <div className="result-card__verification-copy">
+            <p>Scan to re-open this result</p>
+            <h3 className="text-code-break">{studentCode || student.id || '—'}</h3>
+            <span className="text-code-break">{verificationLink}</span>
+          </div>
         </div>
       </section>
 
@@ -105,8 +134,14 @@ function ResultCard({ reportCard }) {
             {reportCard.rows.map((row) => (
               <tr key={row.id}>
                 <td>{row.subjectName}</td>
-                <td>{row.ca}</td>
-                <td>{row.exam}</td>
+                <td>
+                  {row.ca}
+                  {row.caNote ? <div className="mt-1 text-xs font-semibold text-amber-700">{row.caNote}</div> : null}
+                </td>
+                <td>
+                  {row.exam}
+                  {row.examNote ? <div className="mt-1 text-xs font-semibold text-amber-700">{row.examNote}</div> : null}
+                </td>
                 <td>{row.total}</td>
                 <td>{row.grade}</td>
                 <td>{row.remark}</td>

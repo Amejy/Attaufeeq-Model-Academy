@@ -231,9 +231,9 @@ function AdminAdmissionsAccess() {
 
       <section className="interactive-card mt-4 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="font-heading text-2xl text-primary">Admission Window</h2>
-            <p className="mt-2 text-sm text-slate-600">
+          <div className="min-w-0">
+            <h2 className="text-wrap-safe font-heading text-2xl text-primary">Admission Window</h2>
+            <p className="text-wrap-safe mt-2 text-sm text-slate-600">
               Toggle the public admission window. When closed, applicants cannot submit new forms.
             </p>
           </div>
@@ -242,12 +242,12 @@ function AdminAdmissionsAccess() {
           </span>
         </div>
 
-        <form onSubmit={saveAdmissionPeriod} className="mt-5 grid gap-4 lg:grid-cols-2">
+        <form onSubmit={saveAdmissionPeriod} className="mt-5 grid gap-4 xl:grid-cols-2">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 lg:col-span-2">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h3 className="text-sm font-semibold text-slate-800">Master Admissions Switch</h3>
-                <p className="mt-1 text-xs text-slate-600">Turn this off to close every admissions program at once, even if individual windows are configured.</p>
+              <div className="min-w-0">
+                <h3 className="text-wrap-safe text-sm font-semibold text-slate-800">Master Admissions Switch</h3>
+                <p className="text-wrap-safe mt-1 text-xs text-slate-600">Turn this off to close every admissions program at once, even if individual windows are configured.</p>
               </div>
               <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
                 <input
@@ -267,15 +267,15 @@ function AdminAdmissionsAccess() {
 
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <h3 className="text-sm font-semibold text-slate-800">ATTAUFEEQ Model Academy (Modern)</h3>
-                <p className="mt-1 text-xs text-slate-600">Control the modern academy admission window.</p>
+              <div className="min-w-0">
+                <h3 className="text-wrap-safe text-sm font-semibold text-slate-800">ATTAUFEEQ Model Academy (Modern)</h3>
+                <p className="text-wrap-safe mt-1 text-xs text-slate-600">Control the modern academy admission window.</p>
               </div>
               <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${modernOpen ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
                 {modernOpen ? 'Open' : 'Closed'}
               </span>
             </div>
-            <div className="mt-4 flex flex-wrap items-center gap-3">
+            <div className="mt-4 grid gap-3 lg:grid-cols-3">
               <label className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
@@ -328,15 +328,15 @@ function AdminAdmissionsAccess() {
 
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <h3 className="text-sm font-semibold text-slate-800">Madrastul ATTAUFEEQ (Madrasa)</h3>
-                <p className="mt-1 text-xs text-slate-600">Control the madrasa admission window.</p>
+              <div className="min-w-0">
+                <h3 className="text-wrap-safe text-sm font-semibold text-slate-800">Madrastul ATTAUFEEQ (Madrasa)</h3>
+                <p className="text-wrap-safe mt-1 text-xs text-slate-600">Control the madrasa admission window.</p>
               </div>
               <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${madrasaOpen ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
                 {madrasaOpen ? 'Open' : 'Closed'}
               </span>
             </div>
-            <div className="mt-4 flex flex-wrap items-center gap-3">
+            <div className="mt-4 grid gap-3 lg:grid-cols-3">
               <label className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
@@ -388,15 +388,15 @@ function AdminAdmissionsAccess() {
           </div>
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <h3 className="text-sm font-semibold text-slate-800">Quran Memorization</h3>
-                <p className="mt-1 text-xs text-slate-600">Control the memorization admission window.</p>
+              <div className="min-w-0">
+                <h3 className="text-wrap-safe text-sm font-semibold text-slate-800">Quran Memorization</h3>
+                <p className="text-wrap-safe mt-1 text-xs text-slate-600">Control the memorization admission window.</p>
               </div>
               <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${memorizationOpen ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'}`}>
                 {memorizationOpen ? 'Open' : 'Closed'}
               </span>
             </div>
-            <div className="mt-4 flex flex-wrap items-center gap-3">
+            <div className="mt-4 grid gap-3 lg:grid-cols-3">
               <label className="flex items-center gap-2 text-sm">
                 <input
                   type="checkbox"
@@ -451,7 +451,7 @@ function AdminAdmissionsAccess() {
             <button
               type="submit"
               disabled={!canSavePeriod}
-              className="rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+              className="interactive-button w-full rounded-2xl bg-primary px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
             >
               {saving ? 'Saving...' : 'Save Settings'}
             </button>
@@ -461,9 +461,9 @@ function AdminAdmissionsAccess() {
 
       <section className="mt-8 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 className="font-heading text-2xl text-primary">Admission Archive</h2>
-            <p className="mt-2 text-sm text-slate-600">
+          <div className="min-w-0">
+            <h2 className="text-wrap-safe font-heading text-2xl text-primary">Admission Archive</h2>
+            <p className="text-wrap-safe mt-2 text-sm text-slate-600">
               Fully admitted students are archived here by class for future lookup, even after the desk record is cleared.
             </p>
           </div>
@@ -485,7 +485,7 @@ function AdminAdmissionsAccess() {
           <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {archiveSummary.map((item) => (
               <div key={item.label} className="rounded-2xl border border-slate-200 bg-white px-4 py-3">
-                <p className="text-xs uppercase tracking-[0.18em] text-slate-500">{item.label}</p>
+                <p className="text-wrap-safe text-xs uppercase tracking-[0.18em] text-slate-500">{item.label}</p>
                 <p className="mt-2 text-2xl font-semibold text-slate-900">{item.count}</p>
                 <p className="mt-1 text-xs text-slate-500">Archived admissions</p>
               </div>
@@ -526,8 +526,8 @@ function AdminAdmissionsAccess() {
               {showArchiveRows && filteredArchive.map((record) => (
                 <tr key={record.id} className="border-t border-slate-100">
                   <td className="px-4 py-3">
-                    <p className="font-semibold text-slate-800">{record.fullName}</p>
-                    <p className="mt-1 text-xs text-slate-500">{record.guardianName} • {record.phone}</p>
+                    <p className="text-wrap-safe font-semibold text-slate-800">{record.fullName}</p>
+                    <p className="text-wrap-safe mt-1 text-xs text-slate-500">{record.guardianName} • {record.phone}</p>
                   </td>
                   <td className="px-4 py-3">
                     {classLookup.get(record.classId) || record.classLabel || record.classId || '—'}
@@ -535,7 +535,7 @@ function AdminAdmissionsAccess() {
                   <td className="px-4 py-3">{record.status}</td>
                   <td className="px-4 py-3">{record.verificationStatus}</td>
                   <td className="px-4 py-3">{record.archivedAt ? new Date(record.archivedAt).toLocaleString() : '-'}</td>
-                  <td className="px-4 py-3">{record.reason || '-'}</td>
+                  <td className="px-4 py-3 text-wrap-safe">{record.reason || '-'}</td>
                 </tr>
               ))}
               {showArchiveRows && !filteredArchive.length && (

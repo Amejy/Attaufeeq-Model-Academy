@@ -28,6 +28,8 @@ function AdminResultsPublish() {
   const [blockedStudents, setBlockedStudents] = useState([]);
   const [pendingGroups, setPendingGroups] = useState([]);
   const [compiling, setCompiling] = useState(false);
+  const [readiness, setReadiness] = useState(null);
+  const [notifyingTeachers, setNotifyingTeachers] = useState(false);
   const [showRowsByInstitution, setShowRowsByInstitution] = useState(() => ({}));
   const resolveShowRows = (value) => showRowsByInstitution[value] !== false;
   const loadDataSeq = useRef(0);
@@ -44,6 +46,7 @@ function AdminResultsPublish() {
     setOpenClassIds([]);
     setTermClosures([]);
     setBlockedStudents([]);
+    setReadiness(null);
 
     const nextInstitution = next.institution ?? ADMIN_INSTITUTIONS[0];
     const nextTerm = next.term ?? 'First Term';
@@ -65,6 +68,7 @@ function AdminResultsPublish() {
 
       const classRows = classesData.classes || [];
       setResults(resultsData.results || []);
+      setReadiness(resultsData.readiness || null);
       setClasses(classRows);
       setOpenClassIds(accessData.openClassIds || []);
       const sessionRows = sessionsData.sessions || [];
@@ -97,7 +101,9 @@ function AdminResultsPublish() {
     () => termClosures.some((entry) => entry.term === term && entry.sessionId === sessionId),
     [termClosures, term, sessionId]
   );
-  const actionBusy = publishing || accessBusy || termBusy || compiling;
+  const actionBusy = publishing || accessBusy || termBusy || compiling || notifyingTeachers;
+  const missingTeachers = readiness?.missingTeachers || [];
+  const missingRows = readiness?.missing || [];
 
   useEffect(() => {
     void loadData({ institution, term, classId, sessionId });
@@ -184,9 +190,15 @@ function AdminResultsPublish() {
         label: 'Publishable Rows',
         value: results.filter((row) => (row.submittedAt || row.submittedByTeacherId) && !row.published).length,
         tone: hasPublishableResults ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-200 bg-amber-50 text-amber-700'
+      },
+      {
+        key: 'readiness',
+        label: 'Compilation Readiness',
+        value: readiness ? `${readiness.completionPercent}%` : '—',
+        tone: readiness?.ready ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-rose-200 bg-rose-50 text-rose-700'
       }
     ],
-    [groupedResults.length, hasPublishableResults, institution, results]
+    [groupedResults.length, hasPublishableResults, institution, readiness, results]
   );
 
   async function publishResults(event) {
@@ -203,20 +215,63 @@ function AdminResultsPublish() {
       });
 
       const publishedCount = data.publishedCount || 0;
-      const blockedCount = data.blockedCount || 0;
+      const familySent = data.familyNotification?.sent || 0;
       setBlockedStudents(Array.isArray(data.blockedStudents) ? data.blockedStudents : []);
       setSuccess(
-        blockedCount
-          ? publishedCount
-            ? `${publishedCount} result records published for ${institution}. ${blockedCount} student(s) are still held due to outstanding fees.`
-            : `No result records were published for ${institution}. ${blockedCount} student(s) are still held due to outstanding fees.`
-          : `${publishedCount} result records published for ${institution}.`
+        `${publishedCount} result records published for ${institution}.${familySent ? ` ${familySent} family notification email(s) sent.` : ''}`
       );
       void loadData({ institution, term, classId, sessionId });
     } catch (err) {
+      if (err?.payload?.readiness) {
+        setReadiness(err.payload.readiness);
+        setBlockedStudents(Array.isArray(err.payload.blockedStudents) ? err.payload.blockedStudents : []);
+      }
       setError(err.message || 'Unable to publish results.');
     } finally {
       setPublishing(false);
+    }
+  }
+
+  async function notifyMissingTeachers() {
+    if (!missingTeachers.length) return;
+    setNotifyingTeachers(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const deliverable = missingTeachers.filter((teacher) => teacher.teacherEmail);
+      if (!deliverable.length) {
+        setError('No email address is available for the teachers with missing submissions.');
+        return;
+      }
+
+      const classLabel = classId
+        ? classes.find((item) => item.id === classId)
+          ? `${classes.find((item) => item.id === classId).name} ${classes.find((item) => item.id === classId).arm}`
+          : 'selected class'
+        : 'your assigned classes';
+
+      const results = await Promise.allSettled(
+        deliverable.map((teacher) =>
+          apiJson('/notifications/admin', {
+            method: 'POST',
+            body: {
+              title: `Result submission reminder: ${term}`,
+              message: `Please submit the outstanding ${term} result assessments for ${classLabel}. Admin cannot publish until every assigned subject is complete. Missing rows linked to you: ${teacher.missingCount}.`,
+              roleTarget: 'teacher',
+              recipientEmail: teacher.teacherEmail
+            }
+          })
+        )
+      );
+
+      const sent = results.filter((result) => result.status === 'fulfilled').length;
+      const failed = results.length - sent;
+      setSuccess(`${sent} teacher reminder(s) queued.${failed ? ` ${failed} failed.` : ''}`);
+    } catch (err) {
+      setError(err.message || 'Unable to notify teachers.');
+    } finally {
+      setNotifyingTeachers(false);
     }
   }
 
@@ -312,15 +367,74 @@ function AdminResultsPublish() {
       <section className="mt-6 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <h2 className="font-heading text-2xl text-primary">Pending Subject Result Groups</h2>
+            <h2 className="font-heading text-2xl text-primary">Result Compilation Readiness</h2>
             <p className="mt-2 text-sm text-slate-600">
-              Subject-level approvals are disabled. Use Publish or Compile Final Report Cards instead.
+              Publishing stays locked until every assigned teacher has submitted every assigned subject for every student in this scope.
             </p>
           </div>
-          <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600">
-            0 groups
-          </span>
+          <div className="flex flex-wrap gap-2">
+            <span className={`rounded-full border px-3 py-1 text-xs font-semibold ${readiness?.ready ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-rose-200 bg-rose-50 text-rose-700'}`}>
+              {readiness?.ready ? 'Ready to publish' : 'Not ready'}
+            </span>
+            <button
+              type="button"
+              onClick={notifyMissingTeachers}
+              disabled={!missingTeachers.length || notifyingTeachers}
+              className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {notifyingTeachers ? 'Notifying...' : 'Notify missing teachers'}
+            </button>
+          </div>
         </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-4">
+          {[
+            ['Expected rows', readiness?.expectedRows ?? 0],
+            ['Submitted rows', readiness?.submittedRows ?? 0],
+            ['Missing rows', readiness?.missingCount ?? 0],
+            ['Teacher scopes', readiness?.assignmentCount ?? 0]
+          ].map(([label, value]) => (
+            <div key={label} className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{label}</p>
+              <p className="mt-2 text-2xl font-bold text-slate-900">{value}</p>
+            </div>
+          ))}
+        </div>
+        {!!missingTeachers.length && (
+          <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">Teachers with outstanding submissions</p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {missingTeachers.map((teacher) => (
+                <span key={teacher.teacherId} className="rounded-full border border-amber-300 bg-white px-3 py-1 text-xs font-semibold text-amber-800">
+                  {teacher.teacherName} • {teacher.missingCount} missing
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+        {!!missingRows.length && (
+          <div className="mt-4 max-h-72 overflow-auto rounded-2xl border border-slate-200">
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-50 text-left">
+                <tr>
+                  <th className="px-4 py-3">Student</th>
+                  <th className="px-4 py-3">Class</th>
+                  <th className="px-4 py-3">Subject</th>
+                  <th className="px-4 py-3">Teacher</th>
+                </tr>
+              </thead>
+              <tbody>
+                {missingRows.slice(0, 80).map((row) => (
+                  <tr key={`${row.studentId}-${row.subjectId}-${row.term}`} className="border-t border-slate-100">
+                    <td className="px-4 py-3">{row.studentName}</td>
+                    <td className="px-4 py-3">{row.classLabel}</td>
+                    <td className="px-4 py-3">{row.subjectName}</td>
+                    <td className="px-4 py-3">{row.teacherNames?.join(', ') || 'Assigned teacher'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </section>
 
       <form onSubmit={publishResults} className="mt-6 grid gap-3 rounded-[28px] border border-slate-200 bg-white p-5 sm:grid-cols-6">
@@ -371,7 +485,7 @@ function AdminResultsPublish() {
         </select>
         <button
           type="submit"
-          disabled={loading || actionBusy || !sessionId || !hasPublishableResults}
+          disabled={loading || actionBusy || !sessionId || !hasPublishableResults || !readiness?.ready}
           className="rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
         >
           {publishing ? 'Publishing...' : 'Publish Approved Results'}
@@ -409,12 +523,12 @@ function AdminResultsPublish() {
         <section className="mt-4 rounded-[24px] border border-amber-200 bg-amber-50 p-4">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-700">Publishing Hold</p>
           <p className="mt-2 text-sm text-amber-900">
-            These students still have outstanding fee issues, so their submitted results were not published.
+            These rows are still missing teacher submissions, so publishing stays locked for this class scope.
           </p>
           <div className="mt-3 flex flex-wrap gap-2">
             {blockedStudents.map((student) => (
               <span key={student.studentId} className="rounded-full border border-amber-300 bg-white px-3 py-1 text-xs font-semibold text-amber-800">
-                {student.studentName} {student.classLabel ? `• ${student.classLabel}` : ''} • {buildStudentCode({ id: student.studentId, institution })}
+                {student.studentName} {student.classLabel ? `• ${student.classLabel}` : ''} {student.subjectName ? `• ${student.subjectName}` : ''}
               </span>
             ))}
           </div>
@@ -508,6 +622,8 @@ function AdminResultsPublish() {
                                   <th className="px-4 py-3">Exam</th>
                                   <th className="px-4 py-3">Total</th>
                                   <th className="px-4 py-3">Grade</th>
+                                  <th className="px-4 py-3">Teacher</th>
+                                  <th className="px-4 py-3">Notes</th>
                                   <th className="px-4 py-3">Published</th>
                                 </tr>
                               </thead>
@@ -519,6 +635,10 @@ function AdminResultsPublish() {
                                     <td className="px-4 py-3">{row.exam}</td>
                                     <td className="px-4 py-3 font-semibold text-slate-900">{row.total}</td>
                                     <td className="px-4 py-3">{row.grade}</td>
+                                    <td className="px-4 py-3">{row.teacherName || '—'}</td>
+                                    <td className="px-4 py-3">
+                                      {[row.caNote && `CA: ${row.caNote}`, row.examNote && `Exam: ${row.examNote}`].filter(Boolean).join(' • ') || '—'}
+                                    </td>
                                     <td className="px-4 py-3">{row.published ? 'Yes' : 'No'}</td>
                                   </tr>
                                 ))}

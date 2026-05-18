@@ -1,6 +1,7 @@
 import SmartImage from './SmartImage';
 import { useSiteContent } from '../context/SiteContentContext';
 import { buildStudentCode } from '../utils/studentCode';
+import { buildQrCodeUrl, buildResultCheckerUrl, buildVerificationCode } from '../utils/resultVerification';
 
 function resolveStudentPhoto(student = {}) {
   return student.photoUrl || student.avatarUrl || student.passportUrl || '';
@@ -62,19 +63,39 @@ function ReportCardSheet({ reportCard }) {
   const sessionLabel = reportCard.sessionId || '—';
   const publishState = reportCard.publishState || 'Published';
   const studentCode = buildStudentCode(reportCard.student, { institution: reportCard.institution });
+  const verificationLink = buildResultCheckerUrl({
+    studentIdentifier: studentCode || student.id || '',
+    term: reportCard.term || '',
+    sessionId: reportCard.sessionId || '',
+    origin: typeof window !== 'undefined' ? window.location.origin : ''
+  });
+  const verificationCode = buildVerificationCode({
+    studentIdentifier: studentCode || student.id || '',
+    term: reportCard.term || '',
+    sessionId: reportCard.sessionId || ''
+  });
+  const qrCodeUrl = buildQrCodeUrl(verificationLink, 180);
   const classPosition = reportCard.classRank && reportCard.classSize
     ? `${reportCard.classRank}/${reportCard.classSize}`
     : reportCard.classRank || reportCard.classSize || '—';
   const totalStudents = reportCard.classSize || '—';
+  const scoreCell = (score, note) => (
+    <>
+      <span>{score}</span>
+      {note ? <div style={{ marginTop: '2px', fontSize: '8px', fontWeight: 700, color: '#b45309' }}>{note}</div> : null}
+    </>
+  );
 
   return (
     <section className="report-sheet mt-6 bg-white text-[11px] text-slate-900 print:mt-0">
       <style>{`
-        @page { size: A4; margin: 20mm; }
+        @page { size: A4; margin: 10mm; }
         .report-sheet { font-family: "Times New Roman", Times, serif; }
-        .report-sheet table { width: 100%; border-collapse: collapse; }
-        .report-sheet th, .report-sheet td { border: 1px solid #d1d5db; padding: 4px 6px; }
-        .report-sheet .page-break { page-break-before: always; break-before: page; }
+        .report-sheet table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+        .report-sheet th, .report-sheet td { border: 1px solid #cbd5e1; padding: 3px 5px; vertical-align: top; overflow-wrap: anywhere; word-break: break-word; }
+        .report-sheet th { background: #2f8bd8; color: #ffffff; font-weight: 700; }
+        .report-sheet .soft-head { background: #eaf4ff; color: #0f172a; }
+        .report-sheet .blue-panel { background: #2f8bd8; color: white; }
         .report-sheet .no-border td { border: none; padding: 0; }
       `}</style>
 
@@ -84,6 +105,9 @@ function ReportCardSheet({ reportCard }) {
             <tr>
               <td style={{ width: '65%' }}>
                 <SchoolReportMark institution={reportCard.institution} />
+                <div style={{ marginTop: '4px', textAlign: 'center', fontSize: '13px', fontWeight: 700 }}>
+                  {termLabel} Pupil's Performance Report
+                </div>
               </td>
               <td style={{ width: '20%', textAlign: 'right', verticalAlign: 'top' }}>
                 <div style={{ fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.18em', color: '#64748b' }}>
@@ -92,6 +116,9 @@ function ReportCardSheet({ reportCard }) {
                 <div style={{ fontSize: '12px', fontWeight: 700 }}>{publishState}</div>
                 <div style={{ fontSize: '10px', color: '#64748b' }}>
                   {new Date(reportCard.generatedAt).toLocaleString()}
+                </div>
+                <div style={{ marginTop: '8px', fontSize: '9px', color: '#475569' }}>
+                  {verificationCode}
                 </div>
               </td>
               <td style={{ width: '15%', textAlign: 'right', verticalAlign: 'top' }}>
@@ -113,19 +140,19 @@ function ReportCardSheet({ reportCard }) {
           </tbody>
         </table>
 
-        <table>
+        <table style={{ marginBottom: '6px' }}>
           <tbody>
             <tr>
               <th style={{ width: '20%' }}>Student Name</th>
-              <td style={{ width: '30%' }}>{student.fullName || '—'}</td>
+              <td style={{ width: '30%', overflowWrap: 'anywhere' }}>{student.fullName || '—'}</td>
               <th style={{ width: '20%' }}>Student Code</th>
-              <td style={{ width: '30%' }}>{studentCode}</td>
+              <td style={{ width: '30%', overflowWrap: 'anywhere' }}>{studentCode}</td>
             </tr>
             <tr>
               <th>Class</th>
               <td>{classInfo ? `${classInfo.name} ${classInfo.arm || ''}` : '—'}</td>
               <th>Institution</th>
-              <td>{reportCard.institution || '—'}</td>
+              <td style={{ overflowWrap: 'anywhere' }}>{reportCard.institution || '—'}</td>
             </tr>
             <tr>
               <th>Term</th>
@@ -144,6 +171,12 @@ function ReportCardSheet({ reportCard }) {
               <td>{publishState}</td>
               <th>Attendance</th>
               <td>{reportCard.attendance || '—'}</td>
+            </tr>
+            <tr>
+              <th>Verification</th>
+              <td style={{ wordBreak: 'break-word' }}>{verificationCode}</td>
+              <th>Result Link</th>
+              <td style={{ wordBreak: 'break-word' }}>{verificationLink}</td>
             </tr>
             <tr>
               <th>Behavior</th>
@@ -166,12 +199,12 @@ function ReportCardSheet({ reportCard }) {
         </table>
       </div>
 
-      <div className="page-break" />
-
-      <div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 148px', gap: '8px', alignItems: 'start' }}>
+        <div>
+        <div className="blue-panel" style={{ padding: '4px 6px', fontWeight: 700, marginBottom: '0' }}>Cognitive Domain</div>
         <table>
           <thead>
-            <tr style={{ background: '#f8fafc' }}>
+            <tr>
               <th>Subject</th>
               <th>CA</th>
               <th>Exam</th>
@@ -184,8 +217,8 @@ function ReportCardSheet({ reportCard }) {
             {reportCard.rows.map((row) => (
               <tr key={row.id}>
                 <td>{row.subjectName}</td>
-                <td>{row.ca}</td>
-                <td>{row.exam}</td>
+                <td>{scoreCell(row.ca, row.caNote)}</td>
+                <td>{scoreCell(row.exam, row.examNote)}</td>
                 <td>{row.total}</td>
                 <td>{row.grade}</td>
                 <td>{row.remark}</td>
@@ -204,22 +237,57 @@ function ReportCardSheet({ reportCard }) {
         <table style={{ marginTop: '6px' }}>
           <tbody>
             <tr>
-              <th>Total Subjects</th>
+              <th className="soft-head">Total Subjects</th>
               <td>{reportCard.totalSubjects}</td>
-              <th>Total Score</th>
+              <th className="soft-head">Total Score</th>
               <td>{reportCard.totalScore}</td>
-              <th>Average</th>
+              <th className="soft-head">Average</th>
               <td>{reportCard.averageScore}</td>
             </tr>
             <tr>
-              <th>Overall Grade</th>
+              <th className="soft-head">Overall Grade</th>
               <td>{reportCard.overallGrade}</td>
-              <th>Remarks</th>
+              <th className="soft-head">Remarks</th>
               <td colSpan={3}>{reportCard.overallGrade ? 'See subject remarks' : '—'}</td>
             </tr>
           </tbody>
         </table>
+        </div>
+        <aside>
+          <div className="blue-panel" style={{ padding: '6px', fontWeight: 700, textAlign: 'center' }}>Performance Summary</div>
+          <table>
+            <tbody>
+              <tr><th className="soft-head">Total Obtainable</th><td>{reportCard.totalSubjects * 100}</td></tr>
+              <tr><th className="soft-head">Total Score</th><td>{reportCard.totalScore}</td></tr>
+              <tr><th className="soft-head">Average</th><td>{reportCard.averageScore}</td></tr>
+              <tr><th className="soft-head">Grade</th><td>{reportCard.overallGrade}</td></tr>
+              <tr><th className="soft-head">Position</th><td>{classPosition}</td></tr>
+            </tbody>
+          </table>
+          <div className="blue-panel" style={{ marginTop: '8px', padding: '6px', fontWeight: 700, textAlign: 'center' }}>Attendance Summary</div>
+          <table>
+            <tbody>
+              <tr><th className="soft-head">Attendance</th><td>{reportCard.attendance || '—'}</td></tr>
+              <tr><th className="soft-head">Behavior</th><td>{reportCard.behavior || '—'}</td></tr>
+            </tbody>
+          </table>
+        </aside>
       </div>
+        {qrCodeUrl ? (
+          <div style={{ marginTop: '10px', display: 'flex', justifyContent: 'space-between', gap: '12px', alignItems: 'center' }}>
+            <div style={{ fontSize: '10px', color: '#475569', maxWidth: '70%' }}>
+              Scan the QR code or open this link to re-open the published result for verification:
+              <div style={{ marginTop: '4px', wordBreak: 'break-word' }}>{verificationLink}</div>
+            </div>
+            <div style={{ border: '1px solid #d1d5db', borderRadius: '10px', padding: '6px', background: '#fff' }}>
+              <SmartImage
+                src={qrCodeUrl}
+                alt="Result verification QR code"
+                style={{ width: '92px', height: '92px', objectFit: 'contain' }}
+              />
+            </div>
+          </div>
+        ) : null}
     </section>
   );
 }

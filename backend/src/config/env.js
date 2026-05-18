@@ -145,6 +145,24 @@ export const env = {
   sendgridApiKey: optionalEnv('SENDGRID_API_KEY', '').trim(),
   mailFrom: process.env.MAIL_FROM || process.env.EMAIL_FROM || '',
   mailFromName: process.env.MAIL_FROM_NAME || process.env.EMAIL_FROM_NAME || 'ATTAUFEEQ Model Academy Portal',
+  scratchCardBankName: optionalEnv('SCRATCH_CARD_BANK_NAME', 'School-designated bank account').trim() || 'School-designated bank account',
+  scratchCardAccountName: optionalEnv('SCRATCH_CARD_ACCOUNT_NAME', 'ATTAUFEEQ Model Academy').trim() || 'ATTAUFEEQ Model Academy',
+  scratchCardAccountNumber: optionalEnv('SCRATCH_CARD_ACCOUNT_NUMBER', 'Configure school account number').trim() || 'Configure school account number',
+  scratchCardAmountLabel:
+    optionalEnv('SCRATCH_CARD_AMOUNT_LABEL', 'Pay the scratch-card amount, then upload a clear receipt for admissions approval.').trim()
+    || 'Pay the scratch-card amount, then upload a clear receipt for admissions approval.',
+  scratchCardGuide: optionalEnv(
+    'SCRATCH_CARD_GUIDE',
+    [
+      'Pay into the school account shown here or submit cash through the approved school channel.',
+      'Open the receipt upload form and enter the exact amount paid.',
+      'Upload a clear receipt image or PDF and wait for admissions desk confirmation.',
+      'Once confirmed, admissions can release the result token straight to the student and parent dashboards.'
+    ].join('|')
+  )
+    .split('|')
+    .map((item) => item.trim())
+    .filter(Boolean),
   resetCodeTtlHours: (() => {
     const ttlDays = Number(process.env.RESET_CODE_TTL_DAYS || 0);
     if (Number.isFinite(ttlDays) && ttlDays > 0) {

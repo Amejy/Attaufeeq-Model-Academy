@@ -42,4 +42,5 @@ fi
 
 echo "Starting frontend (Vite)..."
 cd "$ROOT_DIR"
+export VITE_BACKEND_PROXY_TARGET="$BACKEND_BASE_URL"
 npm run dev:web

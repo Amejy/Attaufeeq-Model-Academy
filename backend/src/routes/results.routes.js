@@ -11,6 +11,7 @@ import { institutionEquals, normalizeInstitution } from '../utils/institution.js
 import { normalizeTerm } from '../utils/academicProgression.js';
 import { resolveStudentByIdentifier } from '../utils/studentCode.js';
 import { filterCountableActiveStudents } from '../utils/studentLifecycle.js';
+import { sendAdminNotificationEmail } from '../utils/mailer.js';
 import {
   compileFinalResultForGroup,
   createSubjectResult,
@@ -18,6 +19,7 @@ import {
   listPendingSubjectGroups,
   upsertFinalResult
 } from '../repositories/subjectResultRepository.js';
+import { getAssignedResultToken } from '../repositories/resultTokenRepository.js';
 
 const resultsRouter = Router();
 
@@ -69,6 +71,22 @@ async function ensureTokenAccess(studentId, term, sessionId) {
     }
   }
   return access;
+}
+
+async function getAvailableReleasedToken(studentId, term, sessionId) {
+  if (!studentId || !term) return null;
+  const token = await getAssignedResultToken({ studentId, term, sessionId, includeToken: true });
+  if (!token || token.status === 'expired' || token.status === 'used') return null;
+  return {
+    id: token.id,
+    token: token.token,
+    tokenPreview: token.tokenPreview,
+    term: token.term,
+    sessionId: token.sessionId,
+    assignedAt: token.assignedAt || '',
+    expiresAt: token.expiresAt || '',
+    remainingUses: token.remainingUses
+  };
 }
 
 // Fee-based result restrictions removed: access is no longer gated by fee status.
@@ -320,10 +338,15 @@ function buildReportCard(student, term = '', options = {}) {
 function enrichResult(item) {
   const subject = adminStore.subjects.find((subjectEntry) => subjectEntry.id === item.subjectId);
   const classItem = adminStore.classes.find((classEntry) => classEntry.id === item.classId);
+  const submittedTeacher = adminStore.teachers.find((teacher) => teacher.id === item.submittedByTeacherId);
+  const enteredTeacher = adminStore.teachers.find((teacher) => teacher.id === item.enteredByTeacherId);
+  const teacher = submittedTeacher || enteredTeacher || null;
   return {
     ...item,
     subjectName: subject?.name || item.subjectId,
-    classLabel: classItem ? `${classItem.name} ${classItem.arm}` : item.classId
+    classLabel: classItem ? `${classItem.name} ${classItem.arm}` : item.classId,
+    teacherName: teacher?.fullName || '',
+    teacherEmail: teacher?.email || teacher?.portalEmail || ''
   };
 }
 
@@ -344,6 +367,157 @@ function resolveSubjectsForClass(classId = '', institution = '') {
     .map((subjectId) => adminStore.subjects.find((subject) => subject.id === subjectId))
     .filter(Boolean)
     .map((subject) => ({ id: subject.id, name: subject.name }));
+}
+
+function buildResultReadiness({ term = '', classId = '', sessionId = '', institution = '', results = [] } = {}) {
+  const scopedClasses = adminStore.classes
+    .filter((classItem) => (classId ? classItem.id === classId : true))
+    .filter((classItem) => (institution ? institutionEquals(classItem.institution, institution) : true));
+  const classIds = new Set(scopedClasses.map((classItem) => classItem.id));
+  const scopedAssignments = adminStore.teacherAssignments
+    .filter((assignment) => classIds.has(assignment.classId))
+    .filter((assignment) => (term ? assignment.term === term : true));
+
+  const assignmentScopes = new Map();
+  scopedAssignments.forEach((assignment) => {
+    const key = `${assignment.classId}|${assignment.subjectId}|${assignment.term}`;
+    if (!assignmentScopes.has(key)) {
+      assignmentScopes.set(key, {
+        classId: assignment.classId,
+        subjectId: assignment.subjectId,
+        term: assignment.term,
+        teacherIds: new Set()
+      });
+    }
+    assignmentScopes.get(key).teacherIds.add(assignment.teacherId);
+  });
+
+  const resultMap = new Map();
+  results.forEach((result) => {
+    if (!(result.submittedAt || result.submittedByTeacherId || result.published)) return;
+    resultMap.set(`${result.studentId}|${result.classId}|${result.subjectId}|${result.term}`, result);
+  });
+
+  const missing = [];
+  let expectedRows = 0;
+  let submittedRows = 0;
+
+  for (const scope of assignmentScopes.values()) {
+    const classItem = adminStore.classes.find((item) => item.id === scope.classId);
+    const subject = adminStore.subjects.find((item) => item.id === scope.subjectId);
+    const teacherIds = [...scope.teacherIds];
+    const teacherNames = teacherIds
+      .map((teacherId) => adminStore.teachers.find((teacher) => teacher.id === teacherId)?.fullName)
+      .filter(Boolean);
+    const students = resolveClassStudents(scope.classId, sessionId)
+      .filter((student) => {
+        if (!institution) return true;
+        const studentInstitution = student.institution || classItem?.institution || '';
+        return institutionEquals(studentInstitution, institution);
+      });
+
+    students.forEach((student) => {
+      expectedRows += 1;
+      const row = resultMap.get(`${student.id}|${scope.classId}|${scope.subjectId}|${scope.term}`);
+      if (row) {
+        submittedRows += 1;
+        return;
+      }
+      missing.push({
+        studentId: student.id,
+        studentName: student.fullName,
+        classId: scope.classId,
+        classLabel: classItem ? `${classItem.name} ${classItem.arm}` : scope.classId,
+        subjectId: scope.subjectId,
+        subjectName: subject?.name || scope.subjectId,
+        term: scope.term,
+        teacherIds,
+        teacherNames
+      });
+    });
+  }
+
+  const ready = expectedRows > 0 && missing.length === 0;
+  const completionPercent = expectedRows ? Number(((submittedRows / expectedRows) * 100).toFixed(1)) : 0;
+  const missingTeachers = [...new Map(
+    missing.flatMap((item) =>
+      item.teacherIds.map((teacherId) => {
+        const teacher = adminStore.teachers.find((entry) => entry.id === teacherId);
+        return [teacherId, {
+          teacherId,
+          teacherName: teacher?.fullName || item.teacherNames[0] || teacherId,
+          teacherEmail: teacher?.email || teacher?.portalEmail || '',
+          missingCount: missing.filter((missingItem) => missingItem.teacherIds.includes(teacherId)).length
+        }];
+      })
+    )
+  ).values()].sort((a, b) => b.missingCount - a.missingCount || a.teacherName.localeCompare(b.teacherName));
+
+  return {
+    ready,
+    expectedRows,
+    submittedRows,
+    missingCount: missing.length,
+    completionPercent,
+    missing,
+    missingTeachers,
+    assignmentCount: assignmentScopes.size
+  };
+}
+
+function resultReadyRecipientsForStudent(student) {
+  const candidates = [
+    { email: student?.parentPortalEmail, name: student?.guardianName || 'Parent', roleLabel: 'Parent' },
+    { email: student?.guardianEmail, name: student?.guardianName || 'Parent', roleLabel: 'Parent' },
+    { email: student?.studentEmail || student?.portalEmail, name: student?.fullName || 'Student', roleLabel: 'Student' }
+  ];
+  const seen = new Set();
+  return candidates
+    .map((item) => ({ ...item, email: String(item.email || '').trim().toLowerCase() }))
+    .filter((item) => {
+      if (!item.email || seen.has(item.email)) return false;
+      seen.add(item.email);
+      return true;
+    });
+}
+
+async function notifyFamiliesResultsReady({ students = [], term = '', sessionName = '', classLabel = '' } = {}) {
+  const recipients = students.flatMap((student) =>
+    resultReadyRecipientsForStudent(student).map((recipient) => ({ ...recipient, student }))
+  );
+  if (!recipients.length) {
+    return { attempted: 0, sent: 0, skipped: 0, failed: 0 };
+  }
+
+  const title = `${term || 'Term'} results are ready`;
+  const deliveryResults = await Promise.allSettled(
+    recipients.map((recipient) =>
+      sendAdminNotificationEmail({
+        recipientName: recipient.name,
+        recipientEmail: recipient.email,
+        roleLabel: recipient.roleLabel,
+        title,
+        message: [
+          `${recipient.student?.fullName || 'Your child'}'s ${term || 'term'} result has been published${classLabel ? ` for ${classLabel}` : ''}.`,
+          sessionName ? `Session: ${sessionName}.` : '',
+          'Please log in to the portal or visit the result checker. If you have not activated access for this term, proceed with the result token process.'
+        ].filter(Boolean).join(' ')
+      })
+    )
+  );
+
+  return deliveryResults.reduce(
+    (summary, result) => {
+      if (result.status === 'fulfilled') {
+        if (result.value?.status === 'sent') summary.sent += 1;
+        else summary.skipped += 1;
+      } else {
+        summary.failed += 1;
+      }
+      return summary;
+    },
+    { attempted: recipients.length, sent: 0, skipped: 0, failed: 0 }
+  );
 }
 
 resultsRouter.get('/teacher/options', requireAuth, requireRole('teacher'), async (req, res) => {
@@ -468,6 +642,8 @@ resultsRouter.post('/teacher/scores', requireAuth, requireRole('teacher'), async
   for (const row of rows) {
     const ca = Number(row?.ca ?? 0);
     const exam = Number(row?.exam ?? 0);
+    const caNote = String(row?.caNote || '').trim();
+    const examNote = String(row?.examNote || '').trim();
 
     if (!validStudentIds.has(row?.studentId)) {
       return res.status(400).json({ message: 'One or more selected students do not belong to this class.' });
@@ -493,6 +669,12 @@ resultsRouter.post('/teacher/scores', requireAuth, requireRole('teacher'), async
     if (Number.isNaN(ca) || Number.isNaN(exam) || ca < 0 || ca > 40 || exam < 0 || exam > 60) {
       return res.status(400).json({ message: 'Scores must be within CA 0-40 and Exam 0-60.' });
     }
+
+    if ((ca === 0 && !caNote) || (exam === 0 && !examNote)) {
+      return res.status(400).json({
+        message: 'Add a short CA or exam note when a student has 0, for example Absent, Sick, or Did not write.'
+      });
+    }
   }
 
   const upserted = [];
@@ -502,6 +684,8 @@ resultsRouter.post('/teacher/scores', requireAuth, requireRole('teacher'), async
     const studentId = row.studentId;
     const ca = Number(row.ca || 0);
     const exam = Number(row.exam || 0);
+    const caNote = String(row.caNote || '').trim();
+    const examNote = String(row.examNote || '').trim();
     const total = ca + exam;
     const { grade, remark } = gradeFromTotal(total);
 
@@ -517,6 +701,8 @@ resultsRouter.post('/teacher/scores', requireAuth, requireRole('teacher'), async
       term,
       ca,
       exam,
+      caNote,
+      examNote,
       total,
       grade,
       remark,
@@ -840,13 +1026,18 @@ resultsRouter.get('/teacher/records', requireAuth, requireRole('teacher'), async
       const student = adminStore.students.find((studentItem) => studentItem.id === item.studentId);
       const classItem = adminStore.classes.find((classEntry) => classEntry.id === item.classId);
       const subject = adminStore.subjects.find((subjectEntry) => subjectEntry.id === item.subjectId);
+      const submittedTeacher = adminStore.teachers.find((teacherItem) => teacherItem.id === item.submittedByTeacherId);
+      const enteredTeacher = adminStore.teachers.find((teacherItem) => teacherItem.id === item.enteredByTeacherId);
+      const teacher = submittedTeacher || enteredTeacher || null;
 
       return {
         ...item,
         studentName: student?.fullName || item.studentId,
         classLabel: classItem ? `${classItem.name} ${classItem.arm}` : item.classId,
         subjectName: subject?.name || item.subjectId,
-        institution: item.institution || institution
+        institution: item.institution || institution,
+        teacherName: teacher?.fullName || '',
+        teacherEmail: teacher?.email || teacher?.portalEmail || ''
       };
     })
     .sort((a, b) => {
@@ -865,23 +1056,30 @@ resultsRouter.get('/admin/overview', requireAuth, requireRole('admin'), async (r
   const activeSession = await ensureActiveAcademicSession();
   const sessionId = req.query.sessionId ? String(req.query.sessionId) : activeSession?.id || '';
 
-  const filtered = (await listResults({ term, classId, sessionId, institution }))
+  const rawResults = await listResults({ term, classId, sessionId, institution });
+  const filtered = rawResults
     .map((item) => {
       const student = adminStore.students.find((studentItem) => studentItem.id === item.studentId);
       const classItem = adminStore.classes.find((classEntry) => classEntry.id === item.classId);
       const subject = adminStore.subjects.find((subjectEntry) => subjectEntry.id === item.subjectId);
+      const submittedTeacher = adminStore.teachers.find((teacherItem) => teacherItem.id === item.submittedByTeacherId);
+      const enteredTeacher = adminStore.teachers.find((teacherItem) => teacherItem.id === item.enteredByTeacherId);
+      const teacher = submittedTeacher || enteredTeacher || null;
 
       return {
         ...item,
         studentName: student?.fullName || item.studentId,
         classLabel: classItem ? `${classItem.name} ${classItem.arm}` : item.classId,
         institution: item.institution || classItem?.institution || '',
-        subjectName: subject?.name || item.subjectId
+        subjectName: subject?.name || item.subjectId,
+        teacherName: teacher?.fullName || '',
+        teacherEmail: teacher?.email || teacher?.portalEmail || ''
       };
     })
     .sort((a, b) => a.studentName.localeCompare(b.studentName) || a.subjectName.localeCompare(b.subjectName));
 
-  return res.json({ results: filtered });
+  const readiness = buildResultReadiness({ term, classId, sessionId, institution, results: rawResults });
+  return res.json({ results: filtered, readiness });
 });
 
 resultsRouter.get('/admin/pending-subject-results', requireAuth, requireRole('admin'), async (req, res) => {
@@ -926,6 +1124,18 @@ resultsRouter.post('/admin/publish', requireAuth, requireRole('admin'), async (r
   if (!sessionId) return res.status(400).json({ message: 'Active academic session is required.' });
 
   const candidateResults = await listResults({ term, classId, sessionId, institution });
+  const readiness = buildResultReadiness({ term, classId, sessionId, institution, results: candidateResults });
+  if (!readiness.ready) {
+    return res.status(400).json({
+      message: readiness.expectedRows
+        ? 'Cannot publish yet. Every assigned teacher must submit every subject result for every student in the selected class scope.'
+        : 'Cannot publish yet. No teacher assignments were found for this class, term, and session.',
+      readiness,
+      blockedCount: readiness.missingCount,
+      blockedStudents: readiness.missing.slice(0, 50)
+    });
+  }
+
   const submittedCandidates = candidateResults.filter(
     (item) => (item.submittedAt || item.submittedByTeacherId) && !item.published
   );
@@ -999,6 +1209,20 @@ resultsRouter.post('/admin/publish', requireAuth, requireRole('admin'), async (r
     });
   }
 
+  const publishedStudents = [...resultByStudent.keys()]
+    .map((studentId) => adminStore.students.find((item) => item.id === studentId))
+    .filter(Boolean);
+  const classInfo = classId
+    ? adminStore.classes.find((item) => item.id === classId)
+    : adminStore.classes.find((item) => item.id === updatedRows[0]?.classId);
+  const activeSessionName = activeSession?.sessionName || sessionId;
+  const familyNotification = await notifyFamiliesResultsReady({
+    students: publishedStudents,
+    term,
+    sessionName: activeSessionName,
+    classLabel: classInfo ? `${classInfo.name} ${classInfo.arm || ''}`.trim() : ''
+  });
+
   if (!updatedRows.length) {
     return res.status(400).json({
       message: 'Published results are locked and do not need to be published again.',
@@ -1021,7 +1245,8 @@ resultsRouter.post('/admin/publish', requireAuth, requireRole('admin'), async (r
     publishedCount: updatedRows.length,
     blockedCount: 0,
     blockedStudents: [],
-    compiledCount: resultByStudent.size
+    compiledCount: resultByStudent.size,
+    familyNotification
   });
 });
 
@@ -1060,7 +1285,8 @@ resultsRouter.get('/student', requireAuth, requireRole('student'), async (req, r
         results: [],
         subjects,
         holdStatus: 'token-required',
-        holdReason: 'Result access has not been activated for this term. Use your result token first.'
+        holdReason: 'Result access has not been activated for this term. Use your result token first.',
+        availableToken: await getAvailableReleasedToken(student.id, term, sessionId)
       });
     }
   }
@@ -1110,7 +1336,8 @@ resultsRouter.get('/student/report-card', requireAuth, requireRole('student'), a
     return res.json({
       reportCard: null,
       holdStatus: 'token-required',
-      holdReason: 'Result access has not been activated for this term. Use your result token first.'
+      holdReason: 'Result access has not been activated for this term. Use your result token first.',
+      availableToken: await getAvailableReleasedToken(student.id, term, sessionId)
     });
   }
 
@@ -1155,7 +1382,8 @@ resultsRouter.get('/parent', requireAuth, requireRole('parent'), async (req, res
         results: [],
         subjects,
         holdStatus: 'token-required',
-        holdReason: 'Result access has not been activated for this term. Use your result token first.'
+        holdReason: 'Result access has not been activated for this term. Use your result token first.',
+        availableToken: await getAvailableReleasedToken(child.id, term, sessionId)
       });
     }
   }
@@ -1209,7 +1437,8 @@ resultsRouter.get('/parent/report-card', requireAuth, requireRole('parent'), asy
       reportCard: null,
       children,
       holdStatus: 'token-required',
-      holdReason: 'Result access has not been activated for this term. Use your result token first.'
+      holdReason: 'Result access has not been activated for this term. Use your result token first.',
+      availableToken: await getAvailableReleasedToken(child.id, term, sessionId)
     });
   }
 

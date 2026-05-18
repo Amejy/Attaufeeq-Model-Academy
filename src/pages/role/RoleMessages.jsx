@@ -413,10 +413,10 @@ function RoleMessages() {
           description="Teacher contacts now follow the active child so you can start the right conversation for each student."
         />
       )}
-      <div className="thread-shell lg:grid-cols-3 lg:[grid-template-columns:minmax(0,0.95fr)_minmax(0,1.45fr)]">
+      <div className="thread-shell lg:grid-cols-3 lg:[grid-template-columns:minmax(18rem,0.95fr)_minmax(0,1.45fr)]">
         <section className="thread-panel interactive-card p-4 lg:col-span-1">
-          <h2 className="font-heading text-xl text-primary">Threads</h2>
-          <p className="mt-1 text-sm text-slate-600">Search, filter, and reopen conversations without losing context.</p>
+          <h2 className="text-wrap-safe font-heading text-xl text-primary">Threads</h2>
+          <p className="text-wrap-safe mt-1 text-sm text-slate-600">Search, filter, and reopen conversations without losing context.</p>
           <div className="mt-3 grid gap-3">
             <input
               value={threadSearch}
@@ -596,8 +596,8 @@ function RoleMessages() {
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-slate-800">{thread.title}</p>
-                    <p className="mt-1 text-xs text-slate-500">{thread.contextLabel || thread.participants.join(', ')}</p>
+                    <p className="text-wrap-safe text-sm font-semibold text-slate-800">{thread.title}</p>
+                    <p className="text-wrap-safe mt-1 text-xs text-slate-500">{thread.contextLabel || thread.participants.join(', ')}</p>
                   </div>
                   {thread.unread && (
                     <span className="shrink-0 rounded-full bg-emerald-600 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-white">
@@ -606,7 +606,7 @@ function RoleMessages() {
                   )}
                 </div>
                 {thread.lastMessage && (
-                  <p className="mt-2 text-xs leading-5 text-slate-600 line-clamp-2">{thread.lastMessage.body}</p>
+                  <p className="text-wrap-safe mt-2 text-xs leading-5 text-slate-600 line-clamp-2">{thread.lastMessage.body}</p>
                 )}
                 <p className="mt-2 text-[11px] font-medium text-slate-400">
                   {thread.updatedAt ? new Date(thread.updatedAt).toLocaleString() : 'No activity yet'}
@@ -650,10 +650,10 @@ function RoleMessages() {
         </section>
 
         <section className="thread-panel p-4 lg:col-span-2">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <h2 className="font-heading text-xl text-primary">{activeThread?.title || 'Select a thread'}</h2>
-              <p className="mt-1 text-sm text-slate-600">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-wrap-safe font-heading text-xl text-primary">{activeThread?.title || 'Select a thread'}</h2>
+              <p className="text-wrap-safe mt-1 text-sm text-slate-600">
                 {activeThread
                   ? 'Messages stay ordered by time so parents, staff, and admin can follow the conversation clearly.'
                   : 'Choose any thread from the left to read or reply.'}
@@ -664,14 +664,14 @@ function RoleMessages() {
                 type="button"
                 onClick={deleteThread}
                 disabled={deletingThread}
-                className="interactive-button rounded-2xl border border-red-300 px-3 py-2 text-xs font-semibold text-red-600 disabled:cursor-not-allowed disabled:opacity-60"
+                className="interactive-button w-full rounded-2xl border border-red-300 px-3 py-2 text-xs font-semibold text-red-600 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               >
                 {deletingThread ? 'Deleting...' : 'Delete Thread'}
               </button>
             )}
           </div>
           {activeThread?.contextLabel && (
-            <p className="mt-2 text-sm text-slate-600">
+            <p className="text-wrap-safe mt-2 text-sm text-slate-600">
               {activeThread.contextLabel}
               {activeThread.contextSubtitle ? ` • ${activeThread.contextSubtitle}` : ''}
             </p>
@@ -701,7 +701,7 @@ function RoleMessages() {
                     <span>{message.senderName}</span>
                     <span>{new Date(message.createdAt).toLocaleString()}</span>
                   </div>
-                  <p className="mt-2 text-sm leading-6 text-slate-700">{message.body}</p>
+                  <p className="text-wrap-safe mt-2 text-sm leading-6 text-slate-700">{message.body}</p>
                   {outgoing && (
                     <p className="mt-2 text-right text-[11px] font-semibold uppercase tracking-[0.14em] text-emerald-700">
                       {messageReadLabel(message)}
@@ -728,13 +728,13 @@ function RoleMessages() {
               disabled={!activeThread || !canReply}
             />
             <div className="thread-composer__actions">
-              <p className="text-xs text-slate-500">
+              <p className="text-wrap-safe text-xs text-slate-500">
                 Keep replies short and clear so non-technical users can follow the thread easily.
               </p>
               <button
                 type="submit"
                 disabled={!canSendMessage}
-                className="interactive-button rounded-[18px] bg-primary px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                className="interactive-button w-full rounded-[18px] bg-primary px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
               >
                 {sendingMessage ? 'Sending...' : 'Send'}
               </button>

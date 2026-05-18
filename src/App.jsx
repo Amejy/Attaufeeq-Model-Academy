@@ -402,7 +402,15 @@ function App() {
           path="/portal/admissions/fees"
           element={
             <ProtectedRoute allowedRoles={['admissions']} requiredFeature="fees">
-              <FeeManagement role="admissions" />
+              <FeeManagement role="admissions" section="fees" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/portal/admissions/receipt-desk"
+          element={
+            <ProtectedRoute allowedRoles={['admissions']} requiredFeature="fees">
+              <FeeManagement role="admissions" section="receipt-desk" />
             </ProtectedRoute>
           }
         />
@@ -522,7 +530,23 @@ function App() {
           path="/portal/student/fees"
           element={
             <ProtectedRoute allowedRoles={['student']} requiredFeature="fees">
-              <RoleFeeStatus role="student" />
+              <RoleFeeStatus role="student" section="fees" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/portal/student/scratch-card"
+          element={
+            <ProtectedRoute allowedRoles={['student']} requiredFeature="fees">
+              <RoleFeeStatus role="student" section="scratch-card" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/portal/student/receipt-upload"
+          element={
+            <ProtectedRoute allowedRoles={['student']} requiredFeature="fees">
+              <RoleFeeStatus role="student" section="receipt-upload" />
             </ProtectedRoute>
           }
         />
@@ -602,7 +626,23 @@ function App() {
           path="/portal/parent/fees"
           element={
             <ProtectedRoute allowedRoles={['parent']} requiredFeature="fees">
-              <RoleFeeStatus role="parent" />
+              <RoleFeeStatus role="parent" section="fees" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/portal/parent/scratch-card"
+          element={
+            <ProtectedRoute allowedRoles={['parent']} requiredFeature="fees">
+              <RoleFeeStatus role="parent" section="scratch-card" />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/portal/parent/receipt-upload"
+          element={
+            <ProtectedRoute allowedRoles={['parent']} requiredFeature="fees">
+              <RoleFeeStatus role="parent" section="receipt-upload" />
             </ProtectedRoute>
           }
         />

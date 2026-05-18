@@ -35,6 +35,7 @@ const roleNav = {
     { label: 'Admission Desk', to: '/portal/admissions/review', feature: 'admissions' },
     { label: 'Students', to: '/portal/admissions/students', feature: 'students' },
     { label: 'Fees', to: '/portal/admissions/fees', feature: 'fees' },
+    { label: 'Receipt Desk', to: '/portal/admissions/receipt-desk', feature: 'fees' },
     { label: 'Result Tokens', to: '/portal/admissions/result-tokens', feature: 'result-tokens' },
     { label: 'News & Events', to: '/portal/admissions/news', feature: 'news' },
     { label: 'Library', to: '/portal/admissions/library', feature: 'library' },
@@ -58,7 +59,9 @@ const roleNav = {
     { label: 'Timetable', to: '/portal/student/timetable', feature: 'timetable' },
     { label: 'Attendance', to: '/portal/student/attendance', feature: 'attendance' },
     { label: 'Results', to: '/portal/student/results', feature: 'results' },
-    { label: 'Fees', to: '/portal/student/fees', feature: 'fees' },
+    { label: 'School Fees', to: '/portal/student/fees', feature: 'fees' },
+    { label: 'Scratch Card', to: '/portal/student/scratch-card', feature: 'fees' },
+    { label: 'Receipt Upload', to: '/portal/student/receipt-upload', feature: 'fees' },
     { label: 'Library', to: '/portal/student/library', feature: 'library' },
     { label: 'Madrasa', to: '/portal/student/madrasa', feature: 'madrasa' },
     { label: 'Notifications', to: '/portal/student/notifications', feature: 'notifications' },
@@ -70,7 +73,9 @@ const roleNav = {
     { label: 'Timetable', to: '/portal/parent/timetable', feature: 'timetable' },
     { label: 'Attendance', to: '/portal/parent/attendance', feature: 'attendance' },
     { label: 'Results', to: '/portal/parent/results', feature: 'results' },
-    { label: 'Fees', to: '/portal/parent/fees', feature: 'fees' },
+    { label: 'School Fees', to: '/portal/parent/fees', feature: 'fees' },
+    { label: 'Scratch Card', to: '/portal/parent/scratch-card', feature: 'fees' },
+    { label: 'Receipt Upload', to: '/portal/parent/receipt-upload', feature: 'fees' },
     { label: 'Library', to: '/portal/parent/library', feature: 'library' },
     { label: 'Madrasa', to: '/portal/parent/madrasa', feature: 'madrasa' },
     { label: 'Notifications', to: '/portal/parent/notifications', feature: 'notifications' },
@@ -125,7 +130,7 @@ function PortalLayout({ role, title, subtitle, children, actions = null }) {
 
   return (
     <main className="min-h-screen overflow-x-clip bg-[radial-gradient(circle_at_top,rgba(13,148,136,0.1),transparent_42%),radial-gradient(circle_at_bottom,rgba(245,158,11,0.12),transparent_40%)]">
-      <div className="mx-auto flex w-full max-w-[1600px] gap-4 px-3 py-4 sm:gap-6 sm:px-6 sm:py-6 lg:px-8">
+      <div className="mx-auto flex w-full max-w-[1600px] gap-4 px-3 py-3 sm:gap-6 sm:px-5 sm:py-5 lg:px-8">
         <aside className="gradient-shell hidden w-[21.5rem] shrink-0 overflow-hidden rounded-[34px] p-5 text-white shadow-[0_24px_56px_rgba(8,37,26,0.18),0_8px_20px_rgba(8,37,26,0.12)] lg:block">
           <div className="flex items-center gap-3">
             <div className="flex min-w-0 flex-1 items-center gap-3 rounded-[26px] border border-white/12 bg-white/10 p-4 backdrop-blur-md">
@@ -140,7 +145,7 @@ function PortalLayout({ role, title, subtitle, children, actions = null }) {
                 <Tooltip text={user?.fullName || 'User'} className="block min-w-0">
                   <p className="text-truncate-2 text-lg font-bold leading-tight">{user?.fullName || 'User'}</p>
                 </Tooltip>
-                <p className="text-label-nowrap mt-1 text-[11px] uppercase tracking-[0.2em] text-white/70">{role} portal</p>
+                <p className="text-wrap-safe mt-1 text-[11px] uppercase tracking-[0.2em] text-white/70">{role} portal</p>
               </div>
             </div>
             <ThemeToggle />
@@ -148,7 +153,7 @@ function PortalLayout({ role, title, subtitle, children, actions = null }) {
 
           {institutionLabel && (
             <Tooltip text={institutionLabel} className="mt-4 inline-flex max-w-full">
-              <p className="text-label-nowrap inline-flex max-w-full rounded-full border border-white/18 bg-white/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/80">
+              <p className="text-wrap-safe inline-flex max-w-full rounded-full border border-white/18 bg-white/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/80">
                 {institutionLabel}
               </p>
             </Tooltip>
@@ -166,7 +171,7 @@ function PortalLayout({ role, title, subtitle, children, actions = null }) {
                   }`
                 }
               >
-                <span className="text-label-nowrap block">{item.label}</span>
+                <span className="text-label-clamp block leading-tight">{item.label}</span>
               </NavLink>
             ))}
           </nav>
@@ -181,7 +186,7 @@ function PortalLayout({ role, title, subtitle, children, actions = null }) {
         </aside>
 
         <div className="min-w-0 flex-1">
-          <div className="mb-4 flex flex-wrap items-start justify-between gap-3 rounded-[24px] border border-white/50 bg-white/74 p-3.5 shadow-[0_16px_34px_rgba(15,23,42,0.08)] backdrop-blur-xl sm:items-center sm:rounded-[28px] sm:p-4 lg:hidden">
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-3 rounded-[24px] border border-white/50 bg-white/74 p-3 shadow-[0_16px_34px_rgba(15,23,42,0.08)] backdrop-blur-xl sm:items-center sm:rounded-[28px] sm:p-4 lg:hidden">
             <div className="min-w-0 flex-1">
               <p className="text-xs uppercase tracking-[0.22em] text-slate-500">{role} portal</p>
               <Tooltip text={user?.fullName || 'User'} className="block min-w-0">
@@ -189,7 +194,7 @@ function PortalLayout({ role, title, subtitle, children, actions = null }) {
               </Tooltip>
               {institutionLabel && (
                 <Tooltip text={institutionLabel} className="mt-1 block min-w-0">
-                  <p className="text-truncate-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">{institutionLabel}</p>
+                  <p className="text-label-clamp text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">{institutionLabel}</p>
                 </Tooltip>
               )}
             </div>
@@ -246,7 +251,7 @@ function PortalLayout({ role, title, subtitle, children, actions = null }) {
             </div>
           )}
 
-          <section className="glass-panel relative overflow-hidden p-4 sm:p-7 lg:p-8">
+          <section className="glass-panel relative overflow-hidden p-4 sm:p-6 lg:p-7">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(15,81,50,0.08),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(217,179,84,0.12),transparent_30%)]" />
             <div className="relative">
               <PageHeader role={role} title={title} subtitle={subtitle} actions={actions} />

@@ -1180,9 +1180,9 @@ function ManageAdmissions() {
                         <tr className="border-t border-slate-100">
                           <td className="px-4 py-3">
                             <p className="font-semibold text-slate-800">{admission.fullName}</p>
-                            <p className="mt-1 text-xs text-slate-500">{admission.guardianName} • {admission.phone}</p>
+                            <p className="text-wrap-safe mt-1 text-xs text-slate-500">{admission.guardianName} • {admission.phone}</p>
                             {admission.forwardedToAdminAt && (
-                              <p className="mt-1 text-xs text-emerald-700">
+                              <p className="text-wrap-safe mt-1 text-xs text-emerald-700">
                                 Forwarded to admin on {new Date(admission.forwardedToAdminAt).toLocaleString()}
                               </p>
                             )}
@@ -1195,17 +1195,17 @@ function ManageAdmissions() {
                           <td className="px-4 py-3">{admission.documents?.length || 0}</td>
                           <td className="px-4 py-3">{admission.workflowHistory?.length || 0} events</td>
                           <td className="px-4 py-3">
-                            <div className="flex flex-wrap gap-2">
-                              <button type="button" onClick={() => toggleExpanded(admission.id)} className="interactive-button">
+                            <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+                              <button type="button" onClick={() => toggleExpanded(admission.id)} className="interactive-button w-full">
                                 {open ? 'Hide' : 'Open'}
                               </button>
-                              <button type="button" disabled={!canApprove || rowBusy} onClick={() => updateStatus(admission.id, 'approved')} className="interactive-button border-emerald-300 text-emerald-700">
+                              <button type="button" disabled={!canApprove || rowBusy} onClick={() => updateStatus(admission.id, 'approved')} className="interactive-button w-full border-emerald-300 text-emerald-700">
                                 Approve
                               </button>
-                              <button type="button" disabled={!canReject || rowBusy} onClick={() => updateStatus(admission.id, 'rejected')} className="interactive-button border-red-300 text-red-700">
+                              <button type="button" disabled={!canReject || rowBusy} onClick={() => updateStatus(admission.id, 'rejected')} className="interactive-button w-full border-red-300 text-red-700">
                                 Reject
                               </button>
-                              <button type="button" disabled={!canVerify || rowBusy} onClick={() => updateVerification(admission.id, 'verified')} className="interactive-button">
+                              <button type="button" disabled={!canVerify || rowBusy} onClick={() => updateVerification(admission.id, 'verified')} className="interactive-button w-full">
                                 Verify
                               </button>
                             </div>
@@ -1214,9 +1214,9 @@ function ManageAdmissions() {
                         {open && (
                           <tr className="border-t border-slate-100 bg-slate-50/70">
                             <td className="px-4 py-4" colSpan={9}>
-                              <div className="grid gap-4 xl:grid-cols-4">
+                              <div className="grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
                                 <article className="dashboard-tile">
-                                  <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Uploaded documents</h3>
+                                  <h3 className="text-wrap-safe text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Uploaded documents</h3>
                                   <div className="mt-3 space-y-2">
                                     {admission.documents?.map((document, index) => (
                                       <div key={`${admission.id}-doc-${index}`} className="rounded-xl border border-slate-200 px-3 py-3 text-sm text-slate-700">
@@ -1241,12 +1241,12 @@ function ManageAdmissions() {
                                 </article>
 
                                 <article className="dashboard-tile">
-                                  <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Workflow history</h3>
+                                  <h3 className="text-wrap-safe text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Workflow history</h3>
                                   <div className="mt-3 space-y-3">
                                     {admission.workflowHistory?.map((event) => (
                                       <div key={event.id} className="rounded-xl border border-slate-200 px-3 py-3">
                                         <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{event.action}</p>
-                                        <p className="mt-1 text-sm text-slate-700">{event.detail}</p>
+                                        <p className="text-wrap-safe mt-1 text-sm text-slate-700">{event.detail}</p>
                                         <p className="mt-1 text-xs text-slate-500">{new Date(event.createdAt).toLocaleString()}</p>
                                       </div>
                                     ))}
@@ -1255,7 +1255,7 @@ function ManageAdmissions() {
                                 </article>
 
                                 <article className="dashboard-tile">
-                                  <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Applicant contact</h3>
+                                  <h3 className="text-wrap-safe text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Applicant contact</h3>
                                   <div className="mt-3 space-y-3 text-sm text-slate-700">
                                     <div>
                                       <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Guardian</p>
@@ -1295,7 +1295,7 @@ function ManageAdmissions() {
                                 </article>
 
                                 <article className="dashboard-tile">
-                                  <h3 className="text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Portal delivery</h3>
+                                  <h3 className="text-wrap-safe text-sm font-semibold uppercase tracking-[0.16em] text-slate-500">Portal delivery</h3>
                                   <div className="mt-3 space-y-3 text-sm text-slate-700">
                                     <div>
                                       <p className="text-xs uppercase tracking-[0.14em] text-slate-500">Status</p>
@@ -1310,9 +1310,9 @@ function ManageAdmissions() {
                                       {(admission.portalDelivery || []).map((record) => (
                                         <div key={`${admission.id}-${record.userId}`} className="rounded-xl border border-slate-200 px-3 py-2">
                                           <p className="text-xs uppercase tracking-[0.14em] text-slate-500">{record.label}</p>
-                                          <p className="mt-1 font-semibold">{record.email}</p>
-                                          <p className="mt-1 text-xs text-slate-600">Delivery: {record.emailDeliveryStatus}</p>
-                                        </div>
+                                      <p className="text-wrap-safe mt-1 font-semibold">{record.email}</p>
+                                      <p className="mt-1 text-xs text-slate-600">Delivery: {record.emailDeliveryStatus}</p>
+                                    </div>
                                       ))}
                                       {!admission.portalDelivery?.length && (
                                         <p className="text-sm text-slate-500">No portal delivery recorded yet.</p>
@@ -1334,23 +1334,23 @@ function ManageAdmissions() {
                                 </article>
                               </div>
 
-                              <div className="mt-4 flex flex-wrap gap-2">
-                                <button type="button" disabled={!canRejectDocuments || rowBusy} onClick={() => updateVerification(admission.id, 'rejected')} className="interactive-button border-red-300 text-red-700">
+                              <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
+                                <button type="button" disabled={!canRejectDocuments || rowBusy} onClick={() => updateVerification(admission.id, 'rejected')} className="interactive-button w-full border-red-300 text-red-700">
                                   Reject Documents
                                 </button>
                                 {paymentStatus === 'confirmed' ? (
-                                  <button type="button" disabled={!canResetPayment || rowBusy} onClick={() => updatePaymentStatus(admission.id, 'pending')} className="interactive-button border-amber-300 text-amber-700">
+                                  <button type="button" disabled={!canResetPayment || rowBusy} onClick={() => updatePaymentStatus(admission.id, 'pending')} className="interactive-button w-full border-amber-300 text-amber-700">
                                     Reset Payment
                                   </button>
                                 ) : (
-                                  <button type="button" disabled={!canConfirmPayment || rowBusy} onClick={() => updatePaymentStatus(admission.id, 'confirmed')} className="interactive-button border-emerald-300 text-emerald-700">
+                                  <button type="button" disabled={!canConfirmPayment || rowBusy} onClick={() => updatePaymentStatus(admission.id, 'confirmed')} className="interactive-button w-full border-emerald-300 text-emerald-700">
                                     Confirm Payment
                                   </button>
                                 )}
-                                <button type="button" disabled={!canScheduleInterview || rowBusy} onClick={() => scheduleInterview(admission.id)} className="interactive-button">
+                                <button type="button" disabled={!canScheduleInterview || rowBusy} onClick={() => scheduleInterview(admission.id)} className="interactive-button w-full">
                                   Schedule Interview
                                 </button>
-                                <button type="button" disabled={!canGenerateOffer || rowBusy} onClick={() => generateOffer(admission.id)} className="interactive-button">
+                                <button type="button" disabled={!canGenerateOffer || rowBusy} onClick={() => generateOffer(admission.id)} className="interactive-button w-full">
                                   Generate Offer
                                 </button>
                                 {!isAdmissionsDesk && (
@@ -1358,7 +1358,7 @@ function ManageAdmissions() {
                                     type="button"
                                     onClick={() => promoteAdmission(admission)}
                                     disabled={!canConfirm || rowBusy}
-                                    className="interactive-button"
+                                    className="interactive-button w-full"
                                   >
                                     Confirm Full Admission
                                   </button>
@@ -1368,7 +1368,7 @@ function ManageAdmissions() {
                                     type="button"
                                     onClick={() => deleteAdmission(admission.id)}
                                     disabled={rowBusy}
-                                    className="interactive-button border-red-300 text-red-700"
+                                    className="interactive-button w-full border-red-300 text-red-700"
                                   >
                                     Delete Admission
                                   </button>

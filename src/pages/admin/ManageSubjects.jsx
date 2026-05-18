@@ -159,7 +159,7 @@ function ManageSubjects() {
         <button
           type="submit"
           disabled={creatingSubject || !canCreateSubject}
-          className="interactive-button self-end"
+          className="interactive-button w-full self-end xl:w-auto"
         >
           {creatingSubject ? 'Adding...' : 'Add Subject'}
         </button>
@@ -171,10 +171,10 @@ function ManageSubjects() {
       <div className="mt-8 space-y-6">
         {groupedSubjects.map((group) => (
           <section key={group.institution} className="admin-surface">
-            <div className="admin-toolbar">
-              <div>
-                <h2 className="font-heading text-2xl text-primary">{group.institution}</h2>
-                <p className="mt-2 text-sm text-slate-600">Only subjects for this institution are listed here.</p>
+            <div className="admin-toolbar gap-3">
+              <div className="min-w-0">
+                <h2 className="font-heading text-2xl text-primary text-wrap-safe">{group.institution}</h2>
+                <p className="mt-2 text-sm text-slate-600 text-wrap-safe">Only subjects for this institution are listed here.</p>
               </div>
               <span className={`rounded-full border px-3 py-2 text-xs font-semibold ${institutionAccent(group.institution)}`}>
                 {group.rows.length} subjects
@@ -182,15 +182,15 @@ function ManageSubjects() {
             </div>
 
             <div className="mt-5 overflow-x-auto rounded-3xl border border-slate-200">
-              <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                <span>Subjects table</span>
+              <div className="flex flex-col gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+                <span className="text-wrap-safe">Subjects table</span>
                 <button
                   type="button"
                   onClick={() => {
                     const nextValue = !resolveShowRows(group.institution);
                     setShowRowsByInstitution((prev) => ({ ...prev, [group.institution]: nextValue }));
                   }}
-                  className="interactive-button"
+                  className="interactive-button w-full sm:w-auto"
                 >
                   {resolveShowRows(group.institution) ? 'Hide rows' : 'Show rows'}
                 </button>
@@ -212,7 +212,7 @@ function ManageSubjects() {
                   )}
                   {resolveShowRows(group.institution) && group.rows.map((subject) => (
                     <tr key={subject.id} className="border-t border-slate-100">
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3 text-wrap-safe">
                         {editingId === subject.id ? (
                           <input
                             value={editForm.name}
@@ -225,12 +225,12 @@ function ManageSubjects() {
                       </td>
                       <td className="px-4 py-3">
                         {editingId === subject.id ? (
-                          <div className="flex gap-2">
+                          <div className="flex flex-col gap-2 sm:flex-row">
                             <button
                               type="button"
                               onClick={() => handleUpdate(subject.id)}
                               disabled={savingSubjectId === subject.id || !canSaveSubject}
-                              className="interactive-button"
+                              className="interactive-button w-full sm:w-auto"
                             >
                               {savingSubjectId === subject.id ? 'Saving...' : 'Save'}
                             </button>
@@ -238,17 +238,17 @@ function ManageSubjects() {
                               type="button"
                               onClick={cancelEdit}
                               disabled={savingSubjectId === subject.id}
-                              className="interactive-button"
+                              className="interactive-button w-full sm:w-auto"
                             >
                               Cancel
                             </button>
                           </div>
                         ) : (
-                          <div className="flex gap-2">
+                          <div className="flex flex-col gap-2 sm:flex-row">
                             <button
                               type="button"
                               onClick={() => startEdit(subject)}
-                              className="interactive-button"
+                              className="interactive-button w-full sm:w-auto"
                             >
                               Edit
                             </button>
@@ -256,7 +256,7 @@ function ManageSubjects() {
                               type="button"
                               onClick={() => handleDelete(subject.id)}
                               disabled={deletingId === subject.id}
-                              className="interactive-button border-red-300 text-red-600"
+                              className="interactive-button w-full border-red-300 text-red-600 sm:w-auto"
                             >
                               {deletingId === subject.id ? 'Deleting...' : 'Delete'}
                             </button>

@@ -8,17 +8,17 @@ function InsightBars({ title, subtitle, items = [] }) {
   return (
     <section className="glass-card p-4 sm:p-6">
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">{title}</p>
-          {subtitle && <p className="mt-2 text-sm leading-5 text-slate-600 sm:leading-6">{subtitle}</p>}
+        <div className="min-w-0">
+          <p className="text-wrap-safe text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 sm:tracking-[0.22em]">{title}</p>
+          {subtitle && <p className="text-wrap-safe mt-2 text-sm leading-5 text-slate-600 sm:leading-6">{subtitle}</p>}
         </div>
       </div>
       <div className="mt-5 space-y-4 sm:mt-6">
         {items.map((item) => (
           <div key={item.label}>
             <div className="flex items-center justify-between gap-3 text-[13px] sm:text-sm">
-              <span className="font-semibold text-slate-800">{item.label}</span>
-              <span className="text-slate-500">{item.value}</span>
+              <span className="text-wrap-safe min-w-0 font-semibold text-slate-800">{item.label}</span>
+              <span className="shrink-0 text-slate-500">{item.value}</span>
             </div>
             <div className="mt-2 h-3 overflow-hidden rounded-full bg-slate-200/80">
               <div
@@ -45,7 +45,7 @@ function OrbitChart({ title, value, maxValue, detail, ringColor = '#0f5132', glo
 
   return (
     <section className="glass-card flex flex-col items-center justify-center p-4 text-center sm:p-6">
-      <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-500">{title}</p>
+      <p className="text-wrap-safe text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 sm:tracking-[0.22em]">{title}</p>
       <div className="relative mt-4 flex h-32 w-32 items-center justify-center sm:mt-5 sm:h-36 sm:w-36">
         <div
           className="absolute inset-4 rounded-full blur-2xl"
@@ -70,7 +70,7 @@ function OrbitChart({ title, value, maxValue, detail, ringColor = '#0f5132', glo
           <p className="mt-1 text-xs uppercase tracking-[0.16em] text-slate-500">{value} / {safeMax}</p>
         </div>
       </div>
-      {detail && <p className="mt-3 text-sm leading-5 text-slate-600 sm:mt-4 sm:leading-6">{detail}</p>}
+      {detail && <p className="text-wrap-safe mt-3 text-sm leading-5 text-slate-600 sm:mt-4 sm:leading-6">{detail}</p>}
     </section>
   );
 }

@@ -193,7 +193,7 @@ function ManageTimetable() {
       title="Timetable Management"
       subtitle="Filter by institution and class so opening JSS 1 now shows only the JSS 1 timetable."
     >
-      <form onSubmit={createEntry} className="admin-surface grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <form onSubmit={createEntry} className="admin-surface grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
         <label className="field-shell">
           <span className="field-label">Institution</span>
           <select value={institutionFilter} onChange={(e) => setInstitutionFilter(e.target.value)} className="form-select" required>
@@ -245,7 +245,7 @@ function ManageTimetable() {
         <button
           type="submit"
           disabled={!form.classId || !form.subjectId || !form.teacherId}
-          className="interactive-button self-end"
+          className="interactive-button w-full self-end xl:col-span-3 2xl:col-span-1"
         >
           Add Entry
         </button>
@@ -262,7 +262,7 @@ function ManageTimetable() {
 
       <div className="admin-surface mt-6">
         <div className="admin-toolbar">
-          <label className="field-shell min-w-[14rem]">
+          <label className="field-shell min-w-0 sm:min-w-[14rem]">
             <span className="field-label">Class filter</span>
             <select value={classFilter} onChange={(e) => setClassFilter(e.target.value)} className="form-select">
               <option value="">All Classes</option>
@@ -305,14 +305,14 @@ function ManageTimetable() {
             )}
             {showRows && filteredEntries.map((item) => (
               <tr key={item.id} className="border-t border-slate-100">
-                <td className="px-4 py-3">{item.dayOfWeek}</td>
-                <td className="px-4 py-3">{item.startTime} - {item.endTime}</td>
-                <td className="px-4 py-3">{item.classLabel || item.classId}</td>
-                <td className="px-4 py-3">{item.subjectName}</td>
-                <td className="px-4 py-3">{item.teacherName}</td>
-                <td className="px-4 py-3">{item.room || '-'}</td>
+                <td className="px-4 py-3 text-wrap-safe">{item.dayOfWeek}</td>
+                <td className="px-4 py-3 text-wrap-safe">{item.startTime} - {item.endTime}</td>
+                <td className="px-4 py-3 text-wrap-safe">{item.classLabel || item.classId}</td>
+                <td className="px-4 py-3 text-wrap-safe">{item.subjectName}</td>
+                <td className="px-4 py-3 text-wrap-safe">{item.teacherName}</td>
+                <td className="px-4 py-3 text-wrap-safe">{item.room || '-'}</td>
                 <td className="px-4 py-3">
-                  <button type="button" disabled={deletingId === item.id} onClick={() => removeEntry(item.id)} className="interactive-button border-red-300 text-red-600">{deletingId === item.id ? 'Deleting...' : 'Delete'}</button>
+                  <button type="button" disabled={deletingId === item.id} onClick={() => removeEntry(item.id)} className="interactive-button w-full border-red-300 text-red-600 sm:w-auto">{deletingId === item.id ? 'Deleting...' : 'Delete'}</button>
                 </td>
               </tr>
             ))}

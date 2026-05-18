@@ -27,13 +27,13 @@ export function buildAdminCredentials() {
   return { email, password };
 }
 
-export async function createAdminAccount({ email, password }) {
+export async function createAdminAccount({ email, password, role = 'admin', fullName = 'Automation Admin' }) {
   const passwordHash = await hashPassword(password);
   return createUser({
-    fullName: 'Automation Admin',
+    fullName,
     email,
     passwordHash,
-    role: 'admin',
+    role,
     mustChangePassword: false
   });
 }

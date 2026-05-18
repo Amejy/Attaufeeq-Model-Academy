@@ -21,6 +21,8 @@ function mapDbResult(row) {
     term: row.term,
     ca: Number(row.ca || 0),
     exam: Number(row.exam || 0),
+    caNote: row.ca_note || '',
+    examNote: row.exam_note || '',
     total: Number(row.total || 0),
     grade: row.grade,
     remark: row.remark,
@@ -49,6 +51,8 @@ function normalizeResultInput(record) {
     term: String(record?.term || '').trim(),
     ca: Number(record?.ca || 0),
     exam: Number(record?.exam || 0),
+    caNote: String(record?.caNote || '').trim(),
+    examNote: String(record?.examNote || '').trim(),
     total: Number(record?.total || 0),
     grade: String(record?.grade || '').trim(),
     remark: String(record?.remark || '').trim(),
@@ -178,18 +182,20 @@ export async function upsertResult(record) {
 
   const result = await query(
     `INSERT INTO results (
-      id, student_id, class_id, session_id, subject_id, term, ca, exam, total, grade, remark,
+      id, student_id, class_id, session_id, subject_id, term, ca, exam, ca_note, exam_note, total, grade, remark,
       published, approved_at, approved_by_user_id, approved_by_name, approved_by_email,
       institution, entered_by_teacher_id, submitted_at, submitted_by_teacher_id, created_at, updated_at
     ) VALUES (
-      $1, $2, $3, NULLIF($4, ''), $5, $6, $7, $8, $9, $10, $11,
-      $12, CAST(NULLIF($13, '') AS TIMESTAMPTZ), NULLIF($14, ''), NULLIF($15, ''), NULLIF($16, ''),
-      NULLIF($17, ''), NULLIF($18, ''), CAST(NULLIF($19, '') AS TIMESTAMPTZ), NULLIF($20, ''), $21::TIMESTAMPTZ, $22::TIMESTAMPTZ
+      $1, $2, $3, NULLIF($4, ''), $5, $6, $7, $8, $9, $10, $11, $12, $13,
+      $14, CAST(NULLIF($15, '') AS TIMESTAMPTZ), NULLIF($16, ''), NULLIF($17, ''), NULLIF($18, ''),
+      NULLIF($19, ''), NULLIF($20, ''), CAST(NULLIF($21, '') AS TIMESTAMPTZ), NULLIF($22, ''), $23::TIMESTAMPTZ, $24::TIMESTAMPTZ
     )
     ON CONFLICT (student_id, class_id, subject_id, term, session_id)
     DO UPDATE SET
       ca = EXCLUDED.ca,
       exam = EXCLUDED.exam,
+      ca_note = EXCLUDED.ca_note,
+      exam_note = EXCLUDED.exam_note,
       total = EXCLUDED.total,
       grade = EXCLUDED.grade,
       remark = EXCLUDED.remark,
@@ -214,6 +220,8 @@ export async function upsertResult(record) {
       item.term,
       item.ca,
       item.exam,
+      item.caNote,
+      item.examNote,
       item.total,
       item.grade,
       item.remark,

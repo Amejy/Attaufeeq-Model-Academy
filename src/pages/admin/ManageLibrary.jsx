@@ -433,7 +433,7 @@ function ManageLibrary() {
       {success && <p className="mt-4 text-sm text-emerald-700">{success}</p>}
 
       <section className="mt-6 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="font-heading text-2xl text-primary">Inventory View</h2>
+        <h2 className="text-wrap-safe font-heading text-2xl text-primary">Inventory View</h2>
         <div className="mt-3 overflow-x-auto rounded-2xl border border-slate-200">
           <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
             <span>Inventory table</span>
@@ -467,9 +467,9 @@ function ManageLibrary() {
               )}
               {showInventoryRows && scopedBooks.map((book) => (
                 <tr key={book.id} className="border-t border-slate-100">
-                  <td className="px-4 py-3">{book.title}</td>
-                  <td className="px-4 py-3">{book.classLabel || '-'}</td>
-                  <td className="px-4 py-3">{book.category}</td>
+                  <td className="px-4 py-3 text-wrap-safe">{book.title}</td>
+                  <td className="px-4 py-3 text-wrap-safe">{book.classLabel || '-'}</td>
+                  <td className="px-4 py-3 text-wrap-safe">{book.category}</td>
                   <td className="px-4 py-3">{book.totalCopies}</td>
                   <td className="px-4 py-3">{Number(book.totalCopies || 0) - Number(book.availableCopies || 0)}</td>
                   <td className="px-4 py-3 font-semibold text-slate-900">{book.availableCopies}</td>
@@ -478,7 +478,7 @@ function ManageLibrary() {
                       type="button"
                       onClick={() => removeBook(book)}
                       disabled={removingBookId === book.id}
-                      className="rounded-2xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="interactive-button w-full rounded-2xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                     >
                       {removingBookId === book.id ? 'Removing...' : 'Remove'}
                     </button>
@@ -496,7 +496,7 @@ function ManageLibrary() {
       </section>
 
       <section className="mt-6 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-        <h2 className="font-heading text-2xl text-primary">Issue and Return Records</h2>
+        <h2 className="text-wrap-safe font-heading text-2xl text-primary">Issue and Return Records</h2>
         <div className="mt-4 flex flex-wrap items-center gap-3">
           <input
             value={issueSearch}
@@ -540,17 +540,17 @@ function ManageLibrary() {
               )}
               {showIssueRows && filteredIssues.map((issue) => (
                 <tr key={issue.id} className="border-t border-slate-100">
-                  <td className="px-4 py-3">{issue.bookTitle}</td>
+                  <td className="px-4 py-3 text-wrap-safe">{issue.bookTitle}</td>
                   <td className="px-4 py-3">
-                    <div className="font-medium text-slate-900">{issue.studentName || issue.borrowerName || '-'}</div>
+                    <div className="text-wrap-safe font-medium text-slate-900">{issue.studentName || issue.borrowerName || '-'}</div>
                     {issue.studentId && (
                       <div className="mt-1 text-xs text-slate-500">
                         {buildStudentCode({ id: issue.studentId, institution: issue.institution || institutionFilter })}
                       </div>
                     )}
                   </td>
-                  <td className="px-4 py-3">{issue.borrowerContact || '-'}</td>
-                  <td className="px-4 py-3">{issue.classLabel || '-'}</td>
+                  <td className="px-4 py-3 text-wrap-safe">{issue.borrowerContact || '-'}</td>
+                  <td className="px-4 py-3 text-wrap-safe">{issue.classLabel || '-'}</td>
                   <td className="px-4 py-3">{new Date(issue.issuedAt).toLocaleDateString()}</td>
                   <td className="px-4 py-3">{new Date(issue.dueDate).toLocaleDateString()}</td>
                   <td className="px-4 py-3">{issue.returnedAt ? new Date(issue.returnedAt).toLocaleDateString() : '-'}</td>
@@ -565,7 +565,7 @@ function ManageLibrary() {
                         type="button"
                         onClick={() => deleteIssue(issue.id)}
                         disabled={processingIssueId === issue.id}
-                        className="rounded-2xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="interactive-button w-full rounded-2xl border border-red-200 px-3 py-2 text-xs font-semibold text-red-600 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                       >
                         {processingIssueId === issue.id ? 'Deleting...' : 'Delete Record'}
                       </button>
@@ -574,7 +574,7 @@ function ManageLibrary() {
                         type="button"
                         disabled={processingIssueId === issue.id}
                         onClick={() => returnBook(issue.id)}
-                        className="rounded-2xl border border-slate-300 px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+                        className="interactive-button w-full rounded-2xl border border-slate-300 px-3 py-2 text-xs disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
                       >
                         {processingIssueId === issue.id ? 'Updating...' : 'Mark Returned'}
                       </button>

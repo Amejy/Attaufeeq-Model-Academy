@@ -112,7 +112,7 @@ async function start() {
   let currentPort = env.port;
   let retryCount = 0;
   const maxRetries = 5;
-  const bindHost = '0.0.0.0';
+  const bindHost = env.host;
 
   const startServer = () => {
     server = app.listen(currentPort, bindHost, () => {
@@ -124,6 +124,7 @@ async function start() {
 
     server.on('error', (error) => {
       if (error.code === 'EADDRINUSE') {
+        server?.close?.();
         console.error(
           `Backend port ${currentPort} is already in use on ${bindHost}. Stop the old process or change PORT in backend/.env.`
         );
@@ -142,8 +143,9 @@ async function start() {
       }
 
       if (error.code === 'EACCES' || error.code === 'EPERM') {
+        server?.close?.();
         console.error(
-          `Backend cannot bind to ${env.host}:${currentPort}. Check permissions/host settings in backend/.env.`
+          `Backend cannot bind to ${bindHost}:${currentPort}. Check permissions/host settings in backend/.env.`
         );
         process.exit(1);
         return;

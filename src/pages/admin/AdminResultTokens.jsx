@@ -12,7 +12,13 @@ const STATUS_OPTIONS = [
 function formatDate(value) {
   if (!value) return '—';
   try {
-    return new Date(value).toLocaleString();
+    return new Intl.DateTimeFormat('en-NG', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    }).format(new Date(value));
   } catch {
     return value;
   }
@@ -25,7 +31,7 @@ function StatusPill({ status }) {
     expired: 'border-slate-300 bg-slate-100 text-slate-600'
   };
   return (
-    <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${styles[status] || styles.unused}`}>
+    <span className={`inline-flex whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] ${styles[status] || styles.unused}`}>
       {status}
     </span>
   );
@@ -310,13 +316,13 @@ function AdminResultTokens() {
           <table className="min-w-full text-sm">
             <thead className="bg-slate-50 text-left">
               <tr>
-                <th className="px-4 py-3">Token</th>
-                <th className="px-4 py-3">Status</th>
-                <th className="px-4 py-3">Reserved For</th>
-                <th className="px-4 py-3">Term</th>
-                <th className="px-4 py-3">Usage</th>
-                <th className="px-4 py-3">Created</th>
-                <th className="px-4 py-3">Expires</th>
+                <th className="px-4 py-3 whitespace-nowrap">Token</th>
+                <th className="px-4 py-3 whitespace-nowrap">Status</th>
+                <th className="px-4 py-3 whitespace-nowrap">Reserved For</th>
+                <th className="px-4 py-3 whitespace-nowrap">Term</th>
+                <th className="px-4 py-3 whitespace-nowrap">Usage</th>
+                <th className="px-4 py-3 whitespace-nowrap">Created</th>
+                <th className="px-4 py-3 whitespace-nowrap">Expires</th>
               </tr>
             </thead>
             <tbody>
@@ -343,13 +349,13 @@ function AdminResultTokens() {
               )}
               {showRows && !loading && tokens.map((token) => (
                 <tr key={token.id} className="border-t border-slate-100">
-                  <td className="px-4 py-3 font-semibold text-slate-800">{token.token}</td>
+                  <td className="text-code-break px-4 py-3 font-semibold tracking-[0.08em] text-slate-800">{token.token}</td>
                   <td className="px-4 py-3"><StatusPill status={token.status} /></td>
-                  <td className="px-4 py-3">{token.assignedStudentId || '—'}</td>
-                  <td className="px-4 py-3">{token.term || '—'}</td>
-                  <td className="px-4 py-3">{token.usedCount}/{token.maxUses} used</td>
-                  <td className="px-4 py-3">{formatDate(token.createdAt)}</td>
-                  <td className="px-4 py-3">{formatDate(token.expiresAt)}</td>
+                  <td className="text-code-break px-4 py-3 text-slate-700">{token.assignedStudentId || '—'}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-slate-700">{token.term || '—'}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-slate-700">{token.usedCount}/{token.maxUses} used</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-slate-700">{formatDate(token.createdAt)}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-slate-700">{formatDate(token.expiresAt)}</td>
                 </tr>
               ))}
             </tbody>

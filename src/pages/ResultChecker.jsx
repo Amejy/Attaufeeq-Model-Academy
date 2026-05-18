@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import ResultCard from '../components/ResultCard';
 import { GlassPanel, PremiumHero } from '../components/public/PremiumPublic';
 import { apiJson } from '../utils/publicApi';
@@ -6,15 +7,23 @@ import { apiJson } from '../utils/publicApi';
 const TERM_OPTIONS = ['First Term', 'Second Term', 'Third Term'];
 
 function ResultChecker() {
+  const [searchParams] = useSearchParams();
   const [studentIdentifier, setStudentIdentifier] = useState('');
   const [term, setTerm] = useState('First Term');
   const [token, setToken] = useState('');
+  const [sessionId, setSessionId] = useState('');
   const [payload, setPayload] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  async function handleSubmit(event) {
-    event.preventDefault();
+  async function handleSubmit(event, overrides = {}) {
+    event?.preventDefault?.();
+    const nextStudentIdentifier = String(overrides.studentIdentifier ?? studentIdentifier).trim();
+    const nextTerm = String(overrides.term ?? term).trim();
+    const nextToken = String(overrides.token ?? token).trim().toUpperCase();
+    const nextSessionId = String(overrides.sessionId ?? sessionId).trim();
+
+    if (!nextStudentIdentifier || !nextTerm) return;
     setLoading(true);
     setError('');
     setPayload(null);
@@ -22,9 +31,10 @@ function ResultChecker() {
       const data = await apiJson('/result-tokens/check', {
         method: 'POST',
         body: {
-          token,
-          studentIdentifier,
-          term
+          token: nextToken,
+          studentIdentifier: nextStudentIdentifier,
+          term: nextTerm,
+          sessionId: nextSessionId
         }
       });
       setPayload(data);
@@ -34,6 +44,63 @@ function ResultChecker() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    const nextStudentIdentifier = String(searchParams.get('studentIdentifier') || '').trim();
+    const nextTerm = String(searchParams.get('term') || '').trim();
+    const nextToken = String(searchParams.get('token') || '').trim().toUpperCase();
+    const nextSessionId = String(searchParams.get('sessionId') || '').trim();
+
+    if (!nextStudentIdentifier) return;
+
+    setStudentIdentifier(nextStudentIdentifier);
+    if (nextTerm && TERM_OPTIONS.includes(nextTerm)) {
+      setTerm(nextTerm);
+    }
+    if (nextToken) {
+      setToken(nextToken);
+    }
+    if (nextSessionId) {
+      setSessionId(nextSessionId);
+    }
+
+    if (!nextTerm || !TERM_OPTIONS.includes(nextTerm)) return;
+
+    let cancelled = false;
+
+    async function runPrefillCheck() {
+      setLoading(true);
+      setError('');
+      setPayload(null);
+      try {
+        const data = await apiJson('/result-tokens/check', {
+          method: 'POST',
+          body: {
+            token: nextToken,
+            studentIdentifier: nextStudentIdentifier,
+            term: nextTerm,
+            sessionId: nextSessionId
+          }
+        });
+        if (!cancelled) {
+          setPayload(data);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setError(err.message || 'Unable to validate token.');
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    }
+
+    void runPrefillCheck();
+    return () => {
+      cancelled = true;
+    };
+  }, [searchParams]);
 
   const student = payload?.student;
   const holdReason = payload?.holdReason;
@@ -70,6 +137,12 @@ function ResultChecker() {
         .result-card__footer { margin-top: 20px; display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; border-top: 1px dashed #e2e8f0; padding-top: 16px; }
         .result-card__footer img { width: 140px; height: auto; object-fit: contain; }
         .result-card__signature-line { width: 140px; height: 2px; background: #0f172a; margin-top: 24px; }
+        .result-card__verification { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 14px; align-items: center; border: 1px solid #e2e8f0; border-radius: 18px; background: #f8fafc; padding: 12px; }
+        .result-card__verification-box { display: flex; align-items: center; justify-content: center; border-radius: 16px; background: #fff; padding: 8px; }
+        .result-card__verification-qr { width: 88px; height: 88px; object-fit: contain; }
+        .result-card__verification-copy { min-width: 0; display: grid; gap: 4px; color: #475569; font-size: 12px; }
+        .result-card__verification-copy h3 { margin: 0; color: #0f172a; font-size: 15px; font-weight: 700; }
+        .result-card__verification-copy span { font-size: 11px; overflow-wrap: anywhere; word-break: break-word; }
       </style>
     `;
     printWindow.document.open();
@@ -131,6 +204,12 @@ function ResultChecker() {
               value={token}
               onChange={(e) => setToken(e.target.value.toUpperCase())}
               placeholder="Result Token (required only for first-time access)"
+              className="rounded-2xl border border-slate-300 px-4 py-3 text-sm sm:col-span-2"
+            />
+            <input
+              value={sessionId}
+              onChange={(e) => setSessionId(e.target.value)}
+              placeholder="Session ID (optional)"
               className="rounded-2xl border border-slate-300 px-4 py-3 text-sm sm:col-span-2"
             />
             <button

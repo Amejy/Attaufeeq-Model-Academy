@@ -233,13 +233,13 @@ function ManageTeachers() {
         records={lastCredentials}
       />
 
-      <form onSubmit={handleSubmit} className="mt-6 grid gap-3 rounded-xl border border-slate-200 p-4 sm:grid-cols-4">
+      <form onSubmit={handleSubmit} className="admin-surface mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <input
           required
           value={form.fullName}
           onChange={(e) => setForm((prev) => ({ ...prev, fullName: e.target.value }))}
           placeholder="Full name"
-          className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="form-field"
         />
         <input
           type="email"
@@ -247,12 +247,12 @@ function ManageTeachers() {
           value={form.email}
           onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))}
           placeholder="Email"
-          className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="form-field"
         />
         <select
           value={form.institution}
           onChange={(e) => setForm((prev) => ({ ...prev, institution: e.target.value }))}
-          className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="form-select"
         >
           {ADMIN_INSTITUTIONS.map((institution) => (
             <option key={institution} value={institution}>{institution}</option>
@@ -261,13 +261,13 @@ function ManageTeachers() {
         <button
           type="submit"
           disabled={creatingTeacher || !canCreateTeacher}
-          className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+          className="interactive-button w-full xl:w-auto"
         >
           {creatingTeacher ? 'Adding...' : 'Add Teacher'}
         </button>
       </form>
 
-      <div className="mt-4 grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="admin-surface mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <input
           value={search}
           onChange={(e) => {
@@ -275,7 +275,7 @@ function ManageTeachers() {
             setPage(1);
           }}
           placeholder="Search name or email"
-          className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="form-field"
         />
         <select
           value={institutionFilter}
@@ -283,7 +283,7 @@ function ManageTeachers() {
             setInstitutionFilter(e.target.value);
             setPage(1);
           }}
-          className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="form-select"
         >
           <option value="all">All Institutions</option>
           {ADMIN_INSTITUTIONS.map((institution) => (
@@ -296,7 +296,7 @@ function ManageTeachers() {
             setSortBy(e.target.value);
             setPage(1);
           }}
-          className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="form-select"
         >
           <option value="name-asc">Sort by name</option>
           <option value="created-desc">Newest added</option>
@@ -308,12 +308,12 @@ function ManageTeachers() {
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
 
       <div className="mt-6 overflow-x-auto rounded-xl border border-slate-200">
-        <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-          <span>Teachers table</span>
+        <div className="flex flex-col gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+          <span className="text-wrap-safe">Teachers table</span>
           <button
             type="button"
             onClick={() => setShowRows((prev) => !prev)}
-            className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"
+            className="interactive-button w-full sm:w-auto"
           >
             {showRows ? 'Hide rows' : 'Show rows'}
           </button>
@@ -338,35 +338,35 @@ function ManageTeachers() {
             )}
             {showRows && pagedTeachers.map((teacher) => (
               <tr key={teacher.id} className="border-t border-slate-100">
-                <td className="px-4 py-3">
+                <td className="px-4 py-3 text-wrap-safe">
                   {editingId === teacher.id ? (
                     <input
                       value={editForm.fullName}
                       onChange={(e) => setEditForm((prev) => ({ ...prev, fullName: e.target.value }))}
-                      className="w-full rounded-md border border-slate-300 px-2 py-1"
+                      className="form-field w-full"
                     />
                   ) : (
                     highlightMatch(teacher.fullName, debouncedSearch)
                   )}
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3 text-wrap-safe">
                   {editingId === teacher.id ? (
                     <input
                       type="email"
                       value={editForm.email}
                       onChange={(e) => setEditForm((prev) => ({ ...prev, email: e.target.value }))}
-                      className="w-full rounded-md border border-slate-300 px-2 py-1"
+                      className="form-field w-full"
                     />
                   ) : (
                     highlightMatch(teacher.email, debouncedSearch)
                   )}
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-4 py-3 text-wrap-safe">
                   {editingId === teacher.id ? (
                     <select
                       value={editForm.institution}
                       onChange={(e) => setEditForm((prev) => ({ ...prev, institution: e.target.value }))}
-                      className="w-full rounded-md border border-slate-300 px-2 py-1"
+                      className="form-select w-full"
                     >
                       {ADMIN_INSTITUTIONS.map((institution) => (
                         <option key={institution} value={institution}>{institution}</option>
@@ -377,19 +377,19 @@ function ManageTeachers() {
                   )}
                 </td>
                 <td className="px-4 py-3">
-                  <div>
-                    <p className="font-medium text-slate-800">{teacher.portalEmail || teacher.email}</p>
-                    <p className="mt-1 text-xs text-slate-500">{teacher.accountStatus === 'provisioned' ? 'Forced password change on first login' : 'Portal account pending'}</p>
+                  <div className="min-w-0">
+                    <p className="font-medium text-slate-800 text-wrap-safe">{teacher.portalEmail || teacher.email}</p>
+                    <p className="mt-1 text-xs text-slate-500 text-wrap-safe">{teacher.accountStatus === 'provisioned' ? 'Forced password change on first login' : 'Portal account pending'}</p>
                   </div>
                 </td>
                 <td className="px-4 py-3">
                   {editingId === teacher.id ? (
-                    <div className="flex gap-2">
+                    <div className="flex flex-col gap-2 sm:flex-row">
                       <button
                         type="button"
                         onClick={() => handleUpdate(teacher.id)}
                         disabled={savingTeacherId === teacher.id || !canSaveTeacher}
-                        className="rounded-md bg-primary px-3 py-1 text-xs font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                        className="interactive-button w-full sm:w-auto"
                       >
                         {savingTeacherId === teacher.id ? 'Saving...' : 'Save'}
                       </button>
@@ -397,17 +397,17 @@ function ManageTeachers() {
                         type="button"
                         onClick={cancelEdit}
                         disabled={savingTeacherId === teacher.id}
-                        className="rounded-md border border-slate-300 px-3 py-1 text-xs disabled:cursor-not-allowed disabled:opacity-60"
+                        className="interactive-button w-full sm:w-auto"
                       >
                         Cancel
                       </button>
                     </div>
                   ) : (
-                    <div className="flex gap-2">
+                    <div className="flex flex-col gap-2 sm:flex-row">
                       <button
                         type="button"
                         onClick={() => startEdit(teacher)}
-                        className="rounded-md border border-slate-300 px-3 py-1 text-xs"
+                        className="interactive-button w-full sm:w-auto"
                       >
                         Edit
                       </button>
@@ -415,7 +415,7 @@ function ManageTeachers() {
                         type="button"
                         onClick={() => handleDelete(teacher.id)}
                         disabled={deletingId === teacher.id}
-                        className="rounded-md border border-red-300 px-3 py-1 text-xs text-red-600 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="interactive-button w-full border-red-300 text-red-600 sm:w-auto"
                       >
                         {deletingId === teacher.id ? 'Deleting...' : 'Delete'}
                       </button>
@@ -433,23 +433,23 @@ function ManageTeachers() {
         </table>
       </div>
 
-      <div className="mt-3 flex items-center justify-between gap-2 text-sm text-slate-600">
-        <p>Showing {pagedTeachers.length} of {filteredTeachers.length} teachers</p>
-        <div className="flex items-center gap-2">
+      <div className="mt-3 flex flex-col gap-3 text-sm text-slate-600 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-wrap-safe">Showing {pagedTeachers.length} of {filteredTeachers.length} teachers</p>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <button
             type="button"
             disabled={page <= 1}
             onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-            className="rounded-md border border-slate-300 px-3 py-1 disabled:cursor-not-allowed disabled:opacity-50"
+            className="interactive-button w-full sm:w-auto"
           >
             Prev
           </button>
-          <span>Page {page} / {totalPages}</span>
+          <span className="text-center text-wrap-safe">Page {page} / {totalPages}</span>
           <button
             type="button"
             disabled={page >= totalPages}
             onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-            className="rounded-md border border-slate-300 px-3 py-1 disabled:cursor-not-allowed disabled:opacity-50"
+            className="interactive-button w-full sm:w-auto"
           >
             Next
           </button>

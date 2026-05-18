@@ -13,23 +13,53 @@ function isCountableActiveStudent(item) {
   return Boolean(item?.userId && item?.portalEmail && ['pending', 'provisioned', 'active'].includes(status));
 }
 
-function FeeManagement({ role = '' }) {
+function createReceiptObjectUrl(receiptDataUrl) {
+  const value = String(receiptDataUrl || '').trim();
+  if (!value.startsWith('data:')) {
+    return { url: value, mimeType: '' };
+  }
+
+  const [header, data] = value.split(',', 2);
+  if (!header || !data) {
+    throw new Error('Receipt data is malformed.');
+  }
+
+  const mimeType = header.slice(5).split(';')[0] || 'application/octet-stream';
+  const binary = atob(data);
+  const bytes = new Uint8Array(binary.length);
+
+  for (let index = 0; index < binary.length; index += 1) {
+    bytes[index] = binary.charCodeAt(index);
+  }
+
+  return {
+    url: URL.createObjectURL(new Blob([bytes], { type: mimeType })),
+    mimeType
+  };
+}
+
+function FeeManagement({ role = '', section = 'all' }) {
   const { apiJson, user } = useAuth();
   const resolvedRole = role || user?.role || 'admin';
+  const isReceiptDeskOnly = resolvedRole === 'admissions' && section === 'receipt-desk';
+  const showReceiptDesk = resolvedRole !== 'admissions' || isReceiptDeskOnly;
   const managementBase = resolvedRole === 'admissions' ? '/operations' : '/admin';
   const defaultInstitution = ADMIN_INSTITUTIONS[0];
   const [classes, setClasses] = useState([]);
   const [students, setStudents] = useState([]);
   const [plans, setPlans] = useState([]);
   const [payments, setPayments] = useState([]);
+  const [paymentRequests, setPaymentRequests] = useState([]);
   const [defaulters, setDefaulters] = useState([]);
   const [sessions, setSessions] = useState([]);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [creatingPlan, setCreatingPlan] = useState(false);
   const [editingPlanId, setEditingPlanId] = useState('');
+  const [deletingPlanId, setDeletingPlanId] = useState('');
   const [recordingPayment, setRecordingPayment] = useState(false);
   const [deletingPaymentId, setDeletingPaymentId] = useState('');
+  const [reviewingRequestId, setReviewingRequestId] = useState('');
   const [showPlans, setShowPlans] = useState(true);
   const [showPayments, setShowPayments] = useState(true);
   const [showDefaulters, setShowDefaulters] = useState(true);
@@ -37,6 +67,7 @@ function FeeManagement({ role = '' }) {
   const [institutionFilter, setInstitutionFilter] = useState(defaultInstitution);
   const [classFilter, setClassFilter] = useState('');
   const [termFilter, setTermFilter] = useState('First Term');
+  const [receiptPreview, setReceiptPreview] = useState(null);
 
   const [planForm, setPlanForm] = useState({ classId: '', term: 'First Term', amount: '' });
   const [paymentForm, setPaymentForm] = useState({
@@ -64,6 +95,7 @@ function FeeManagement({ role = '' }) {
     setStudents([]);
     setPlans([]);
     setPayments([]);
+    setPaymentRequests([]);
     setDefaulters([]);
 
     try {
@@ -92,6 +124,7 @@ function FeeManagement({ role = '' }) {
       setStudents(studentsData.students || []);
       setPlans(plansData.plans || []);
       setPayments(paymentsData.payments || []);
+      setPaymentRequests(paymentsData.paymentRequests || []);
       setDefaulters(defaultersData.defaulters || []);
     } catch (err) {
       if (loadDataSeq.current !== requestId) return;
@@ -102,6 +135,12 @@ function FeeManagement({ role = '' }) {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  useEffect(() => () => {
+    if (receiptPreview?.url?.startsWith('blob:')) {
+      URL.revokeObjectURL(receiptPreview.url);
+    }
+  }, [receiptPreview]);
 
   const scopedClasses = useMemo(
     () => classes.filter((item) => canonicalInstitution(item.institution) === canonicalInstitution(institutionFilter)),
@@ -250,6 +289,12 @@ function FeeManagement({ role = '' }) {
       .filter((item) => item.term === termFilter),
     [payments, scopedStudents, termFilter]
   );
+  const filteredPaymentRequests = useMemo(
+    () => paymentRequests
+      .filter((item) => scopedStudents.some((student) => student.id === item.studentId))
+      .filter((item) => item.term === termFilter),
+    [paymentRequests, scopedStudents, termFilter]
+  );
   const filteredDefaulters = useMemo(
     () => defaulters
       .filter((item) => canonicalInstitution(item.student?.institution) === canonicalInstitution(institutionFilter))
@@ -303,6 +348,25 @@ function FeeManagement({ role = '' }) {
       term: plan.term || 'First Term',
       amount: String(plan.amount ?? '')
     });
+  }
+
+  async function deletePlan(planId) {
+    if (!window.confirm('Delete this fee plan?')) return;
+    setError('');
+    setSuccess('');
+    setDeletingPlanId(planId);
+    try {
+      await apiJson(`/fees/admin/plans/${planId}`, { method: 'DELETE' });
+      if (editingPlanId === planId) {
+        resetPlanForm(planForm.classId);
+      }
+      setSuccess('Fee plan deleted.');
+      void loadData({ preserveSuccess: true });
+    } catch (err) {
+      setError(err.message || 'Unable to delete fee plan.');
+    } finally {
+      setDeletingPlanId('');
+    }
   }
 
   async function recordPayment(event) {
@@ -380,16 +444,83 @@ function FeeManagement({ role = '' }) {
     }
   }
 
+  async function reviewPaymentRequest(requestId, status) {
+    setError('');
+    setSuccess('');
+    setReviewingRequestId(requestId);
+    try {
+      await apiJson(`/fees/admin/payment-requests/${requestId}`, {
+        method: 'PUT',
+        body: { status }
+      });
+      setSuccess(status === 'approved' ? 'Receipt confirmed and payment recorded.' : 'Receipt rejected.');
+      void loadData({ preserveSuccess: true });
+    } catch (err) {
+      setError(err.message || 'Unable to review receipt.');
+    } finally {
+      setReviewingRequestId('');
+    }
+  }
+
+  async function releaseResultToken(requestId) {
+    setError('');
+    setSuccess('');
+    setReviewingRequestId(requestId);
+    try {
+      await apiJson(`/fees/admin/payment-requests/${requestId}/release-token`, {
+        method: 'POST'
+      });
+      setSuccess('Result token released to the student and parent dashboards.');
+      void loadData({ preserveSuccess: true });
+    } catch (err) {
+      setError(err.message || 'Unable to release result token.');
+    } finally {
+      setReviewingRequestId('');
+    }
+  }
+
+  function openReceiptPreview(request) {
+    setError('');
+
+    try {
+      if (receiptPreview?.url?.startsWith('blob:')) {
+        URL.revokeObjectURL(receiptPreview.url);
+      }
+
+      const preview = createReceiptObjectUrl(request.receiptDataUrl);
+      setReceiptPreview({
+        requestId: request.id,
+        receiptName: request.receiptName || 'receipt',
+        url: preview.url,
+        mimeType: preview.mimeType
+      });
+    } catch (err) {
+      setError(err.message || 'Unable to preview receipt.');
+    }
+  }
+
+  function closeReceiptPreview() {
+    if (receiptPreview?.url?.startsWith('blob:')) {
+      URL.revokeObjectURL(receiptPreview.url);
+    }
+    setReceiptPreview(null);
+  }
+
   return (
     <PortalLayout
       role={resolvedRole}
-      title="Fee Management"
-      subtitle="Finance is now institution-aware and can be drilled down to a single class."
+      title={isReceiptDeskOnly ? `Receipt Upload Desk (${termFilter})` : resolvedRole === 'admissions' ? 'Fee Management' : 'Fee Management'}
+      subtitle={isReceiptDeskOnly
+        ? 'Parent and student receipt uploads wait here for admissions confirmation before payment records and result-token release.'
+        : resolvedRole === 'admissions'
+        ? 'Manage school fee plans and payment records for the selected institution and session.'
+        : 'Finance is now institution-aware and can be drilled down to a single class.'}
     >
+      {!isReceiptDeskOnly && (
       <div className="grid gap-4 lg:grid-cols-3">
         {ADMIN_INSTITUTIONS.map((institution) => (
           <article key={institution} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
-            <p className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${institutionAccent(institution)}`}>
+            <p className={`inline-flex max-w-full text-wrap-safe rounded-full border px-3 py-1 text-xs font-semibold ${institutionAccent(institution)}`}>
               {institution}
             </p>
             <p className="mt-4 text-3xl font-bold text-slate-900">
@@ -401,6 +532,7 @@ function FeeManagement({ role = '' }) {
           </article>
         ))}
       </div>
+      )}
 
       <div className="mt-6 flex flex-wrap gap-3 rounded-[28px] border border-slate-200 bg-white p-5">
         <select value={sessionId} onChange={(e) => setSessionId(e.target.value)} className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm sm:w-auto">
@@ -429,6 +561,7 @@ function FeeManagement({ role = '' }) {
         </div>
       )}
 
+      {!isReceiptDeskOnly && (
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
         <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="font-heading text-2xl text-primary">{editingPlanId ? 'Edit Fee Plan' : 'Create Fee Plan'}</h2>
@@ -582,11 +715,13 @@ function FeeManagement({ role = '' }) {
           </form>
         </section>
       </div>
+      )}
 
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
       {success && <p className="mt-4 text-sm text-emerald-700">{success}</p>}
 
-      <section className="mt-8 grid gap-6 lg:grid-cols-3">
+      <section className={`mt-8 grid gap-6 ${isReceiptDeskOnly ? 'lg:grid-cols-1' : 'lg:grid-cols-3'}`}>
+        {!isReceiptDeskOnly && (
         <article className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
           <h3 className="font-heading text-xl text-primary">Fee Plans ({termFilter})</h3>
           <div className="mt-2 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
@@ -608,24 +743,36 @@ function FeeManagement({ role = '' }) {
             {showPlans && filteredPlans.map((plan) => {
               const classItem = classes.find((item) => item.id === plan.classId);
               return (
-                <li key={plan.id} className="flex flex-wrap items-center justify-between gap-2">
-                  <span>
+                <li key={plan.id} className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
+                  <p className="text-wrap-safe pr-1">
                     {classItem?.label || `${classItem?.name || plan.classId} ${classItem?.arm || ''}`} | {plan.term} | NGN {plan.amount}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => startEditPlan(plan)}
-                    disabled={creatingPlan}
-                    className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    Edit
-                  </button>
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => startEditPlan(plan)}
+                      disabled={creatingPlan || deletingPlanId === plan.id}
+                      className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => deletePlan(plan.id)}
+                      disabled={creatingPlan || deletingPlanId === plan.id}
+                      className="rounded-md border border-red-300 px-2 py-1 text-xs text-red-600 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {deletingPlanId === plan.id ? 'Deleting...' : 'Delete'}
+                    </button>
+                  </div>
                 </li>
               );
             })}
           </ul>
         </article>
+        )}
 
+        {!isReceiptDeskOnly && (
         <article className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
           <h3 className="font-heading text-xl text-primary">Payments ({termFilter})</h3>
           <div className="mt-2 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
@@ -647,24 +794,130 @@ function FeeManagement({ role = '' }) {
             {showPayments && filteredPayments.map((payment) => {
               const student = students.find((item) => item.id === payment.studentId);
               return (
-                <li key={payment.id} className="flex flex-wrap items-center justify-between gap-2">
-                  <span>
+                <li key={payment.id} className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
+                  <p className="text-wrap-safe pr-1">
                     {student?.fullName || payment.studentId} | {buildStudentCode(student || { id: payment.studentId })} | {payment.term} | NGN {payment.amountPaid}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => deletePayment(payment.id)}
-                    disabled={deletingPaymentId === payment.id}
-                    className="rounded-md border border-red-300 px-2 py-1 text-xs text-red-600 disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {deletingPaymentId === payment.id ? 'Deleting...' : 'Delete'}
-                  </button>
+                  </p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => deletePayment(payment.id)}
+                      disabled={deletingPaymentId === payment.id}
+                      className="rounded-md border border-red-300 px-2 py-1 text-xs text-red-600 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {deletingPaymentId === payment.id ? 'Deleting...' : 'Delete'}
+                    </button>
+                  </div>
                 </li>
               );
             })}
           </ul>
         </article>
+        )}
 
+        {showReceiptDesk && (
+        <article className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+          <h3 className="font-heading text-xl text-primary">Receipt Upload Desk ({termFilter})</h3>
+          <p className="mt-2 text-sm text-slate-600">
+            Parent and student receipt uploads wait here for admissions confirmation before payment records and result-token release.
+          </p>
+          {receiptPreview && (
+            <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <p className="text-sm font-semibold text-slate-900">
+                  Receipt preview: {receiptPreview.receiptName}
+                </p>
+                <div className="flex flex-wrap gap-2 text-xs">
+                  <a
+                    href={receiptPreview.url}
+                    download={receiptPreview.receiptName}
+                    className="rounded-md border border-slate-300 bg-white px-2 py-1 font-semibold text-slate-700"
+                  >
+                    Download receipt
+                  </a>
+                  <button
+                    type="button"
+                    onClick={closeReceiptPreview}
+                    className="rounded-md border border-slate-300 bg-white px-2 py-1 font-semibold text-slate-700"
+                  >
+                    Close preview
+                  </button>
+                </div>
+              </div>
+              {receiptPreview.mimeType.includes('pdf') ? (
+                <iframe
+                  title="Receipt preview"
+                  src={receiptPreview.url}
+                  className="mt-3 h-[32rem] w-full rounded-xl border border-slate-200 bg-white"
+                />
+              ) : (
+                <img
+                  src={receiptPreview.url}
+                  alt="Payment receipt preview"
+                  className="mt-3 max-h-[32rem] w-full rounded-xl border border-slate-200 bg-white object-contain"
+                />
+              )}
+            </div>
+          )}
+          <ul className="mt-3 space-y-2 text-sm">
+            {filteredPaymentRequests.map((request) => {
+              const student = students.find((item) => item.id === request.studentId);
+              return (
+                <li key={request.id} className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
+                  <p className="text-wrap-safe pr-1">
+                    {student?.fullName || request.studentName || request.studentId} | {request.term} | NGN {request.amountPaid} | {request.status}
+                  </p>
+                  <p className="mt-1 text-xs text-slate-500">
+                    Submitted by {request.submittedByRole || 'parent'} {request.submittedByEmail ? `• ${request.submittedByEmail}` : ''}
+                  </p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                    {request.receiptDataUrl && (
+                      <button
+                        type="button"
+                        onClick={() => openReceiptPreview(request)}
+                        className="rounded-md border border-slate-300 bg-white px-2 py-1 font-semibold text-slate-700"
+                      >
+                        Preview receipt
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => reviewPaymentRequest(request.id, 'approved')}
+                      disabled={request.status !== 'pending' || reviewingRequestId === request.id}
+                      className="rounded-md border border-emerald-300 bg-emerald-50 px-2 py-1 font-semibold text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Confirm
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => reviewPaymentRequest(request.id, 'rejected')}
+                      disabled={request.status !== 'pending' || reviewingRequestId === request.id}
+                      className="rounded-md border border-red-300 bg-red-50 px-2 py-1 font-semibold text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Reject
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => releaseResultToken(request.id)}
+                      disabled={request.status !== 'approved' || Boolean(request.releasedTokenId) || reviewingRequestId === request.id}
+                      className="rounded-md border border-primary/25 bg-primary/10 px-2 py-1 font-semibold text-primary disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {request.releasedTokenId ? 'Token Released' : 'Release Token'}
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
+            {!filteredPaymentRequests.length && (
+              <li className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-6 text-center text-slate-500">
+                No receipt confirmations in this scope.
+              </li>
+            )}
+          </ul>
+        </article>
+        )}
+
+        {!isReceiptDeskOnly && (
         <article className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
           <h3 className="font-heading text-xl text-primary">Defaulters ({termFilter})</h3>
           <div className="mt-2 flex items-center justify-between text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
@@ -684,10 +937,13 @@ function FeeManagement({ role = '' }) {
               </li>
             )}
             {showDefaulters && filteredDefaulters.map((item) => (
-              <li key={item.student.id}>{item.student.fullName} | Balance: NGN {item.balance}</li>
+              <li key={item.student.id} className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3 text-wrap-safe">
+                {item.student.fullName} | Balance: NGN {item.balance}
+              </li>
             ))}
           </ul>
         </article>
+        )}
       </section>
     </PortalLayout>
   );

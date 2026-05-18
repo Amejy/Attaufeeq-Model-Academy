@@ -8,6 +8,7 @@ import AnimatedCounter from '../components/AnimatedCounter';
 import { InsightBars, OrbitChart } from '../components/InsightChart';
 import { DashboardSkeleton } from '../components/Skeleton';
 import useParentChildSelection from '../hooks/useParentChildSelection';
+import SmartSearchPanel from '../components/dashboard/SmartSearchPanel';
 
 function filterActions(actions, scopeFeatures = [], role = '') {
   if (role === 'admin' || scopeFeatures.includes('all')) return actions;
@@ -40,13 +41,15 @@ function renderLeadContact(classLead) {
 
 function MetricCard({ label, value, note, accent = 'linear-gradient(135deg, #0f5132, #d9b354)' }) {
   return (
-    <article className="glass-card dashboard-tile floating-card relative overflow-hidden p-4 sm:p-5">
+    <article className="glass-card dashboard-tile dashboard-metric-card floating-card relative p-4 sm:p-5">
       <div className="absolute inset-x-4 top-0 h-1 rounded-full sm:inset-x-5" style={{ background: accent }} />
-      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">{label}</p>
-      <p className="mt-3 break-words font-heading text-[1.85rem] leading-none text-primary sm:mt-4 sm:text-[2.5rem]">
+      <p className="pr-4 text-[10px] font-semibold uppercase tracking-[0.12em] leading-5 text-slate-500 [overflow-wrap:normal] [word-break:normal] sm:text-[11px] sm:tracking-[0.18em]">
+        <span className="block text-wrap-balance">{label}</span>
+      </p>
+      <p className="text-wrap-safe text-code-break mt-3 font-heading text-[clamp(1.45rem,4.5vw,2.35rem)] leading-tight text-primary sm:mt-4">
         <AnimatedCounter value={value} />
       </p>
-      {note && <p className="mt-2.5 text-sm leading-6 text-slate-600 sm:mt-3">{note}</p>}
+      {note && <p className="text-wrap-safe mt-2.5 text-sm leading-6 text-slate-600 sm:mt-3">{note}</p>}
     </article>
   );
 }
@@ -54,8 +57,8 @@ function MetricCard({ label, value, note, accent = 'linear-gradient(135deg, #0f5
 function Panel({ title, eyebrow, children }) {
   return (
     <section className="glass-card admin-surface p-4 sm:p-6">
-      {eyebrow && <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-slate-500">{eyebrow}</p>}
-      <h2 className="mt-2 font-heading text-[1.35rem] leading-tight text-primary sm:text-[1.7rem]">{title}</h2>
+      {eyebrow && <p className="text-wrap-safe text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500 sm:tracking-[0.24em]">{eyebrow}</p>}
+      <h2 className="text-wrap-safe mt-2 font-heading text-[clamp(1.2rem,3.8vw,1.7rem)] leading-tight text-primary">{title}</h2>
       <div className="mt-5 sm:mt-6">{children}</div>
     </section>
   );
@@ -68,7 +71,7 @@ function ActionGrid({ actions }) {
         <Link
           key={action.label}
           to={action.to}
-          className="surface-outline interactive-card rounded-[22px] px-3.5 py-3.5 text-sm font-semibold text-slate-700 sm:px-4 sm:py-4"
+          className="surface-outline interactive-card text-wrap-safe rounded-[22px] px-3.5 py-3.5 text-left text-sm font-semibold leading-6 text-slate-700 sm:px-4 sm:py-4"
         >
           {action.label}
         </Link>
@@ -98,8 +101,8 @@ function DetailListItem({ item }) {
     <article className="surface-outline dashboard-tile rounded-[22px] px-3.5 py-3.5 sm:px-4 sm:py-4">
       <div className="flex flex-col items-start gap-3 sm:flex-row sm:justify-between">
         <div className="min-w-0">
-          <p className="text-sm font-semibold text-slate-900">{item.title}</p>
-          {item.description && <p className="mt-2 text-sm leading-6 text-slate-600">{item.description}</p>}
+          <p className="text-wrap-safe text-sm font-semibold text-slate-900">{item.title}</p>
+          {item.description && <p className="text-wrap-safe mt-2 text-sm leading-6 text-slate-600">{item.description}</p>}
         </div>
         {badge && (
           <span className="max-w-full whitespace-normal break-words rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-emerald-800 sm:text-[11px]">
@@ -126,7 +129,7 @@ function AdminView({ data }) {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
         <MetricCard label="Model Enrolled" value={metrics.modernEnrolled ?? 0} note="Students already inside the academy register." />
         <MetricCard label="Madrasa Enrolled" value={metrics.madrasaEnrolled ?? 0} note="Students already active in the madrasa register." accent="linear-gradient(135deg, #7c2d12, #f59e0b)" />
         <MetricCard label="Memorization Enrolled" value={metrics.memorizationEnrolled ?? 0} note="Students active in the memorization register." accent="linear-gradient(135deg, #1e3a8a, #60a5fa)" />
@@ -134,6 +137,8 @@ function AdminView({ data }) {
         <MetricCard label="Madrasa Admitted" value={metrics.madrasaAdmitted ?? 0} note="Fully admitted into Madrastul ATTAUFEEQ." accent="linear-gradient(135deg, #92400e, #fbbf24)" />
         <MetricCard label="Memorization Admitted" value={metrics.memorizationAdmitted ?? 0} note="Fully admitted into Quran Memorization Academy." accent="linear-gradient(135deg, #1e40af, #93c5fd)" />
         <MetricCard label="Total Students" value={metrics.totalStudents ?? 0} note="Whole-school active count across both institutions." accent="linear-gradient(135deg, #0f172a, #475569)" />
+        <MetricCard label="Pending Receipts" value={metrics.pendingReceiptUploads ?? 0} note="Receipt uploads waiting for admissions confirmation." accent="linear-gradient(135deg, #92400e, #f59e0b)" />
+        <MetricCard label="Tokens Released" value={metrics.releasedTokens ?? 0} note="Scratch-card tokens already pushed to dashboard holders." accent="linear-gradient(135deg, #0f766e, #14b8a6)" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.15fr,0.85fr]">
@@ -162,6 +167,7 @@ function AdminView({ data }) {
             { label: 'Teacher Assignments', to: '/portal/admin/teacher-assignments' },
             { label: 'Publish Results', to: '/portal/admin/results' },
             { label: 'Result Tokens', to: '/portal/admin/result-tokens' },
+            { label: 'Receipt Upload Flows', to: '/portal/admin/fees' },
             { label: 'Promote Students', to: '/portal/admin/promotions' },
             { label: 'Library Management', to: '/portal/admin/library' },
             { label: 'Timetable Management', to: '/portal/admin/timetable' },
@@ -175,6 +181,7 @@ function AdminView({ data }) {
           ]}
         />
       </Panel>
+
     </div>
   );
 }
@@ -184,7 +191,8 @@ function AdmissionsView({ data, scopeFeatures = [] }) {
     [
       { label: 'Review Applications', to: '/portal/admissions/review', feature: 'admissions' },
       { label: 'Student Roster', to: '/portal/admissions/students', feature: 'students' },
-      { label: 'Fee Management', to: '/portal/admissions/fees', feature: 'fees' },
+      { label: 'Fees', to: '/portal/admissions/fees', feature: 'fees' },
+      { label: 'Receipt Upload Desk', to: '/portal/admissions/receipt-desk', feature: 'fees' },
       { label: 'Result Tokens', to: '/portal/admissions/result-tokens', feature: 'result-tokens' },
       { label: 'Publish News', to: '/portal/admissions/news', feature: 'news' },
       { label: 'Manage Library', to: '/portal/admissions/library', feature: 'library' },
@@ -207,7 +215,7 @@ function AdmissionsView({ data, scopeFeatures = [] }) {
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
         <MetricCard label="Model Pending" value={metrics.modernPending ?? 0} note="Applications waiting for desk review." accent="linear-gradient(135deg, #155e75, #38bdf8)" />
         <MetricCard label="Madrasa Pending" value={metrics.madrasaPending ?? 0} note="Islamic track submissions awaiting review." accent="linear-gradient(135deg, #92400e, #f59e0b)" />
         <MetricCard label="Memorization Pending" value={metrics.memorizationPending ?? 0} note="Memorization applications awaiting review." accent="linear-gradient(135deg, #1e3a8a, #60a5fa)" />
@@ -215,6 +223,8 @@ function AdmissionsView({ data, scopeFeatures = [] }) {
         <MetricCard label="Madrasa Admitted" value={metrics.madrasaAdmitted ?? 0} note="Fully admitted into Madrastul ATTAUFEEQ classes." accent="linear-gradient(135deg, #78350f, #fbbf24)" />
         <MetricCard label="Memorization Admitted" value={metrics.memorizationAdmitted ?? 0} note="Fully admitted into Quran Memorization Academy." accent="linear-gradient(135deg, #1e40af, #93c5fd)" />
         <MetricCard label="Total Admitted" value={totalAdmitted} note="Students fully admitted with completed desk processing." accent="linear-gradient(135deg, #0f172a, #475569)" />
+        <MetricCard label="Pending Receipts" value={metrics.pendingReceiptUploads ?? 0} note="Uploads waiting in the receipt desk queue." accent="linear-gradient(135deg, #92400e, #f59e0b)" />
+        <MetricCard label="Token Ready" value={metrics.tokenReadyCount ?? 0} note="Approved payments that already have released result tokens." accent="linear-gradient(135deg, #0f766e, #14b8a6)" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.15fr,0.85fr]">
@@ -332,7 +342,9 @@ function StudentView({ data, scopeFeatures = [] }) {
       { label: 'Announcements', to: '/portal/student/announcements' },
       { label: 'Timetable', to: '/portal/student/timetable', feature: 'timetable' },
       { label: 'Attendance', to: '/portal/student/attendance', feature: 'attendance' },
-      { label: 'Fee Status', to: '/portal/student/fees', feature: 'fees' },
+      { label: 'School Fees', to: '/portal/student/fees', feature: 'fees' },
+      { label: 'Scratch Card', to: '/portal/student/scratch-card', feature: 'fees' },
+      { label: 'Receipt Upload', to: '/portal/student/receipt-upload', feature: 'fees' },
       { label: 'Notifications', to: '/portal/student/notifications', feature: 'notifications' },
       { label: 'Madrasa', to: '/portal/student/madrasa', feature: 'madrasa' },
       { label: 'Library', to: '/portal/student/library', feature: 'library' },
@@ -414,15 +426,15 @@ function StudentView({ data, scopeFeatures = [] }) {
         <div className="grid gap-4 sm:grid-cols-3">
           <article className="rounded-[22px] border border-white/60 bg-white/70 p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Teacher</p>
-            <p className="mt-2 text-lg font-semibold text-slate-900">{data?.classLead?.fullName || 'Not assigned yet'}</p>
+            <p className="text-wrap-safe mt-2 text-lg font-semibold text-slate-900">{data?.classLead?.fullName || 'Not assigned yet'}</p>
           </article>
           <article className="rounded-[22px] border border-white/60 bg-white/70 p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Role</p>
-            <p className="mt-2 text-lg font-semibold text-slate-900">{renderLeadRole(data?.classLead)}</p>
+            <p className="text-wrap-safe mt-2 text-lg font-semibold text-slate-900">{renderLeadRole(data?.classLead)}</p>
           </article>
           <article className="rounded-[22px] border border-white/60 bg-white/70 p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Contact</p>
-            <p className="mt-2 text-lg font-semibold text-slate-900">{renderLeadContact(data?.classLead)}</p>
+            <p className="text-code-break mt-2 text-lg font-semibold text-slate-900">{renderLeadContact(data?.classLead)}</p>
           </article>
         </div>
         <div className="mt-5">
@@ -441,7 +453,9 @@ function ParentView({ data, onChildChange, onTermChange, selectedTerm, scopeFeat
       { label: 'View Timetable', to: '/portal/parent/timetable', feature: 'timetable' },
       { label: 'View Attendance', to: '/portal/parent/attendance', feature: 'attendance' },
       { label: 'View Results', to: '/portal/parent/results', feature: 'results' },
-      { label: 'Check Fees', to: '/portal/parent/fees', feature: 'fees' },
+      { label: 'School Fees', to: '/portal/parent/fees', feature: 'fees' },
+      { label: 'Scratch Card', to: '/portal/parent/scratch-card', feature: 'fees' },
+      { label: 'Receipt Upload', to: '/portal/parent/receipt-upload', feature: 'fees' },
       { label: 'Notifications', to: '/portal/parent/notifications', feature: 'notifications' },
       { label: 'Madrasa Progress', to: '/portal/parent/madrasa', feature: 'madrasa' },
       { label: 'Messages', to: '/portal/parent/messages', feature: 'messages' },
@@ -492,15 +506,15 @@ function ParentView({ data, onChildChange, onTermChange, selectedTerm, scopeFeat
             <div className="grid gap-4 sm:grid-cols-3">
               <article className="rounded-[22px] border border-white/60 bg-white/70 p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Class</p>
-                <p className="mt-2 text-lg font-semibold text-slate-900">{child.classLabel || child.level || 'Pending'}</p>
+                <p className="text-wrap-safe mt-2 text-lg font-semibold text-slate-900">{child.classLabel || child.level || 'Pending'}</p>
               </article>
               <article className="rounded-[22px] border border-white/60 bg-white/70 p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Institution</p>
-                <p className="mt-2 text-lg font-semibold text-slate-900">{child.institution || 'Pending'}</p>
+                <p className="text-wrap-safe mt-2 text-lg font-semibold text-slate-900">{child.institution || 'Pending'}</p>
               </article>
               <article className="rounded-[22px] border border-white/60 bg-white/70 p-4">
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Student Record</p>
-                <p className="mt-2 text-lg font-semibold text-slate-900">{child.id}</p>
+                <p className="text-code-break mt-2 text-lg font-semibold text-slate-900">{child.id}</p>
               </article>
               {child.accountStatus === 'graduated' && (
                 <article className="rounded-[22px] border border-amber-200 bg-amber-50/60 p-4">
@@ -527,15 +541,15 @@ function ParentView({ data, onChildChange, onTermChange, selectedTerm, scopeFeat
         <div className="grid gap-4 sm:grid-cols-3">
           <article className="rounded-[22px] border border-white/60 bg-white/70 p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Teacher</p>
-            <p className="mt-2 text-lg font-semibold text-slate-900">{data?.classLead?.fullName || 'Not assigned yet'}</p>
+            <p className="text-wrap-safe mt-2 text-lg font-semibold text-slate-900">{data?.classLead?.fullName || 'Not assigned yet'}</p>
           </article>
           <article className="rounded-[22px] border border-white/60 bg-white/70 p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Role</p>
-            <p className="mt-2 text-lg font-semibold text-slate-900">{renderLeadRole(data?.classLead)}</p>
+            <p className="text-wrap-safe mt-2 text-lg font-semibold text-slate-900">{renderLeadRole(data?.classLead)}</p>
           </article>
           <article className="rounded-[22px] border border-white/60 bg-white/70 p-4">
             <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Contact</p>
-            <p className="mt-2 text-lg font-semibold text-slate-900">{renderLeadContact(data?.classLead)}</p>
+            <p className="text-code-break mt-2 text-lg font-semibold text-slate-900">{renderLeadContact(data?.classLead)}</p>
           </article>
         </div>
       </Panel>
@@ -618,17 +632,22 @@ function RoleDashboard({ role }) {
   return (
     <PortalLayout
       role={role}
-      title={`${role.toUpperCase()} Dashboard`}
+      title={`${role.charAt(0).toUpperCase()}${role.slice(1)} Dashboard`}
       subtitle={subtitle}
     >
       {loading && <DashboardSkeleton />}
       {error && <p className="rounded-[22px] border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
-      {!loading && !error && data && renderRoleContent(role, data, {
-        onChildChange: setSelectedChildId,
-        onTermChange: setSelectedTerm,
-        selectedTerm,
-        scopeFeatures: user?.scope?.features || []
-      })}
+      {!loading && !error && data && (
+        <div className="space-y-6">
+          {renderRoleContent(role, data, {
+            onChildChange: setSelectedChildId,
+            onTermChange: setSelectedTerm,
+            selectedTerm,
+            scopeFeatures: user?.scope?.features || []
+          })}
+          <SmartSearchPanel role={role} apiJson={apiJson} classes={data?.classes || []} />
+        </div>
+      )}
     </PortalLayout>
   );
 }

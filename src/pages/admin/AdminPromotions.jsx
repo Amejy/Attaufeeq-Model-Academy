@@ -323,11 +323,11 @@ function AdminPromotions() {
       {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
       {message && <p className="mt-3 text-sm text-emerald-700">{message}</p>}
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-4">
+      <div className="mt-6 grid gap-4 md:grid-cols-2 2xl:grid-cols-4">
         <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Active Session</p>
-          <p className="mt-3 text-2xl font-semibold text-slate-900">{activeSession?.sessionName || 'Not set'}</p>
-          <p className="mt-2 text-xs text-slate-500">Use this as the source for promotions.</p>
+          <p className="mt-3 text-2xl font-semibold text-slate-900 text-wrap-safe">{activeSession?.sessionName || 'Not set'}</p>
+          <p className="mt-2 text-xs text-slate-500 text-wrap-safe">Use this as the source for promotions.</p>
         </article>
         <article className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Eligible Students</p>
@@ -347,8 +347,8 @@ function AdminPromotions() {
       </div>
 
       <section className="mt-6 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
-        <div className="grid gap-4 lg:grid-cols-6">
-          <div>
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+          <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Source Session</p>
             <select
               value={sessionId}
@@ -363,7 +363,7 @@ function AdminPromotions() {
               ))}
               </select>
             </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Institution</p>
             <select
               value={institution}
@@ -380,7 +380,7 @@ function AdminPromotions() {
               ))}
             </select>
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Term</p>
             <select
               value={term}
@@ -393,13 +393,13 @@ function AdminPromotions() {
                 </option>
               ))}
             </select>
-            <p className="mt-2 text-xs text-slate-500">
+            <p className="mt-2 text-xs text-slate-500 text-wrap-safe">
               {requiresSessionRollover
                 ? 'Third Term promotion moves students into the next class and can open a new session.'
                 : `This promotion moves approved students into ${term === 'First Term' ? 'Second Term' : 'Third Term'}.`}
             </p>
           </div>
-          <div>
+          <div className="min-w-0">
             <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Class Filter</p>
             <select
               value={classId}
@@ -415,7 +415,7 @@ function AdminPromotions() {
             </select>
           </div>
           {requiresSessionRollover && (
-            <div>
+            <div className="min-w-0">
               <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">New Session Name</p>
               <input
                 value={toSessionName}
@@ -433,7 +433,7 @@ function AdminPromotions() {
               type="button"
               onClick={handlePromote}
               disabled={submitting || !canRunPromotion}
-              className="w-full rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+              className="interactive-button w-full"
             >
               {submitting ? 'Saving...' : requiresSessionRollover ? 'Run Class Promotion' : 'Run Term Promotion'}
             </button>
@@ -458,7 +458,7 @@ function AdminPromotions() {
             <option value="promote">Promote</option>
             <option value="repeat">Repeat</option>
           </select>
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600 text-wrap-safe">
             Search applies to eligible, repeated, and graduated lists.
           </div>
         </div>
@@ -482,22 +482,22 @@ function AdminPromotions() {
               type="button"
               onClick={() => setClearedSections((prev) => ({ ...prev, eligible: true }))}
               disabled={!eligibleRows.length}
-              className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600 disabled:cursor-not-allowed disabled:opacity-60"
+              className="interactive-button w-full sm:w-auto"
             >
               Clear List
             </button>
           </div>
         </div>
         <div className="mt-4 overflow-x-auto rounded-3xl border border-slate-200">
-          <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-            <span>Eligible table</span>
+          <div className="flex flex-col gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+            <span className="text-wrap-safe">Eligible table</span>
             <button
               type="button"
               onClick={() => {
                 const nextValue = !resolveShowRows('eligible');
                 setShowRowsBySection((prev) => ({ ...prev, eligible: nextValue }));
               }}
-              className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"
+              className="interactive-button w-full sm:w-auto"
             >
               {resolveShowRows('eligible') ? 'Hide rows' : 'Show rows'}
             </button>
@@ -524,14 +524,14 @@ function AdminPromotions() {
               {resolveShowRows('eligible') && filteredEligibleRows.map((row) => (
                 <tr key={row.studentId} className="border-t border-slate-100">
                   <td className="px-4 py-3">
-                    <p className="font-semibold text-slate-800">{row.fullName}</p>
-                    <p className="text-xs text-slate-500">{buildStudentCode(row)}</p>
+                    <p className="font-semibold text-slate-800 text-wrap-safe">{row.fullName}</p>
+                    <p className="text-xs text-slate-500 text-wrap-safe">{buildStudentCode(row)}</p>
                   </td>
-                  <td className="px-4 py-3">{row.classLabel}</td>
-                  <td className="px-4 py-3">{row.nextStepLabel || row.nextClassLabel}</td>
+                  <td className="px-4 py-3 text-wrap-safe">{row.classLabel}</td>
+                  <td className="px-4 py-3 text-wrap-safe">{row.nextStepLabel || row.nextClassLabel}</td>
                   <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-3 text-xs text-slate-700">
-                      <label className="inline-flex items-center gap-2">
+                    <div className="flex flex-col gap-2 text-xs text-slate-700 sm:flex-row sm:flex-wrap">
+                      <label className="inline-flex items-center gap-2 text-wrap-safe">
                         <input
                           type="checkbox"
                           checked={(decisions[row.studentId] || 'promote') === 'promote'}
@@ -539,7 +539,7 @@ function AdminPromotions() {
                         />
                         Promote
                       </label>
-                      <label className="inline-flex items-center gap-2">
+                      <label className="inline-flex items-center gap-2 text-wrap-safe">
                         <input
                           type="checkbox"
                           checked={decisions[row.studentId] === 'repeat'}
@@ -549,12 +549,12 @@ function AdminPromotions() {
                       </label>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-xs text-slate-600">
+                  <td className="px-4 py-3 text-xs text-slate-600 text-wrap-safe">
                     {row.recommendation
                       ? `${row.recommendation.action || 'promote'}${row.recommendation.teacherName ? ` • ${row.recommendation.teacherName}` : ''}`
                       : '—'}
                   </td>
-                  <td className="px-4 py-3 text-xs text-slate-600">{row.parentEmail || '—'}</td>
+                  <td className="px-4 py-3 text-xs text-slate-600 text-wrap-safe">{row.parentEmail || '—'}</td>
                 </tr>
               ))}
               {resolveShowRows('eligible') && !filteredEligibleRows.length && (
@@ -587,22 +587,22 @@ function AdminPromotions() {
               type="button"
               onClick={() => setClearedSections((prev) => ({ ...prev, repeated: true }))}
               disabled={!repeatedRows.length}
-              className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600 disabled:cursor-not-allowed disabled:opacity-60"
+              className="interactive-button w-full sm:w-auto"
             >
               Clear List
             </button>
           </div>
         </div>
         <div className="mt-4 overflow-x-auto rounded-3xl border border-slate-200">
-          <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-            <span>Repeated table</span>
+          <div className="flex flex-col gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+            <span className="text-wrap-safe">Repeated table</span>
             <button
               type="button"
               onClick={() => {
                 const nextValue = !resolveShowRows('repeated');
                 setShowRowsBySection((prev) => ({ ...prev, repeated: nextValue }));
               }}
-              className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"
+              className="interactive-button w-full sm:w-auto"
             >
               {resolveShowRows('repeated') ? 'Hide rows' : 'Show rows'}
             </button>
@@ -627,14 +627,14 @@ function AdminPromotions() {
               {resolveShowRows('repeated') && filteredRepeatedRows.map((row) => (
                 <tr key={row.studentId} className="border-t border-slate-100">
                   <td className="px-4 py-3">
-                    <p className="font-semibold text-slate-800">{row.fullName}</p>
-                    <p className="text-xs text-slate-500">{buildStudentCode(row)}</p>
+                    <p className="font-semibold text-slate-800 text-wrap-safe">{row.fullName}</p>
+                    <p className="text-xs text-slate-500 text-wrap-safe">{buildStudentCode(row)}</p>
                   </td>
-                  <td className="px-4 py-3">{row.classLabel}</td>
-                  <td className="px-4 py-3 text-xs text-slate-600">{row.parentEmail || '—'}</td>
+                  <td className="px-4 py-3 text-wrap-safe">{row.classLabel}</td>
+                  <td className="px-4 py-3 text-xs text-slate-600 text-wrap-safe">{row.parentEmail || '—'}</td>
                   <td className="px-4 py-3">
-                    <div className="flex flex-wrap gap-3 text-xs text-slate-700">
-                      <label className="inline-flex items-center gap-2">
+                    <div className="flex flex-col gap-2 text-xs text-slate-700 sm:flex-row sm:flex-wrap">
+                      <label className="inline-flex items-center gap-2 text-wrap-safe">
                         <input
                           type="checkbox"
                           checked={(decisions[row.studentId] || 'repeat') === 'repeat'}
@@ -642,7 +642,7 @@ function AdminPromotions() {
                         />
                         Repeat
                       </label>
-                      <label className="inline-flex items-center gap-2">
+                      <label className="inline-flex items-center gap-2 text-wrap-safe">
                         <input
                           type="checkbox"
                           checked={decisions[row.studentId] === 'promote'}
@@ -651,7 +651,7 @@ function AdminPromotions() {
                         Promote
                       </label>
                     </div>
-                    <p className="mt-2 text-xs text-slate-500">
+                    <p className="mt-2 text-xs text-slate-500 text-wrap-safe">
                       Current: {decisions[row.studentId] === 'promote' ? 'Promote' : 'Repeat'}
                     </p>
                   </td>
@@ -683,22 +683,22 @@ function AdminPromotions() {
               type="button"
               onClick={() => setClearedSections((prev) => ({ ...prev, graduated: true }))}
               disabled={!graduatedRows.length}
-              className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-semibold text-slate-600 disabled:cursor-not-allowed disabled:opacity-60"
+              className="interactive-button w-full sm:w-auto"
             >
               Clear List
             </button>
           </div>
         </div>
         <div className="mt-4 overflow-x-auto rounded-3xl border border-slate-200">
-          <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-            <span>Graduated table</span>
+          <div className="flex flex-col gap-3 border-b border-slate-200 bg-slate-50 px-4 py-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+            <span className="text-wrap-safe">Graduated table</span>
             <button
               type="button"
               onClick={() => {
                 const nextValue = !resolveShowRows('graduated');
                 setShowRowsBySection((prev) => ({ ...prev, graduated: nextValue }));
               }}
-              className="rounded-full border border-slate-300 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700"
+              className="interactive-button w-full sm:w-auto"
             >
               {resolveShowRows('graduated') ? 'Hide rows' : 'Show rows'}
             </button>
@@ -723,12 +723,12 @@ function AdminPromotions() {
               {resolveShowRows('graduated') && filteredGraduatedRows.map((row) => (
                 <tr key={row.studentId} className="border-t border-slate-100">
                   <td className="px-4 py-3">
-                    <p className="font-semibold text-slate-800">{row.fullName}</p>
-                    <p className="text-xs text-slate-500">{buildStudentCode(row)}</p>
+                    <p className="font-semibold text-slate-800 text-wrap-safe">{row.fullName}</p>
+                    <p className="text-xs text-slate-500 text-wrap-safe">{buildStudentCode(row)}</p>
                   </td>
-                  <td className="px-4 py-3">{row.classLabel}</td>
-                  <td className="px-4 py-3">{row.institution}</td>
-                  <td className="px-4 py-3 text-xs text-slate-600">{row.parentEmail || '—'}</td>
+                  <td className="px-4 py-3 text-wrap-safe">{row.classLabel}</td>
+                  <td className="px-4 py-3 text-wrap-safe">{row.institution}</td>
+                  <td className="px-4 py-3 text-xs text-slate-600 text-wrap-safe">{row.parentEmail || '—'}</td>
                 </tr>
               ))}
               {resolveShowRows('graduated') && !filteredGraduatedRows.length && (
@@ -757,7 +757,7 @@ function AdminPromotions() {
               type="button"
               onClick={handleClearBatches}
               disabled={clearing || !batches.length}
-              className="rounded-full border border-rose-200 bg-rose-50 px-3 py-1 text-xs font-semibold text-rose-700 disabled:cursor-not-allowed disabled:opacity-60"
+              className="interactive-button w-full border-rose-200 bg-rose-50 text-rose-700 sm:w-auto"
             >
               {clearing ? 'Clearing...' : 'Clear History'}
             </button>
@@ -767,7 +767,7 @@ function AdminPromotions() {
                 const nextValue = !resolveShowRows('history');
                 setShowRowsBySection((prev) => ({ ...prev, history: nextValue }));
               }}
-              className="rounded-full border border-slate-300 bg-white px-3 py-1 text-xs font-semibold text-slate-700"
+              className="interactive-button w-full sm:w-auto"
             >
               {resolveShowRows('history') ? 'Hide rows' : 'Show rows'}
             </button>
@@ -780,9 +780,9 @@ function AdminPromotions() {
           {resolveShowRows('history') && batches.map((batch) => (
             <article key={batch.id} className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-semibold text-slate-900">{batch.toSessionName}</p>
-                  <p className="text-xs text-slate-500">{new Date(batch.createdAt).toLocaleString()}</p>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-slate-900 text-wrap-safe">{batch.toSessionName}</p>
+                  <p className="text-xs text-slate-500 text-wrap-safe">{new Date(batch.createdAt).toLocaleString()}</p>
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <span className="rounded-full bg-emerald-50 px-3 py-1 text-[11px] font-semibold text-emerald-700">Promoted: {batch.promotedCount}</span>
@@ -791,7 +791,7 @@ function AdminPromotions() {
                   <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-semibold text-slate-600">Skipped: {batch.skippedCount}</span>
                 </div>
               </div>
-              <p className="mt-2 text-xs text-slate-500">
+              <p className="mt-2 text-xs text-slate-500 text-wrap-safe">
                 {batch.institution || 'All institutions'} • From {batch.fromSessionId} • Term {batch.term}
               </p>
             </article>

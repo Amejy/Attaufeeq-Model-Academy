@@ -116,6 +116,37 @@ export async function ensureBootstrapAdmin(options = {}) {
     await executor.query('SELECT pg_advisory_xact_lock($1)', [AUTH_BOOTSTRAP_LOCK_KEY]);
 
     const userCount = await countUsers({ executor });
+    const existingBootstrapAdmin = await findUserByEmail(bootstrapAdminEmail, { executor });
+
+    if (existingBootstrapAdmin && existingBootstrapAdmin.role === 'admin') {
+      const passwordVerified = await verifyPassword(bootstrapAdminPassword, existingBootstrapAdmin.passwordHash);
+      const fullNameChanged = String(existingBootstrapAdmin.fullName || '').trim() !== bootstrapAdminFullName;
+      const shouldRefreshCredentials = !passwordVerified && env.isDevelopment;
+
+      if (fullNameChanged || shouldRefreshCredentials) {
+        if (shouldRefreshCredentials) {
+          await updateUserPassword(existingBootstrapAdmin.id, {
+            passwordHash: await hashPassword(bootstrapAdminPassword),
+            mustChangePassword: true
+          }, { executor });
+        }
+
+        if (fullNameChanged) {
+          await executor.query(
+            `UPDATE users
+             SET full_name = $2
+             WHERE id = $1`,
+            [existingBootstrapAdmin.id, bootstrapAdminFullName]
+          );
+        }
+      }
+
+      return {
+        created: false,
+        reason: shouldRefreshCredentials ? 'development-password-synced' : 'bootstrap-admin-exists'
+      };
+    }
+
     if (userCount > 0) {
       return { created: false, reason: 'users-exist' };
     }

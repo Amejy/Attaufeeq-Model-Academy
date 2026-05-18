@@ -185,7 +185,7 @@ function AdminReports() {
     >
       {error && <ErrorState compact title="Unable to load reports" message={error} onRetry={() => loadData()} className="mb-4" />}
       {loading && <div className="status-banner mb-4">Loading reports...</div>}
-      <p className="admin-toolbar__meta mb-4">
+      <p className="admin-toolbar__meta mb-4 text-wrap-safe">
         Scope: <span className="font-semibold text-slate-900">{institutionLabel}</span> • <span className="font-semibold text-slate-900">{termLabel}</span> • <span className="font-semibold text-slate-900">{sessionLabel}</span>
       </p>
 
@@ -202,9 +202,9 @@ function AdminReports() {
             {(summary.institutionSummary || []).map((row) => (
               <section key={row.institution} className="admin-surface">
                 <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <h2 className="font-heading text-2xl text-primary">{row.institution}</h2>
-                    <p className="mt-2 text-sm text-slate-600">Institution-level report snapshot for admin oversight.</p>
+                  <div className="min-w-0">
+                    <h2 className="text-wrap-safe font-heading text-2xl text-primary">{row.institution}</h2>
+                    <p className="text-wrap-safe mt-2 text-sm text-slate-600">Institution-level report snapshot for admin oversight.</p>
                   </div>
                   <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${institutionAccent(row.institution)}`}>
                     Institution Report
@@ -225,9 +225,9 @@ function AdminReports() {
               <h2 className="font-heading text-xl text-primary">Admissions by Status</h2>
               <ul className="mt-3 space-y-2 text-sm">
                 {summary.admissionsByStatus.map((row) => (
-                  <li key={row.status} className="flex items-center justify-between">
-                    <span className="capitalize">{row.status}</span>
-                    <span className="font-semibold">{row.count}</span>
+                  <li key={row.status} className="flex items-start justify-between gap-3">
+                    <span className="text-wrap-safe capitalize">{row.status}</span>
+                    <span className="shrink-0 font-semibold">{row.count}</span>
                   </li>
                 ))}
               </ul>
@@ -237,9 +237,9 @@ function AdminReports() {
               <h2 className="font-heading text-xl text-primary">Students by Institution</h2>
               <ul className="mt-3 space-y-2 text-sm">
                 {summary.studentsByInstitution.map((row) => (
-                  <li key={row.institution} className="flex items-center justify-between">
-                    <span>{row.institution}</span>
-                    <span className="font-semibold">{row.count}</span>
+                  <li key={row.institution} className="flex items-start justify-between gap-3">
+                    <span className="text-wrap-safe">{row.institution}</span>
+                    <span className="shrink-0 font-semibold">{row.count}</span>
                   </li>
                 ))}
               </ul>
@@ -249,9 +249,9 @@ function AdminReports() {
               <h2 className="font-heading text-xl text-primary">Grade Distribution</h2>
               <ul className="mt-3 space-y-2 text-sm">
                 {summary.gradeDistribution.map((row) => (
-                  <li key={row.grade} className="flex items-center justify-between">
-                    <span>Grade {row.grade}</span>
-                    <span className="font-semibold">{row.count}</span>
+                  <li key={row.grade} className="flex items-start justify-between gap-3">
+                    <span className="text-wrap-safe">Grade {row.grade}</span>
+                    <span className="shrink-0 font-semibold">{row.count}</span>
                   </li>
                 ))}
               </ul>
@@ -271,8 +271,8 @@ function AdminReports() {
           {showTop3 && performanceByClass.map((group) => (
             <article key={`${group.institution}-${group.classId}`} className="dashboard-tile">
               <div className="flex items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-lg font-semibold text-slate-900">{group.classLabel}</h3>
+                <div className="min-w-0">
+                  <h3 className="text-wrap-safe text-lg font-semibold text-slate-900">{group.classLabel}</h3>
                   <p className={`mt-2 inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${institutionAccent(group.institution)}`}>
                     {group.institution}
                   </p>
@@ -292,7 +292,7 @@ function AdminReports() {
                     {group.rows.map((row, index) => (
                       <tr key={row.studentId} className="border-t border-slate-100">
                         <td className="px-4 py-3 font-semibold text-slate-900">{index + 1}</td>
-                        <td className="px-4 py-3">{row.studentName}</td>
+                        <td className="px-4 py-3 text-wrap-safe">{row.studentName}</td>
                         <td className="px-4 py-3">{row.average}</td>
                       </tr>
                     ))}
@@ -332,9 +332,9 @@ function AdminReports() {
               <tbody>
                 {performance.map((row) => (
                   <tr key={row.studentId} className="border-t border-slate-100">
-                    <td className="px-3 py-2">{row.studentName}</td>
-                    <td className="px-3 py-2">{row.institution}</td>
-                    <td className="px-3 py-2">{row.classLabel || row.classId}</td>
+                    <td className="px-3 py-2 text-wrap-safe">{row.studentName}</td>
+                    <td className="px-3 py-2 text-wrap-safe">{row.institution}</td>
+                    <td className="px-3 py-2 text-wrap-safe">{row.classLabel || row.classId}</td>
                     <td className="px-3 py-2">{row.average}</td>
                   </tr>
                 ))}

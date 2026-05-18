@@ -123,8 +123,8 @@ function ForgotPassword() {
   }
 
   return (
-    <main className="section-wrap py-16">
-      <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[1.1fr,0.9fr]">
+    <main className="login-shell section-wrap py-8 sm:py-12 lg:py-14">
+      <div className="mx-auto grid max-w-6xl items-start gap-5 lg:grid-cols-[1.08fr,0.92fr] lg:gap-6">
         <section className="glass-panel min-w-0 overflow-hidden p-6 sm:p-9">
           <div className="login-logo-row">
             <SmartImage
@@ -152,7 +152,7 @@ function ForgotPassword() {
           </div>
         </section>
 
-        <section className="glass-card interactive-card min-w-0 p-6 sm:p-8">
+        <section className="glass-card login-auth-panel min-w-0 p-6 sm:p-7 lg:p-8">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Step 1</p>
           <h2 className="mt-3 break-words font-heading text-3xl text-primary">Request reset code</h2>
           <form className="mt-5 space-y-4" onSubmit={requestReset}>

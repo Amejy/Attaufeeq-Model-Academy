@@ -87,6 +87,37 @@ function writeStoredSession(token, user) {
   }
 }
 
+function toSessionSnapshot(token, user) {
+  if (!token || !user) return null;
+  return { token, user };
+}
+
+function mergeAvatarIntoSessionUser(previous, nextUser = {}, nextProfile = null) {
+  const avatarUrl = String(nextUser?.avatarUrl || previous?.avatarUrl || nextProfile?.avatarUrl || previous?.profile?.avatarUrl || '').trim();
+  return {
+    ...(previous || {}),
+    ...(nextUser || {}),
+    avatarUrl,
+    profile: {
+      ...(previous?.profile || {}),
+      ...(nextProfile || {}),
+      avatarUrl
+    },
+    student: previous?.student
+      ? {
+          ...previous.student,
+          avatarUrl
+        }
+      : previous?.student,
+    child: previous?.child
+      ? {
+          ...previous.child,
+          avatarUrl
+        }
+      : previous?.child
+  };
+}
+
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
@@ -197,6 +228,7 @@ export function AuthProvider({ children }) {
     }
 
     refreshInFlightRef.current = (async () => {
+    const currentSession = toSessionSnapshot(tokenRef.current, user);
     try {
       const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
         method: 'POST',
@@ -208,6 +240,9 @@ export function AuthProvider({ children }) {
       login(data);
       return data;
     } catch {
+      if (isTokenUsable(currentSession?.token)) {
+        return currentSession;
+      }
       setSessionExpired(true);
       try {
         sessionStorage.setItem('session-expired', '1');
@@ -224,7 +259,7 @@ export function AuthProvider({ children }) {
     } finally {
       refreshInFlightRef.current = null;
     }
-  }, [login, logout]);
+  }, [login, logout, user]);
 
   const apiFetch = useCallback(async (path, options = {}) => {
     const {
@@ -316,17 +351,15 @@ export function AuthProvider({ children }) {
     async function hydrateScope() {
       setProfileReady(false);
       try {
-        const response = await fetch(`${API_BASE_URL}/dashboard/me`, {
+        const response = await apiFetch('/dashboard/me', {
           headers: { Authorization: `Bearer ${token}` }
         });
-        const data = await response.json();
+        const data = await parseJsonSafely(response);
         if (!response.ok || cancelled || tokenRef.current !== requestToken) return;
 
         updateUser((previous) => ({
-          ...(previous || {}),
-          ...(data.user || {}),
+          ...mergeAvatarIntoSessionUser(previous, data.user || {}, data.profile || previous?.profile || null),
           scope: data.scope || data.user?.scope || previous?.scope || null,
-          profile: data.profile || previous?.profile || null,
           scopeHydrated: true
         }));
       } catch {
@@ -343,7 +376,7 @@ export function AuthProvider({ children }) {
     return () => {
       cancelled = true;
     };
-  }, [token, updateUser, user?.id, user?.scopeHydrated]);
+  }, [apiFetch, token, updateUser, user?.id, user?.scopeHydrated]);
 
   const value = useMemo(
     () => ({

@@ -52,9 +52,9 @@ function rowStatus(row, baseline) {
 
   if (row.published) return 'Approved';
   if (row.submittedAt) return 'Submitted';
-  if (!baseline) return total > 0 ? 'New draft' : 'Pending';
-  if (baseline.ca !== row.ca || baseline.exam !== row.exam) return 'Edited';
-  if (total > 0) return 'Saved';
+  if (!baseline) return total > 0 || row.caNote || row.examNote ? 'New draft' : 'Pending';
+  if (baseline.ca !== row.ca || baseline.exam !== row.exam || baseline.caNote !== row.caNote || baseline.examNote !== row.examNote) return 'Edited';
+  if (total > 0 || row.caNote || row.examNote) return 'Saved';
   return 'Pending';
 }
 
@@ -337,6 +337,8 @@ function TeacherResults() {
         studentCode: buildStudentCode(student),
         ca: Number(existing?.ca || 0),
         exam: Number(existing?.exam || 0),
+        caNote: existing?.caNote || '',
+        examNote: existing?.examNote || '',
         published: Boolean(existing?.published),
         submittedAt: existing?.submittedAt || '',
         teacherClearedAt: existing?.teacherClearedAt || '',
@@ -369,14 +371,14 @@ function TeacherResults() {
     () =>
       rows.filter((row) => {
         const baseline = baselineMap.get(row.studentId);
-        if (!baseline) return Number(row.ca || 0) + Number(row.exam || 0) > 0;
-        return baseline.ca !== row.ca || baseline.exam !== row.exam;
+        if (!baseline) return Number(row.ca || 0) + Number(row.exam || 0) > 0 || row.caNote || row.examNote;
+        return baseline.ca !== row.ca || baseline.exam !== row.exam || baseline.caNote !== row.caNote || baseline.examNote !== row.examNote;
       }).length,
     [baselineMap, rows]
   );
 
   const completedCount = useMemo(
-    () => rows.filter((row) => Number(row.ca || 0) + Number(row.exam || 0) > 0).length,
+    () => rows.filter((row) => Number(row.ca || 0) + Number(row.exam || 0) > 0 || row.caNote || row.examNote).length,
     [rows]
   );
   const editableRows = useMemo(
@@ -392,6 +394,17 @@ function TeacherResults() {
     [rows]
   );
   const hasEditableRows = editableRows.length > 0;
+  const savableRows = useMemo(
+    () =>
+      editableRows.filter((row) => {
+        const baseline = baselineMap.get(row.studentId);
+        const hasEntry = Number(row.ca || 0) + Number(row.exam || 0) > 0 || row.caNote || row.examNote;
+        if (!baseline) return hasEntry;
+        return baseline.ca !== row.ca || baseline.exam !== row.exam || baseline.caNote !== row.caNote || baseline.examNote !== row.examNote;
+      }),
+    [baselineMap, editableRows]
+  );
+  const hasSavableRows = savableRows.length > 0;
   const hasSubmittableRows = submittableRows.length > 0;
   const hasClearablePublishedRows = clearablePublishedRows.length > 0;
 
@@ -502,6 +515,12 @@ function TeacherResults() {
     );
   }
 
+  function updateScoreNote(studentId, field, value) {
+    setRows((prev) =>
+      prev.map((row) => (row.studentId === studentId ? { ...row, [field]: value } : row))
+    );
+  }
+
   function toggleStudentExpansion(studentId) {
     setExpandedStudents((prev) => ({ ...prev, [studentId]: !prev[studentId] }));
   }
@@ -517,10 +536,18 @@ function TeacherResults() {
     setSaving(true);
 
     try {
-      const payloadRows = editableRows.map((row) => ({
+      if (!hasSavableRows) {
+        setError('Enter at least one score or assessment note before saving.');
+        setSaving(false);
+        return;
+      }
+
+      const payloadRows = savableRows.map((row) => ({
         studentId: row.studentId,
         ca: Number(row.ca || 0),
-        exam: Number(row.exam || 0)
+        exam: Number(row.exam || 0),
+        caNote: row.caNote || '',
+        examNote: row.examNote || ''
       }));
 
       const data = await apiJson('/results/teacher/scores', {
@@ -675,12 +702,12 @@ function TeacherResults() {
     >
       <div className="grid gap-4 xl:grid-cols-4">
         <div className="rounded-3xl border border-emerald-900/10 bg-[linear-gradient(145deg,rgba(15,81,50,0.08),rgba(201,162,39,0.06))] p-5 xl:col-span-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Active scoring lane</p>
-          <h2 className="mt-2 font-heading text-2xl text-primary">{selectedClassLabel}</h2>
-          <p className="mt-2 text-sm text-slate-600">
+          <p className="text-wrap-safe text-xs font-semibold uppercase tracking-[0.18em] text-slate-500 sm:tracking-[0.24em]">Active scoring lane</p>
+          <h2 className="text-wrap-safe mt-2 font-heading text-2xl text-primary">{selectedClassLabel}</h2>
+          <p className="text-wrap-safe mt-2 text-sm text-slate-600">
             {selectedSubjectLabel} • {form.term} {options.activeSession?.sessionName ? `• ${options.activeSession.sessionName}` : ''}
           </p>
-          <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-600">
+          <p className="text-wrap-safe mt-4 max-w-2xl text-sm leading-6 text-slate-600">
             This workspace is locked to your assigned institution only. Choose a class to load the exact roster, search
             within that class, edit existing scores safely, and keep each saved record attached to the student profile.
           </p>
@@ -701,6 +728,20 @@ function TeacherResults() {
         </div>
       </div>
 
+      <div className="mt-4 grid gap-3 md:grid-cols-2 2xl:grid-cols-4">
+        {[
+          { label: 'Unsaved rows', value: dirtyCount, tone: dirtyCount ? 'border-amber-200 bg-amber-50 text-amber-800' : 'border-slate-200 bg-white text-slate-700' },
+          { label: 'Ready to submit', value: submittableRows.length, tone: submittableRows.length ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-slate-200 bg-white text-slate-700' },
+          { label: 'Already submitted', value: rows.filter((row) => row.submittedAt && !row.published).length, tone: 'border-sky-200 bg-sky-50 text-sky-800' },
+          { label: 'Approved rows', value: rows.filter((row) => row.published).length, tone: 'border-primary/20 bg-primary/5 text-primary' }
+        ].map((item) => (
+          <div key={item.label} className={`rounded-2xl border px-4 py-3 ${item.tone}`}>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em]">{item.label}</p>
+            <p className="mt-2 text-2xl font-bold">{item.value}</p>
+          </div>
+        ))}
+      </div>
+
       {error && <p className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p>}
       {!hasSession && (
         <p className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
@@ -717,10 +758,10 @@ function TeacherResults() {
         onSubmit={handleSaveScores}
         className="mt-6 rounded-[28px] border border-emerald-900/10 bg-white/95 p-5 shadow-sm"
       >
-        <div className="grid gap-4 lg:grid-cols-5">
+        <div className="grid gap-4 lg:grid-cols-3 2xl:grid-cols-5">
           <label className="space-y-2">
-            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Institution</span>
-            <div className="rounded-2xl border border-emerald-900/10 bg-emerald-50 px-4 py-3 text-sm font-semibold text-primary">
+            <span className="text-wrap-safe text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 sm:tracking-[0.2em]">Institution</span>
+            <div className="text-wrap-safe rounded-2xl border border-emerald-900/10 bg-emerald-50 px-4 py-3 text-sm font-semibold text-primary">
               {options.institution}
             </div>
           </label>
@@ -799,8 +840,8 @@ function TeacherResults() {
           </label>
         </div>
 
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3">
-          <div className="flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+        <div className="mt-5 flex flex-col gap-3 rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 xl:flex-row xl:items-center xl:justify-between">
+          <div className="flex flex-wrap gap-2 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 sm:tracking-[0.18em]">
             <span className="rounded-full bg-white px-3 py-2 text-slate-700">{visibleRows.length} visible</span>
             <span className="rounded-full bg-white px-3 py-2 text-slate-700">{dirtyCount} edited rows</span>
             <span className="rounded-full bg-white px-3 py-2 text-slate-700">{groupedRecords.length} saved students</span>
@@ -810,11 +851,11 @@ function TeacherResults() {
               </span>
             )}
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
             <button
               type="submit"
-              disabled={actionBusy || !hasSession || !form.classId || !form.subjectId || !hasEditableRows}
-              className="rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={actionBusy || !hasSession || !form.classId || !form.subjectId || !hasEditableRows || !hasSavableRows}
+              className="interactive-button w-full rounded-2xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
             >
               {saving ? 'Saving scores...' : hasUnsavedChanges ? 'Save result records' : 'Save current scores'}
             </button>
@@ -822,7 +863,7 @@ function TeacherResults() {
               type="button"
               onClick={handleSubmitToAdmin}
               disabled={actionBusy || !hasSession || !form.classId || !form.subjectId || !hasSubmittableRows}
-              className="rounded-2xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="interactive-button w-full rounded-2xl border border-slate-300 px-5 py-3 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
             >
               {submitting ? 'Submitting...' : 'Submit to Admin'}
             </button>
@@ -830,7 +871,7 @@ function TeacherResults() {
               type="button"
               onClick={handleClearDrafts}
               disabled={actionBusy || !hasSession || !form.classId || !form.subjectId || !hasSubmittableRows}
-              className="rounded-2xl border border-rose-200 bg-rose-50 px-5 py-3 text-sm font-semibold text-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
+              className="interactive-button w-full rounded-2xl border border-rose-200 bg-rose-50 px-5 py-3 text-sm font-semibold text-rose-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
             >
               {clearing ? 'Clearing...' : 'Clear Drafts'}
             </button>
@@ -838,7 +879,7 @@ function TeacherResults() {
               type="button"
               onClick={handleClearPublished}
               disabled={actionBusy || !hasSession || !form.classId || !form.subjectId || !hasClearablePublishedRows}
-              className="rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3 text-sm font-semibold text-amber-800 disabled:cursor-not-allowed disabled:opacity-50"
+              className="interactive-button w-full rounded-2xl border border-amber-200 bg-amber-50 px-5 py-3 text-sm font-semibold text-amber-800 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
             >
               {clearingPublished ? 'Clearing...' : 'Clear Approved'}
             </button>
@@ -903,6 +944,8 @@ function TeacherResults() {
                     : row.submittedAt
                       ? `Submitted ${formatDateTime(row.submittedAt)}`
                       : formatDateTime(row.savedAt);
+                  const caNeedsNote = Number(row.ca || 0) === 0 && !row.caNote && (row.examNote || Number(row.exam || 0) > 0);
+                  const examNeedsNote = Number(row.exam || 0) === 0 && !row.examNote && (row.caNote || Number(row.ca || 0) > 0);
 
                   return (
                     <tr
@@ -925,6 +968,27 @@ function TeacherResults() {
                           disabled={rowLocked}
                           className="w-24 rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                         />
+                        <input
+                          value={row.caNote}
+                          onChange={(event) => updateScoreNote(row.studentId, 'caNote', event.target.value)}
+                          disabled={rowLocked}
+                          placeholder="CA note"
+                          className={`mt-2 w-36 rounded-xl border px-3 py-2 text-xs outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 ${caNeedsNote ? 'border-amber-300 bg-amber-50' : 'border-slate-200'}`}
+                        />
+                        {!rowLocked && (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {['Absent', 'Sick'].map((note) => (
+                              <button
+                                key={note}
+                                type="button"
+                                onClick={() => updateScoreNote(row.studentId, 'caNote', note)}
+                                className="rounded-full border border-slate-200 px-2 py-1 text-[10px] font-semibold text-slate-600"
+                              >
+                                {note}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <input
@@ -936,6 +1000,27 @@ function TeacherResults() {
                           disabled={rowLocked}
                           className="w-24 rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                         />
+                        <input
+                          value={row.examNote}
+                          onChange={(event) => updateScoreNote(row.studentId, 'examNote', event.target.value)}
+                          disabled={rowLocked}
+                          placeholder="Exam note"
+                          className={`mt-2 w-36 rounded-xl border px-3 py-2 text-xs outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 ${examNeedsNote ? 'border-amber-300 bg-amber-50' : 'border-slate-200'}`}
+                        />
+                        {!rowLocked && (
+                          <div className="mt-1 flex flex-wrap gap-1">
+                            {['Absent', 'Did not write'].map((note) => (
+                              <button
+                                key={note}
+                                type="button"
+                                onClick={() => updateScoreNote(row.studentId, 'examNote', note)}
+                                className="rounded-full border border-slate-200 px-2 py-1 text-[10px] font-semibold text-slate-600"
+                              >
+                                {note}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3 font-semibold text-slate-900">{total}</td>
                       <td className="px-4 py-3">
@@ -1171,6 +1256,7 @@ function TeacherResults() {
                                 <th className="px-4 py-3 font-semibold text-slate-600">Exam</th>
                                 <th className="px-4 py-3 font-semibold text-slate-600">Total</th>
                                 <th className="px-4 py-3 font-semibold text-slate-600">Grade</th>
+                                <th className="px-4 py-3 font-semibold text-slate-600">Assessment Notes</th>
                                 <th className="px-4 py-3 font-semibold text-slate-600">Approval</th>
                               </tr>
                             </thead>
@@ -1179,10 +1265,19 @@ function TeacherResults() {
                                 <tr key={subject.id} className="border-t border-slate-100">
                                     <td className="px-4 py-3 text-slate-800">{subject.subjectName}</td>
                                     <td className="px-4 py-3 text-slate-700">{subject.term}</td>
-                                    <td className="px-4 py-3 text-slate-700">{subject.ca}</td>
-                                  <td className="px-4 py-3 text-slate-700">{subject.exam}</td>
+                                    <td className="px-4 py-3 text-slate-700">
+                                      {subject.ca}
+                                      {subject.caNote ? <div className="mt-1 text-[11px] font-semibold text-amber-700">{subject.caNote}</div> : null}
+                                    </td>
+                                  <td className="px-4 py-3 text-slate-700">
+                                    {subject.exam}
+                                    {subject.examNote ? <div className="mt-1 text-[11px] font-semibold text-amber-700">{subject.examNote}</div> : null}
+                                  </td>
                                   <td className="px-4 py-3 font-semibold text-slate-900">{subject.total}</td>
                                   <td className="px-4 py-3 text-slate-700">{subject.grade}</td>
+                                  <td className="px-4 py-3 text-slate-700">
+                                    {[subject.caNote && `CA: ${subject.caNote}`, subject.examNote && `Exam: ${subject.examNote}`].filter(Boolean).join(' • ') || '—'}
+                                  </td>
                                   <td className="px-4 py-3 text-slate-700">
                                     {subject.published ? 'Approved' : 'Pending'}
                                     {subject.approvedAt && (

@@ -27,6 +27,7 @@ function RoleResults({ role }) {
   const reportCardSeq = useRef(0);
   const holdReason = payload.holdReason || '';
   const holdStatus = payload.holdStatus || '';
+  const availableToken = payload.availableToken || null;
   const debouncedSubjectSearch = useDebouncedValue(subjectSearch.trim(), 300);
 
   useEffect(() => {
@@ -270,24 +271,33 @@ function RoleResults({ role }) {
       )}
       {holdStatus === 'token-required' && !loading && (
         <form onSubmit={handleTokenActivation} className="mt-4 rounded-xl border border-amber-100 bg-amber-50/60 p-4">
-          <p className="text-sm font-semibold text-amber-900">Enter result token</p>
-          <p className="mt-1 text-xs text-amber-800">
+          <p className="text-wrap-safe text-sm font-semibold text-amber-900">Enter result token</p>
+          <p className="text-wrap-safe mt-1 text-xs text-amber-800">
             Use the token from the admission desk to unlock this term’s results.
           </p>
+          {availableToken && (
+            <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm text-emerald-900">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Released token</p>
+              <p className="text-code-break mt-2 text-lg font-bold tracking-[0.2em] text-emerald-950">{availableToken.token}</p>
+              <p className="text-wrap-safe mt-1 text-xs text-emerald-800">
+                This token has already been released to your dashboard for {availableToken.term}.
+              </p>
+            </div>
+          )}
           <div className="mt-3 flex flex-wrap items-end gap-3">
-            <label className="text-xs text-amber-900">
+            <label className="min-w-0 text-xs text-amber-900">
               <span className="mb-1 block font-semibold uppercase tracking-[0.2em]">Token</span>
               <input
                 value={tokenValue}
                 onChange={(event) => setTokenValue(event.target.value.toUpperCase())}
-                className="w-64 rounded-md border border-amber-200 bg-white px-3 py-2 text-sm uppercase tracking-[0.2em]"
+                className="w-full min-w-0 rounded-md border border-amber-200 bg-white px-3 py-2 text-sm uppercase tracking-[0.2em] sm:w-64"
                 placeholder="Enter token"
               />
             </label>
             <button
               type="submit"
               disabled={tokenBusy}
-              className="rounded-full bg-amber-600 px-5 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-70"
+              className="interactive-button w-full rounded-full bg-amber-600 px-5 py-2 text-xs font-semibold uppercase tracking-[0.2em] text-white hover:bg-amber-700 disabled:cursor-not-allowed disabled:opacity-70 sm:w-auto"
             >
               {tokenBusy ? 'Checking...' : 'Activate'}
             </button>
@@ -305,11 +315,11 @@ function RoleResults({ role }) {
           description="Switch child once and the overview table plus report card stay aligned to that student."
         />
       )}
-      <div className="mt-3 flex flex-wrap gap-2">
+      <div className="mt-3 grid gap-2 sm:flex sm:flex-wrap">
         <select
           value={sessionId}
           onChange={(e) => setSessionId(e.target.value)}
-          className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm sm:w-auto"
         >
           {!sessions.length && <option value="">No sessions available</option>}
           {sessions.map((session) => (
@@ -321,7 +331,7 @@ function RoleResults({ role }) {
         <select
           value={term}
           onChange={(e) => setTerm(e.target.value)}
-          className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm sm:w-auto"
         >
           <option value="">All Terms</option>
           {['First Term', 'Second Term', 'Third Term'].map((item) => (
@@ -332,13 +342,13 @@ function RoleResults({ role }) {
           value={subjectSearch}
           onChange={(e) => setSubjectSearch(e.target.value)}
           placeholder="Filter subjects"
-          className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm sm:w-auto"
         />
         <button
           type="button"
           onClick={loadReportCard}
           disabled={!canGenerateReport}
-          className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="interactive-button w-full rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
         >
           Generate Report Card
         </button>
@@ -352,7 +362,7 @@ function RoleResults({ role }) {
             }, 100);
           }}
           disabled={!reportCard}
-          className="rounded-md border border-primary px-3 py-2 text-sm font-semibold text-primary disabled:cursor-not-allowed disabled:opacity-50"
+          className="interactive-button w-full rounded-md border border-primary px-3 py-2 text-sm font-semibold text-primary disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
         >
           Print / Save as PDF
         </button>
@@ -362,15 +372,15 @@ function RoleResults({ role }) {
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
           <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Student</p>
-            <p className="mt-2 text-lg font-semibold text-slate-900">{child.fullName}</p>
+            <p className="text-wrap-safe mt-2 text-lg font-semibold text-slate-900">{child.fullName}</p>
           </article>
           <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Class</p>
-            <p className="mt-2 text-lg font-semibold text-slate-900">{child.classLabel || child.level || 'Pending'}</p>
+            <p className="text-wrap-safe mt-2 text-lg font-semibold text-slate-900">{child.classLabel || child.level || 'Pending'}</p>
           </article>
           <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Institution</p>
-            <p className="mt-2 text-lg font-semibold text-slate-900">{child.institution || 'Pending'}</p>
+            <p className="text-wrap-safe mt-2 text-lg font-semibold text-slate-900">{child.institution || 'Pending'}</p>
           </article>
         </div>
       )}
