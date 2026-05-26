@@ -1,12 +1,14 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { resolveApiBaseUrl } from '../utils/apiBase';
+import { getRequestErrorMessage } from '../utils/userMessage';
 
 const AuthContext = createContext(null);
 const API_BASE_URL = resolveApiBaseUrl();
 const AUTH_SESSION_FLAG = 'auth-active';
 const AUTH_TOKEN_KEY = 'auth-token';
 const AUTH_USER_KEY = 'auth-user';
+const AUTH_REQUEST_TIMEOUT_MS = 15_000;
 
 function decodeTokenPayload(token) {
   try {
@@ -92,6 +94,29 @@ function toSessionSnapshot(token, user) {
   return { token, user };
 }
 
+async function fetchWithTimeout(url, options = {}, timeoutMs = AUTH_REQUEST_TIMEOUT_MS) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), Math.max(1, Number(timeoutMs) || AUTH_REQUEST_TIMEOUT_MS));
+  const { signal, ...rest } = options;
+
+  if (signal) {
+    if (signal.aborted) {
+      controller.abort();
+    } else {
+      signal.addEventListener('abort', () => controller.abort(), { once: true });
+    }
+  }
+
+  try {
+    return await fetch(url, {
+      ...rest,
+      signal: controller.signal
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+}
+
 function mergeAvatarIntoSessionUser(previous, nextUser = {}, nextProfile = null) {
   const avatarUrl = String(nextUser?.avatarUrl || previous?.avatarUrl || nextProfile?.avatarUrl || previous?.profile?.avatarUrl || '').trim();
   return {
@@ -151,7 +176,7 @@ export function AuthProvider({ children }) {
       }
 
       try {
-        const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        const response = await fetchWithTimeout(`${API_BASE_URL}/auth/refresh`, {
           method: 'POST',
           credentials: 'include'
         });
@@ -198,7 +223,7 @@ export function AuthProvider({ children }) {
   const logout = useCallback(async (options = {}) => {
     const preserveSessionFlag = Boolean(options?.preserveSessionExpired);
     try {
-      await fetch(`${API_BASE_URL}/auth/logout`, {
+      await fetchWithTimeout(`${API_BASE_URL}/auth/logout`, {
         method: 'POST',
         credentials: 'include'
       });
@@ -230,13 +255,19 @@ export function AuthProvider({ children }) {
     refreshInFlightRef.current = (async () => {
     const currentSession = toSessionSnapshot(tokenRef.current, user);
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      const response = await fetchWithTimeout(`${API_BASE_URL}/auth/refresh`, {
         method: 'POST',
         credentials: 'include'
       });
 
       const data = await parseJsonSafely(response);
-      if (!response.ok) throw new Error(data.message || 'Session refresh failed.');
+      if (!response.ok) {
+        throw new Error(getRequestErrorMessage({
+          status: response.status,
+          message: data?.message || '',
+          fallback: 'Your session could not be refreshed. Please sign in again.'
+        }));
+      }
       login(data);
       return data;
     } catch {
@@ -277,18 +308,33 @@ export function AuthProvider({ children }) {
     }
 
     const run = () =>
-      fetch(path.startsWith('http') ? path : `${API_BASE_URL}${path}`, {
+      fetchWithTimeout(path.startsWith('http') ? path : `${API_BASE_URL}${path}`, {
         ...rest,
         headers: requestHeaders,
         credentials
       });
 
-    let response = await run();
+    let response;
+    try {
+      response = await run();
+    } catch (error) {
+      if (error?.name === 'AbortError') {
+        throw new Error('Request timed out. Please try again.');
+      }
+      throw new Error('Cannot reach the server right now. Check your connection and try again.');
+    }
     if (response.status === 401 && retryOnUnauthorized && !omitAuth) {
       const refreshed = await refreshSession();
       if (refreshed?.token) {
         requestHeaders.set('Authorization', `Bearer ${refreshed.token}`);
-        response = await run();
+        try {
+          response = await run();
+        } catch (error) {
+          if (error?.name === 'AbortError') {
+            throw new Error('Request timed out. Please try again.');
+          }
+          throw new Error('Cannot reach the server right now. Check your connection and try again.');
+        }
       }
     }
 

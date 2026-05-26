@@ -4,6 +4,7 @@ import PortalLayout from '../../components/PortalLayout';
 import SmartImage from '../../components/SmartImage';
 import { ADMIN_INSTITUTIONS } from '../../utils/adminInstitution';
 import { DEFAULT_IMAGES } from '../../utils/defaultImages';
+import { getRequestErrorMessage, sanitizeUserMessage } from '../../utils/userMessage';
 
 const DEFAULT_INSTITUTION = ADMIN_INSTITUTIONS[0];
 const CATEGORY_ALIASES = {
@@ -151,7 +152,13 @@ function ManageNewsEvents() {
           body: formData
         });
         const data = await response.json();
-        if (!response.ok) throw new Error(data.message || 'Upload failed.');
+        if (!response.ok) {
+          throw new Error(getRequestErrorMessage({
+            status: response.status,
+            message: data?.message || '',
+            fallback: 'We could not upload the selected file.'
+          }));
+        }
         if (type === 'image') {
           setForm((prev) => ({ ...prev, images: [...(prev.images || []), data.url] }));
         } else {
@@ -159,7 +166,7 @@ function ManageNewsEvents() {
         }
       }
     } catch (err) {
-      setError(err.message || 'Upload failed.');
+      setError(sanitizeUserMessage(err.message, 'We could not upload the selected file.'));
     } finally {
       setUploading(false);
       e.target.value = '';

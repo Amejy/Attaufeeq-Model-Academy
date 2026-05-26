@@ -31,7 +31,18 @@ function ProvisioningPanel({ title = 'Portal Access Ready', description = '', re
               </div>
               <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
                 <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Temporary password</p>
-                <p className="text-wrap-safe mt-2 text-sm font-medium text-slate-800" title={record.password || 'Existing password remains active'}>{record.password || 'Existing password remains active'}</p>
+                <p
+                  className="text-wrap-safe mt-2 text-sm font-medium text-slate-800"
+                  title={
+                    record.passwordVisible
+                      ? (record.password || 'Existing password remains active')
+                      : 'This password is not shown after delivery.'
+                  }
+                >
+                  {record.passwordVisible
+                    ? (record.password || 'Existing password remains active')
+                    : 'Shared through the approved delivery channel only'}
+                </p>
               </div>
             </div>
 

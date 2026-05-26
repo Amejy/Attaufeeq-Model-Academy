@@ -6,6 +6,23 @@ const SITE_CONTENT_KEY = 'public_site_content';
 const SITE_CONTENT_CACHE_KEY = 'site-content:public';
 const LEGACY_HIGHLIGHTS_DESCRIPTION =
   'Every card, section, and CTA now carries the same premium visual language so the school feels intentional instead of generic.';
+const LEGACY_PUBLIC_IMAGE_ALIASES = {
+  '/images/campus.jpg': '/images/schoolwebsite/main image (6).png',
+  '/images/classroom.jpg': '/images/schoolwebsite/Pasted image (2).png',
+  '/images/students.jpg': '/images/Home/Pasted image (2).png',
+  '/images/community.jpg': '/images/contact/main image (2).png',
+  '/images/hero-school.jpg': '/images/schoolwebsite/main image (6).png',
+  '/images/islamic-class.jpg': '/images/madrasawebsite/main image.png',
+  '/images/schoolwebsite1.png': '/images/schoolwebsite/main image (6).png',
+  '/images/schoolweb2.png': '/images/schoolwebsite/Pasted image (2).png',
+  '/images/schoolweb3.png': '/images/Home/Pasted image (2).png',
+  '/images/schoolweb4.png': '/images/contact/main image (2).png',
+  '/images/gallery1.png': '/images/gallery/main image (16).png',
+  '/images/gallery2.png': '/images/gallery/Pasted image.png',
+  '/images/gallery3.png': '/images/gallery/Pasted image (2).png',
+  '/images/gallery4.png': '/images/gallery/Pasted image (3).png',
+  '/images/gallery5.png': '/images/madrasawebsite/main image.png'
+};
 
 export const defaultSiteContent = {
   branding: {
@@ -37,7 +54,7 @@ export const defaultSiteContent = {
         title: 'ATTAUFEEQ Model Academy',
         description:
           'Western academic education with strong exam preparation, confidence-building instruction, and a disciplined growth culture.',
-        image: '/images/schoolweb2.png',
+        image: '/images/schoolwebsite/Pasted image (2).png',
         to: '/modern-academy',
         badge: 'Model Track',
         accent: 'from-emerald-950 via-emerald-800 to-amber-500'
@@ -46,7 +63,7 @@ export const defaultSiteContent = {
         title: 'Madrastul ATTAUFEEQ',
         description:
           "Qur'an memorization, Tajweed, Arabic, and strong Islamic values delivered in a calm, focused learning environment.",
-        image: '/images/gallery5.png',
+        image: '/images/madrasawebsite/main image.png',
         to: '/madrastul-attaufiq',
         badge: 'Madrasa Track',
         accent: 'from-slate-900 via-amber-700 to-yellow-400'
@@ -64,9 +81,9 @@ export const defaultSiteContent = {
       { value: '24/7', title: 'Access', text: 'News, access, records' }
     ],
     heroImages: [
-      { url: '/images/schoolwebsite1.png', alt: 'ATTAUFEEQ school environment' },
-      { url: '/images/schoolweb3.png', alt: 'Students learning in class' },
-      { url: '/images/schoolwebsite1.png', alt: 'School campus and facilities' }
+      { url: '/images/Home/main image.png', alt: 'ATTAUFEEQ school environment' },
+      { url: '/images/Home/Pasted image (2).png', alt: 'Students learning in class' },
+      { url: '/images/Home/Pasted image (3).png', alt: 'School campus and facilities' }
     ],
     highlightsEyebrow: 'School Highlights',
     highlightsTitle: 'A brighter, stronger public presence',
@@ -75,29 +92,29 @@ export const defaultSiteContent = {
       {
         title: 'Academic Excellence',
         text: 'Our students consistently perform well in WAEC and NECO examinations.',
-        image: '/images/schoolweb3.png'
+        image: '/images/Home/Pasted image (2).png'
       },
       {
         title: 'Qualified Teachers',
         text: 'Our experienced teachers are dedicated to delivering quality education.',
-        image: '/images/schoolweb2.png'
+        image: '/images/schoolwebsite/Pasted image (2).png'
       },
       {
         title: 'Modern Facilities',
         text: 'The school provides well-equipped classrooms and learning environments.',
-        image: '/images/schoolwebsite1.png'
+        image: '/images/schoolwebsite/main image (6).png'
       },
       {
         title: 'Islamic Education',
         text: 'Students receive strong Islamic training through Madrastul ATTAUFEEQ.',
-        image: '/images/gallery5.png'
+        image: '/images/madrasawebsite/main image.png'
       }
     ],
     storyEyebrow: 'School Story',
     storyTitle: 'Education with structure, confidence, and values',
     storyText:
       'ATTAUFEEQ Model Academy was founded with the vision of providing a balanced education that combines academic excellence with strong moral and Islamic values.',
-    storyImage: '/images/schoolwebsite1.png',
+    storyImage: '/images/Home/Pasted image (2).png',
     programsEyebrow: 'Academic Programs',
     programsTitle: 'Two institutions. One polished digital identity.',
     programsDescription:
@@ -108,14 +125,14 @@ export const defaultSiteContent = {
         description:
           'Western academic education in Mathematics, English, Science, Social Studies, and Technology using national standards and exam preparation pathways.',
         standards: ['WAEC', 'NECO', 'National Education Standards'],
-        image: '/images/schoolweb2.png'
+        image: '/images/schoolwebsite/main image (6).png'
       },
       {
         title: 'Madrastul ATTAUFEEQ',
         description:
           "Islamic education with Qur'an memorization, Tajweed, Arabic language, and foundational Islamic studies.",
         standards: ['Quran Memorization', 'Tajweed', 'Arabic Language'],
-        image: '/images/gallery5.png'
+        image: '/images/madrasawebsite/main image.png'
       }
     ],
     ctaEyebrow: 'Ready to join?',
@@ -173,7 +190,7 @@ export const defaultSiteContent = {
     ],
     signLabel: '',
     signatureImage: '',
-    image: '/images/schoolwebsite1.png',
+    image: '/images/schoolwebsite/main image (6).png',
     visionTitle: 'Vision',
     visionText:
       'To become a leading educational institution that develops intellectually capable, morally upright, and socially responsible students.',
@@ -189,7 +206,7 @@ export const defaultSiteContent = {
       'ATTAUFEEQ Model Academy provides structured learning pathways across nursery, primary, secondary, and madrasa programs to support all-round student development.',
     levelsTitle: 'Educational Levels',
     levels: ['Nursery School', 'Primary School', 'Secondary School', 'Madrasa Program'],
-    image: '/images/schoolweb3.png',
+    image: '/images/academics/main image (2).png',
     subjectsTitle: 'Subjects Offered',
     subjectsText:
       'Mathematics, English Language, Basic Science, Computer Studies, Social Studies, Arabic Language, and Islamic Studies.',
@@ -207,11 +224,11 @@ export const defaultSiteContent = {
     title: 'Gallery',
     description: 'School life, classes, and student activities.',
     photos: [
-      { url: '/images/schoolwebsite1.png', alt: 'School gallery hero view' },
-      { url: '/images/schoolweb3.png', alt: 'Students learning in class' },
-      { url: '/images/schoolweb2.png', alt: 'Classroom session' },
-      { url: '/images/schoolwebsite1.png', alt: 'School campus' },
-      { url: '/images/gallery5.png', alt: 'Islamic learning session' }
+      { url: '/images/gallery/main image (16).png', alt: 'School gallery hero view' },
+      { url: '/images/gallery/Pasted image.png', alt: 'Students learning in class' },
+      { url: '/images/gallery/Pasted image (2).png', alt: 'Classroom session' },
+      { url: '/images/gallery/Pasted image (3).png', alt: 'School campus' },
+      { url: '/images/gallery/Pasted image (4).png', alt: 'Islamic learning session' }
     ]
   },
   madrasa: {
@@ -219,7 +236,7 @@ export const defaultSiteContent = {
     title: 'Madrastul ATTAUFEEQ',
     description:
       "A dedicated Islamic learning environment supporting Qur'anic excellence, moral training, and spiritual growth for every learner.",
-    image: '/images/gallery5.png',
+    image: '/images/madrasawebsite/main image.png',
     modulesTitle: 'Madrasa Learning Modules',
     modulesSubtitle: 'Core components designed for academic and spiritual depth.',
     modules: [
@@ -268,6 +285,16 @@ function cleanText(value, fallback = '') {
   return normalized || fallback;
 }
 
+function cleanPlainText(value, fallback = '') {
+  const normalized = typeof value === 'string' ? value.trim() : '';
+  return normalized || fallback;
+}
+
+function cleanAssetValue(value, fallback = '') {
+  const normalized = cleanPlainText(value, fallback);
+  return LEGACY_PUBLIC_IMAGE_ALIASES[normalized] || normalized;
+}
+
 function cleanStringArray(values, fallback = []) {
   const rows = Array.isArray(values) ? values : fallback;
   return rows
@@ -300,7 +327,8 @@ export function normalizeSiteContent(payload = {}) {
       address: cleanText(branding.address, defaultSiteContent.branding.address),
       phone: cleanText(branding.phone, defaultSiteContent.branding.phone),
       email: cleanText(branding.email, defaultSiteContent.branding.email),
-      navSubtitle: cleanText(branding.navSubtitle, defaultSiteContent.branding.navSubtitle)
+      navSubtitle: cleanText(branding.navSubtitle, defaultSiteContent.branding.navSubtitle),
+      logoUrl: cleanAssetValue(branding.logoUrl, defaultSiteContent.branding.logoUrl)
     },
     landing: {
       badge: cleanText(landing.badge, defaultSiteContent.landing.badge),
@@ -316,10 +344,10 @@ export function normalizeSiteContent(payload = {}) {
       institutions: cleanObjectArray(landing.institutions, defaultSiteContent.landing.institutions, (row, fallback) => ({
         title: cleanText(row.title, fallback.title),
         description: cleanText(row.description, fallback.description),
-        image: cleanText(row.image, fallback.image),
-        to: cleanText(row.to, fallback.to),
+        image: cleanAssetValue(row.image, fallback.image),
+        to: cleanPlainText(row.to, fallback.to),
         badge: cleanText(row.badge, fallback.badge),
-        accent: cleanText(row.accent, fallback.accent)
+        accent: cleanPlainText(row.accent, fallback.accent)
       }))
     },
     home: {
@@ -332,7 +360,7 @@ export function normalizeSiteContent(payload = {}) {
         text: cleanText(row.text, fallback.text)
       })),
       heroImages: cleanObjectArray(home.heroImages, defaultSiteContent.home.heroImages, (row, fallback) => ({
-        url: cleanText(row.url, fallback.url),
+        url: cleanAssetValue(row.url, fallback.url),
         alt: cleanText(row.alt, fallback.alt)
       })),
       highlightsEyebrow: cleanText(home.highlightsEyebrow, defaultSiteContent.home.highlightsEyebrow),
@@ -341,12 +369,12 @@ export function normalizeSiteContent(payload = {}) {
       highlights: cleanObjectArray(home.highlights, defaultSiteContent.home.highlights, (row, fallback) => ({
         title: cleanText(row.title, fallback.title),
         text: cleanText(row.text, fallback.text),
-        image: cleanText(row.image, fallback.image)
+        image: cleanAssetValue(row.image, fallback.image)
       })),
       storyEyebrow: cleanText(home.storyEyebrow, defaultSiteContent.home.storyEyebrow),
       storyTitle: cleanText(home.storyTitle, defaultSiteContent.home.storyTitle),
       storyText: cleanText(home.storyText, defaultSiteContent.home.storyText),
-      storyImage: cleanText(home.storyImage, defaultSiteContent.home.storyImage),
+      storyImage: cleanAssetValue(home.storyImage, defaultSiteContent.home.storyImage),
       programsEyebrow: cleanText(home.programsEyebrow, defaultSiteContent.home.programsEyebrow),
       programsTitle: cleanText(home.programsTitle, defaultSiteContent.home.programsTitle),
       programsDescription: cleanText(home.programsDescription, defaultSiteContent.home.programsDescription),
@@ -354,7 +382,7 @@ export function normalizeSiteContent(payload = {}) {
         title: cleanText(row.title, fallback.title),
         description: cleanText(row.description, fallback.description),
         standards: cleanStringArray(row.standards, fallback.standards),
-        image: cleanText(row.image, fallback.image)
+        image: cleanAssetValue(row.image, fallback.image)
       })),
       ctaEyebrow: cleanText(home.ctaEyebrow, defaultSiteContent.home.ctaEyebrow),
       ctaTitle: cleanText(home.ctaTitle, defaultSiteContent.home.ctaTitle),
@@ -370,8 +398,8 @@ export function normalizeSiteContent(payload = {}) {
         bullets: cleanStringArray(row.bullets, fallback.bullets || [])
       })),
       signLabel: cleanText(about.signLabel, defaultSiteContent.about.signLabel),
-      signatureImage: cleanText(about.signatureImage, defaultSiteContent.about.signatureImage),
-      image: cleanText(about.image, defaultSiteContent.about.image),
+      signatureImage: cleanAssetValue(about.signatureImage, defaultSiteContent.about.signatureImage),
+      image: cleanAssetValue(about.image, defaultSiteContent.about.image),
       visionTitle: cleanText(about.visionTitle, defaultSiteContent.about.visionTitle),
       visionText: cleanText(about.visionText, defaultSiteContent.about.visionText),
       missionTitle: cleanText(about.missionTitle, defaultSiteContent.about.missionTitle),
@@ -384,7 +412,7 @@ export function normalizeSiteContent(payload = {}) {
       intro: cleanText(academics.intro, defaultSiteContent.academics.intro),
       levelsTitle: cleanText(academics.levelsTitle, defaultSiteContent.academics.levelsTitle),
       levels: cleanStringArray(academics.levels, defaultSiteContent.academics.levels),
-      image: cleanText(academics.image, defaultSiteContent.academics.image),
+      image: cleanAssetValue(academics.image, defaultSiteContent.academics.image),
       subjectsTitle: cleanText(academics.subjectsTitle, defaultSiteContent.academics.subjectsTitle),
       subjectsText: cleanText(academics.subjectsText, defaultSiteContent.academics.subjectsText),
       curriculumTitle: cleanText(academics.curriculumTitle, defaultSiteContent.academics.curriculumTitle),
@@ -397,14 +425,14 @@ export function normalizeSiteContent(payload = {}) {
         name: cleanText(row.name, fallback.name || ''),
         role: cleanText(row.role, fallback.role || ''),
         bio: cleanText(row.bio, fallback.bio || ''),
-        image: cleanText(row.image, fallback.image || '')
+        image: cleanAssetValue(row.image, fallback.image || '')
       }))
     },
     gallery: {
       title: cleanText(gallery.title, defaultSiteContent.gallery.title),
       description: cleanText(gallery.description, defaultSiteContent.gallery.description),
       photos: cleanObjectArray(gallery.photos, defaultSiteContent.gallery.photos, (row, fallback) => ({
-        url: cleanText(row.url, fallback.url),
+        url: cleanAssetValue(row.url, fallback.url),
         alt: cleanText(row.alt, fallback.alt)
       }))
     },
@@ -412,7 +440,7 @@ export function normalizeSiteContent(payload = {}) {
       eyebrow: cleanText(madrasa.eyebrow, defaultSiteContent.madrasa.eyebrow),
       title: cleanText(madrasa.title, defaultSiteContent.madrasa.title),
       description: cleanText(madrasa.description, defaultSiteContent.madrasa.description),
-      image: cleanText(madrasa.image, defaultSiteContent.madrasa.image),
+      image: cleanAssetValue(madrasa.image, defaultSiteContent.madrasa.image),
       modulesTitle: cleanText(madrasa.modulesTitle, defaultSiteContent.madrasa.modulesTitle),
       modulesSubtitle: cleanText(madrasa.modulesSubtitle, defaultSiteContent.madrasa.modulesSubtitle),
       modules: cleanObjectArray(madrasa.modules, defaultSiteContent.madrasa.modules, (row, fallback) => ({

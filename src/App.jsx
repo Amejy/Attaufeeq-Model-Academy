@@ -1,4 +1,4 @@
-import { Suspense, lazy, useEffect } from 'react';
+import { Suspense, lazy, useEffect, useLayoutEffect } from 'react';
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom';
 import AOS from 'aos';
 import 'aos/dist/aos.css';
@@ -99,9 +99,32 @@ function App() {
   const hasProgramWindow = showModernWindow || showMadrasaWindow || showMemorizationWindow;
   const showLegacyWindow = !hasProgramWindow && admissionPeriod?.startDate && admissionPeriod?.endDate;
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    if (typeof window === 'undefined') return;
+    const scrollingElement = document.scrollingElement || document.documentElement;
+    const htmlElement = document.documentElement;
+    const previousScrollBehavior = htmlElement.style.scrollBehavior;
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
     if (!isPortalRoute) {
-      window.scrollTo({ top: 0, behavior: 'auto' });
+      const resetScroll = () => {
+        htmlElement.style.scrollBehavior = 'auto';
+        window.scrollTo(0, 0);
+        scrollingElement.scrollTop = 0;
+        document.documentElement.scrollTop = 0;
+        document.body.scrollTop = 0;
+      };
+
+      resetScroll();
+      const rafId = window.requestAnimationFrame(resetScroll);
+      const timeoutId = window.setTimeout(resetScroll, 80);
+
+      return () => {
+        htmlElement.style.scrollBehavior = previousScrollBehavior;
+        window.cancelAnimationFrame(rafId);
+        window.clearTimeout(timeoutId);
+      };
     }
   }, [location.pathname, location.search, isPortalRoute]);
 

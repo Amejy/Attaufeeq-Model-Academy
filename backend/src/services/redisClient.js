@@ -2,6 +2,7 @@ import { Buffer } from 'node:buffer';
 import net from 'node:net';
 import tls from 'node:tls';
 import { env } from '../config/env.js';
+import { logger } from '../utils/logger.js';
 
 const NOOP_RESULT = { enabled: false };
 let client = null;
@@ -230,7 +231,7 @@ function buildConfig() {
 function logDevWarning(message) {
   if (env.isProduction || warningLogged) return;
   warningLogged = true;
-  console.warn(message);
+  logger.warn(message);
 }
 
 export async function getRedisClient() {

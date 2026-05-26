@@ -10,7 +10,10 @@ export function createAccessToken(user) {
       email: user.email
     },
     env.jwtSecret,
-    { expiresIn: env.jwtExpiresIn }
+    {
+      algorithm: 'HS256',
+      expiresIn: env.jwtExpiresIn
+    }
   );
 }
 
@@ -23,12 +26,15 @@ export function createRefreshToken(user) {
       type: 'refresh'
     },
     env.refreshSecret,
-    { expiresIn: env.refreshExpiresIn }
+    {
+      algorithm: 'HS256',
+      expiresIn: env.refreshExpiresIn
+    }
   );
 }
 
 export function verifyRefreshToken(token) {
-  const payload = jwt.verify(token, env.refreshSecret);
+  const payload = jwt.verify(token, env.refreshSecret, { algorithms: ['HS256'] });
   if (payload?.type !== 'refresh') {
     throw new Error('Invalid refresh token.');
   }

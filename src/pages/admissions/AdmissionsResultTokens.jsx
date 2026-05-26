@@ -341,6 +341,7 @@ function AdmissionsResultTokens() {
                 term={tokenCard.token?.term || '—'}
                 sessionId={tokenCard.token?.sessionId || ''}
                 token={tokenCard.token?.token || tokenCard.token || ''}
+                revealOnInteract={false}
               />
             </div>
             <button

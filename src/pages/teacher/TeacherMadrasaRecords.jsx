@@ -8,6 +8,8 @@ function TeacherMadrasaRecords() {
   const { apiJson } = useAuth();
   const [students, setStudents] = useState([]);
   const [records, setRecords] = useState([]);
+  const [sessions, setSessions] = useState([]);
+  const [sessionId, setSessionId] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [editingId, setEditingId] = useState('');
@@ -53,13 +55,26 @@ function TeacherMadrasaRecords() {
     }
     setStudents([]);
     setRecords([]);
+    setSessions([]);
     try {
+      const sessionsData = await apiJson('/results/sessions');
+      if (seq !== loadDataSeq.current) return;
+      const sessionRows = sessionsData.sessions || [];
+      const activeSession = sessionsData.activeSession || sessionRows.find((item) => item.isActive) || sessionRows[0] || null;
+      const effectiveSessionId = sessionId && sessionRows.some((item) => item.id === sessionId)
+        ? sessionId
+        : activeSession?.id || '';
+
       const [studentsData, recordsData] = await Promise.all([
-        apiJson('/madrasa/teacher/students'),
-        apiJson('/madrasa/teacher/records')
+        apiJson(`/madrasa/teacher/students${effectiveSessionId ? `?sessionId=${encodeURIComponent(effectiveSessionId)}` : ''}`),
+        apiJson(`/madrasa/teacher/records${effectiveSessionId ? `?sessionId=${encodeURIComponent(effectiveSessionId)}` : ''}`)
       ]);
       if (seq !== loadDataSeq.current) return;
 
+      setSessions(sessionRows);
+      if (sessionId !== effectiveSessionId) {
+        setSessionId(effectiveSessionId);
+      }
       const studentRows = studentsData.students || [];
       setStudents(studentRows);
       setRecords(recordsData.records || []);
@@ -75,7 +90,7 @@ function TeacherMadrasaRecords() {
         setLoading(false);
       }
     }
-  }, [apiJson]);
+  }, [apiJson, sessionId]);
 
   useEffect(() => {
     loadData();
@@ -108,7 +123,7 @@ function TeacherMadrasaRecords() {
     try {
       await apiJson(endpoint, {
         method,
-        body: form
+        body: { ...form, sessionId }
       });
 
       setSuccess(editingId ? 'Madrasa record updated.' : 'Madrasa record created.');
@@ -202,6 +217,19 @@ function TeacherMadrasaRecords() {
         onSubmit={submitRecord}
         className="mt-4 grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2 lg:grid-cols-4"
       >
+        <select
+          value={sessionId}
+          onChange={(e) => setSessionId(e.target.value)}
+          className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+          required
+        >
+          {!sessions.length && <option value="">No sessions available</option>}
+          {sessions.map((session) => (
+            <option key={session.id} value={session.id}>
+              {session.sessionName} {session.isActive ? '(Active)' : ''}
+            </option>
+          ))}
+        </select>
         <select
           value={form.studentId}
           onChange={(e) => setForm((prev) => ({ ...prev, studentId: e.target.value }))}

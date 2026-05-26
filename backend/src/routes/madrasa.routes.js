@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { adminStore, makeId } from '../data/adminStore.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { ensureActiveAcademicSession } from '../repositories/academicSessionRepository.js';
 import { findChildForParent, findChildrenForParent, findStudentByUser, findTeacherByUser } from '../utils/portalScope.js';
 import { filterCountableActiveStudents } from '../utils/studentLifecycle.js';
 
@@ -17,6 +18,7 @@ function normalizeScore(value) {
 function normalizeRecordPayload(body = {}) {
   return {
     studentId: String(body.studentId || '').trim(),
+    sessionId: String(body.sessionId || '').trim(),
     term: String(body.term || '').trim(),
     quranPortion: String(body.quranPortion || '').trim(),
     tajweedLevel: String(body.tajweedLevel || '').trim(),
@@ -32,6 +34,18 @@ function getActiveSessionId() {
   return active?.id || '';
 }
 
+function matchesSession(recordSessionId, sessionId) {
+  if (!sessionId) return true;
+  return String(recordSessionId || '').trim() === sessionId;
+}
+
+async function resolveSessionId(value = '') {
+  const normalized = String(value || '').trim();
+  if (normalized) return normalized;
+  const activeSession = await ensureActiveAcademicSession();
+  return activeSession?.id || '';
+}
+
 function resolveEnrollmentClassId(studentId, sessionId) {
   if (!studentId || !sessionId) return '';
   const enrollment = (adminStore.studentEnrollments || []).find(
@@ -45,7 +59,7 @@ function buildClassLabel(classId, fallback = '') {
   return classItem ? `${classItem.name} ${classItem.arm}` : fallback;
 }
 
-function resolveTeacherStudents(teacher) {
+function resolveTeacherStudents(teacher, sessionId = '') {
   if (!teacher?.id) return [];
   const classIds = adminStore.teacherAssignments
     .filter((item) => item.teacherId === teacher.id)
@@ -54,7 +68,7 @@ function resolveTeacherStudents(teacher) {
 
   if (!classIds.length) return [];
 
-  const activeSessionId = getActiveSessionId();
+  const activeSessionId = sessionId || getActiveSessionId();
 
   return filterCountableActiveStudents(adminStore.students)
     .map((student) => {
@@ -72,7 +86,8 @@ function resolveTeacherStudents(teacher) {
     .sort((a, b) => a.fullName.localeCompare(b.fullName));
 }
 
-madrasaRouter.get('/admin/records', requireAuth, requireRole('admin'), (_req, res) => {
+madrasaRouter.get('/admin/records', requireAuth, requireRole('admin'), async (req, res) => {
+  const sessionId = await resolveSessionId(req.query.sessionId);
   const records = adminStore.madrasaRecords.map((record) => {
     const student = adminStore.students.find((item) => item.id === record.studentId);
     return {
@@ -80,14 +95,15 @@ madrasaRouter.get('/admin/records', requireAuth, requireRole('admin'), (_req, re
       studentName: student?.fullName || record.studentId,
       institution: student?.institution || 'Madrastul ATTAUFEEQ'
     };
-  });
+  }).filter((record) => matchesSession(record.sessionId, sessionId));
 
-  return res.json({ records });
+  return res.json({ records, sessionId });
 });
 
-madrasaRouter.post('/admin/records', requireAuth, requireRole('admin'), (req, res) => {
+madrasaRouter.post('/admin/records', requireAuth, requireRole('admin'), async (req, res) => {
   const {
     studentId,
+    sessionId: requestedSessionId,
     term,
     quranPortion,
     tajweedLevel,
@@ -110,9 +126,12 @@ madrasaRouter.post('/admin/records', requireAuth, requireRole('admin'), (req, re
     return res.status(400).json({ message: 'Invalid studentId.' });
   }
 
+  const sessionId = await resolveSessionId(requestedSessionId);
+
   const record = {
     id: makeId('mdr'),
     studentId,
+    sessionId,
     term,
     quranPortion,
     tajweedLevel,
@@ -125,7 +144,7 @@ madrasaRouter.post('/admin/records', requireAuth, requireRole('admin'), (req, re
   return res.status(201).json({ record });
 });
 
-madrasaRouter.put('/admin/records/:id', requireAuth, requireRole('admin'), (req, res) => {
+madrasaRouter.put('/admin/records/:id', requireAuth, requireRole('admin'), async (req, res) => {
   const { id } = req.params;
   const recordIndex = adminStore.madrasaRecords.findIndex((item) => item.id === id);
 
@@ -135,6 +154,7 @@ madrasaRouter.put('/admin/records/:id', requireAuth, requireRole('admin'), (req,
 
   const {
     studentId,
+    sessionId: requestedSessionId,
     term,
     quranPortion,
     tajweedLevel,
@@ -157,9 +177,12 @@ madrasaRouter.put('/admin/records/:id', requireAuth, requireRole('admin'), (req,
     return res.status(400).json({ message: 'Invalid studentId.' });
   }
 
+  const sessionId = await resolveSessionId(requestedSessionId);
+
   adminStore.madrasaRecords[recordIndex] = {
     id,
     studentId,
+    sessionId,
     term,
     quranPortion,
     tajweedLevel,
@@ -183,29 +206,33 @@ madrasaRouter.delete('/admin/records/:id', requireAuth, requireRole('admin'), (r
   return res.status(204).send();
 });
 
-madrasaRouter.get('/teacher/students', requireAuth, requireRole('teacher'), (req, res) => {
+madrasaRouter.get('/teacher/students', requireAuth, requireRole('teacher'), async (req, res) => {
   const teacher = findTeacherByUser(req.user);
-  const students = resolveTeacherStudents(teacher);
-  return res.json({ students });
+  const sessionId = await resolveSessionId(req.query.sessionId);
+  const students = resolveTeacherStudents(teacher, sessionId);
+  return res.json({ students, sessionId });
 });
 
-madrasaRouter.get('/teacher/records', requireAuth, requireRole('teacher'), (req, res) => {
+madrasaRouter.get('/teacher/records', requireAuth, requireRole('teacher'), async (req, res) => {
   const teacher = findTeacherByUser(req.user);
-  const students = resolveTeacherStudents(teacher);
+  const sessionId = await resolveSessionId(req.query.sessionId);
+  const students = resolveTeacherStudents(teacher, sessionId);
   const studentMap = new Map(students.map((student) => [student.id, student]));
   const records = adminStore.madrasaRecords
     .filter((record) => studentMap.has(record.studentId))
+    .filter((record) => matchesSession(record.sessionId, sessionId))
     .map((record) => ({
       ...record,
       studentName: studentMap.get(record.studentId)?.fullName || record.studentId,
       classLabel: studentMap.get(record.studentId)?.classLabel || ''
     }));
-  return res.json({ records });
+  return res.json({ records, sessionId });
 });
 
-madrasaRouter.post('/teacher/records', requireAuth, requireRole('teacher'), (req, res) => {
+madrasaRouter.post('/teacher/records', requireAuth, requireRole('teacher'), async (req, res) => {
   const teacher = findTeacherByUser(req.user);
-  const students = resolveTeacherStudents(teacher);
+  const sessionId = await resolveSessionId(req.body?.sessionId);
+  const students = resolveTeacherStudents(teacher, sessionId);
   const allowedIds = new Set(students.map((student) => student.id));
   const {
     studentId,
@@ -233,6 +260,7 @@ madrasaRouter.post('/teacher/records', requireAuth, requireRole('teacher'), (req
   const record = {
     id: makeId('mdr'),
     studentId,
+    sessionId,
     term,
     quranPortion,
     tajweedLevel,
@@ -245,7 +273,7 @@ madrasaRouter.post('/teacher/records', requireAuth, requireRole('teacher'), (req
   return res.status(201).json({ record });
 });
 
-madrasaRouter.put('/teacher/records/:id', requireAuth, requireRole('teacher'), (req, res) => {
+madrasaRouter.put('/teacher/records/:id', requireAuth, requireRole('teacher'), async (req, res) => {
   const { id } = req.params;
   const recordIndex = adminStore.madrasaRecords.findIndex((item) => item.id === id);
 
@@ -254,7 +282,8 @@ madrasaRouter.put('/teacher/records/:id', requireAuth, requireRole('teacher'), (
   }
 
   const teacher = findTeacherByUser(req.user);
-  const students = resolveTeacherStudents(teacher);
+  const sessionId = await resolveSessionId(req.body?.sessionId);
+  const students = resolveTeacherStudents(teacher, sessionId);
   const allowedIds = new Set(students.map((student) => student.id));
   const {
     studentId,
@@ -282,6 +311,7 @@ madrasaRouter.put('/teacher/records/:id', requireAuth, requireRole('teacher'), (
   adminStore.madrasaRecords[recordIndex] = {
     id,
     studentId,
+    sessionId,
     term,
     quranPortion,
     tajweedLevel,
@@ -312,21 +342,27 @@ madrasaRouter.delete('/teacher/records/:id', requireAuth, requireRole('teacher')
   return res.status(204).send();
 });
 
-madrasaRouter.get('/student', requireAuth, requireRole('student'), (req, res) => {
+madrasaRouter.get('/student', requireAuth, requireRole('student'), async (req, res) => {
   const student = findStudentByUser(req.user);
   if (!student) return res.json({ student: null, records: [] });
+  const sessionId = await resolveSessionId(req.query.sessionId);
 
-  const records = adminStore.madrasaRecords.filter((item) => item.studentId === student.id);
-  return res.json({ student, records });
+  const records = adminStore.madrasaRecords
+    .filter((item) => item.studentId === student.id)
+    .filter((item) => matchesSession(item.sessionId, sessionId));
+  return res.json({ student, records, sessionId });
 });
 
-madrasaRouter.get('/parent', requireAuth, requireRole('parent'), (req, res) => {
+madrasaRouter.get('/parent', requireAuth, requireRole('parent'), async (req, res) => {
   const children = findChildrenForParent(req.user);
   const child = findChildForParent(req.user, String(req.query.childId || '')) || children[0] || null;
   if (!child) return res.json({ child: null, children, records: [] });
+  const sessionId = await resolveSessionId(req.query.sessionId);
 
-  const records = adminStore.madrasaRecords.filter((item) => item.studentId === child.id);
-  return res.json({ child, children, records });
+  const records = adminStore.madrasaRecords
+    .filter((item) => item.studentId === child.id)
+    .filter((item) => matchesSession(item.sessionId, sessionId));
+  return res.json({ child, children, records, sessionId });
 });
 
 export default madrasaRouter;

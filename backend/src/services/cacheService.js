@@ -1,4 +1,5 @@
 import { env } from '../config/env.js';
+import { logger } from '../utils/logger.js';
 import { sendRedisCommand } from './redisClient.js';
 
 const memoryCache = new Map();
@@ -61,7 +62,7 @@ export async function getCacheJson(key) {
     return JSON.parse(raw);
   } catch (error) {
     if (!env.isProduction) {
-      console.warn(`Cache read bypassed: ${error.message || error}`);
+      logger.warn('Cache read bypassed.', { error });
     }
     return null;
   }
@@ -80,7 +81,7 @@ export async function setCacheJson(key, value, { ttlSeconds = env.cacheDefaultTt
     await sendRedisCommand(['SET', cacheKey, JSON.stringify(value), 'EX', String(Math.max(1, ttlSeconds))]);
   } catch (error) {
     if (!env.isProduction) {
-      console.warn(`Cache write bypassed: ${error.message || error}`);
+      logger.warn('Cache write bypassed.', { error });
     }
   }
 
@@ -100,7 +101,7 @@ export async function deleteCacheKey(key) {
     await sendRedisCommand(['DEL', cacheKey]);
   } catch (error) {
     if (!env.isProduction) {
-      console.warn(`Cache delete bypassed: ${error.message || error}`);
+      logger.warn('Cache delete bypassed.', { error });
     }
   }
 }
@@ -123,7 +124,7 @@ export async function deleteCacheByPrefix(prefix) {
     }
   } catch (error) {
     if (!env.isProduction) {
-      console.warn(`Cache prefix delete bypassed: ${error.message || error}`);
+      logger.warn('Cache prefix delete bypassed.', { error });
     }
   }
 }

@@ -1,11 +1,14 @@
 import SmartImage from '../components/SmartImage';
+import SectionPhotoGrid from '../components/public/SectionPhotoGrid';
 import { GlassPanel, PremiumHero, SectionIntro } from '../components/public/PremiumPublic';
 import { useSiteContent } from '../context/SiteContentContext';
 import { DEFAULT_IMAGES } from '../utils/defaultImages';
+import { getSectionMedia } from '../utils/publicSectionImages';
 
 function Academics() {
   const { siteContent } = useSiteContent();
   const academics = siteContent.academics || {};
+  const academicsMedia = getSectionMedia('academics');
 
   return (
     <main className="premium-page">
@@ -15,7 +18,7 @@ function Academics() {
         title={academics.title}
         kicker="School Section"
         description={academics.intro}
-        image={academics.image || DEFAULT_IMAGES.students}
+        image={academicsMedia.headerImage?.url || academics.image || DEFAULT_IMAGES.students}
         imageAlt="Students in class"
       />
 
@@ -29,7 +32,7 @@ function Academics() {
         </div>
         <div className="premium-media-card">
           <SmartImage
-          src={academics.image || DEFAULT_IMAGES.students}
+          src={academicsMedia.supportingImages[0]?.url || academics.image || DEFAULT_IMAGES.students}
           fallbackSrc={DEFAULT_IMAGES.students}
           alt="Students in class"
           className="h-72 w-full object-cover md:h-full"
@@ -38,6 +41,14 @@ function Academics() {
         </div>
         </GlassPanel>
       </section>
+
+      <SectionPhotoGrid
+        eyebrow="Academic Spaces"
+        title="Learning scenes from the academic environment"
+        description="Supporting images for the academics page are pulled from the academics folder."
+        photos={academicsMedia.supportingImages.slice(1)}
+        fallbackSrc={DEFAULT_IMAGES.students}
+      />
 
       <section className="section-wrap pb-20">
         <div className="grid gap-6 md:grid-cols-2">

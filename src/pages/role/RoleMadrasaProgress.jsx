@@ -7,6 +7,8 @@ import useParentChildSelection from '../../hooks/useParentChildSelection';
 function RoleMadrasaProgress({ role }) {
   const { apiJson, user } = useAuth();
   const [records, setRecords] = useState([]);
+  const [sessions, setSessions] = useState([]);
+  const [sessionId, setSessionId] = useState('');
   const [profileName, setProfileName] = useState('');
   const [children, setChildren] = useState([]);
   const [selectedChildId, setSelectedChildId] = useParentChildSelection(role, user);
@@ -20,16 +22,31 @@ function RoleMadrasaProgress({ role }) {
       setLoading(true);
       setError('');
       setRecords([]);
+      setSessions([]);
       setProfileName('');
       setChildren([]);
       try {
-        const query = role === 'parent' && selectedChildId ? `?childId=${encodeURIComponent(selectedChildId)}` : '';
+        const sessionsData = await apiJson('/results/sessions');
+        if (!isCurrent) return;
+        const sessionRows = sessionsData.sessions || [];
+        const activeSession = sessionsData.activeSession || sessionRows.find((item) => item.isActive) || sessionRows[0] || null;
+        const effectiveSessionId = sessionId && sessionRows.some((item) => item.id === sessionId)
+          ? sessionId
+          : activeSession?.id || '';
+        const params = new URLSearchParams();
+        if (role === 'parent' && selectedChildId) params.set('childId', selectedChildId);
+        if (effectiveSessionId) params.set('sessionId', effectiveSessionId);
+        const query = params.toString() ? `?${params.toString()}` : '';
         const data = await apiJson(`/madrasa/${role}${query}`);
         if (!isCurrent) return;
 
         setRecords(data.records || []);
+        setSessions(sessionRows);
         setProfileName(data.student?.fullName || data.child?.fullName || '');
         setChildren(data.children || []);
+        if (sessionId !== effectiveSessionId) {
+          setSessionId(effectiveSessionId);
+        }
         if (role === 'parent' && data.child?.id && data.child.id !== selectedChildId) {
           setSelectedChildId(data.child.id);
         }
@@ -47,7 +64,7 @@ function RoleMadrasaProgress({ role }) {
     return () => {
       isCurrent = false;
     };
-  }, [role, apiJson, selectedChildId, setSelectedChildId]);
+  }, [role, apiJson, selectedChildId, sessionId, setSelectedChildId]);
 
   return (
     <PortalLayout
@@ -67,6 +84,21 @@ function RoleMadrasaProgress({ role }) {
       {loading && <p className="mt-3 text-sm text-slate-600">Loading madrasa progress...</p>}
       {profileName && <p className="text-sm text-slate-600">Profile: {profileName}</p>}
       {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        <select
+          value={sessionId}
+          onChange={(event) => setSessionId(event.target.value)}
+          className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+        >
+          {!sessions.length && <option value="">No sessions available</option>}
+          {sessions.map((session) => (
+            <option key={session.id} value={session.id}>
+              {session.sessionName} {session.isActive ? '(Active)' : ''}
+            </option>
+          ))}
+        </select>
+      </div>
 
       <div className="mt-4 overflow-x-auto rounded-xl border border-slate-200">
         <table className="min-w-full text-sm">

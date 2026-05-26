@@ -91,6 +91,26 @@ test('parent can submit receipt request and admissions can confirm it into a pay
       { id: `enr-payreq-${nonce}`, studentId, classId, sessionId: session.id }
     ];
 
+    const credentials = buildAdminCredentials();
+    const admissionsUser = await createAdminAccount({
+      ...credentials,
+      role: 'admissions',
+      fullName: 'Admissions Reviewer'
+    });
+    const admissionsLogin = await loginAs(credentials);
+    assert.equal(admissionsLogin.status, 200);
+
+    const adminCredentials = buildAdminCredentials();
+    const adminUser = await createAdminAccount(adminCredentials);
+    const adminLogin = await loginAs(adminCredentials);
+    assert.equal(adminLogin.status, 200);
+
+    const salesControlResponse = await request(app)
+      .put('/api/fees/admin/token-sales-control')
+      .set(authHeader(adminLogin.body.token))
+      .send({ sessionId: session.id, term: 'First Term', enabled: true });
+    assert.equal(salesControlResponse.status, 200, JSON.stringify(salesControlResponse.body));
+
     const parentLogin = await request(app)
       .post('/api/auth/login')
       .send({ email: parentEmail, password: parentPassword });
@@ -111,15 +131,6 @@ test('parent can submit receipt request and admissions can confirm it into a pay
     assert.equal(parentRequest.status, 201, JSON.stringify(parentRequest.body));
     assert.equal(parentRequest.body.paymentRequest?.status, 'pending');
 
-    const credentials = buildAdminCredentials();
-    const admissionsUser = await createAdminAccount({
-      ...credentials,
-      role: 'admissions',
-      fullName: 'Admissions Reviewer'
-    });
-    const admissionsLogin = await loginAs(credentials);
-    assert.equal(admissionsLogin.status, 200);
-
     const reviewResponse = await request(app)
       .put(`/api/fees/admin/payment-requests/${parentRequest.body.paymentRequest.id}`)
       .set(authHeader(admissionsLogin.body.token))
@@ -135,6 +146,7 @@ test('parent can submit receipt request and admissions can confirm it into a pay
     adminStore.studentEnrollments = (adminStore.studentEnrollments || []).filter((item) => item.studentId !== studentId);
     await cleanupUser(parentUser.id);
     await cleanupUser(admissionsUser.id);
+    await cleanupUser(adminUser.id);
   });
 });
 
@@ -184,6 +196,26 @@ test('approved receipt can release a result token to parent and student fee dash
       { id: `enr-release-${nonce}`, studentId, classId, sessionId: session.id }
     ];
 
+    const admissionsCredentials = buildAdminCredentials();
+    const admissionsUser = await createAdminAccount({
+      ...admissionsCredentials,
+      role: 'admissions',
+      fullName: 'Token Release Desk'
+    });
+    const admissionsLogin = await loginAs(admissionsCredentials);
+    assert.equal(admissionsLogin.status, 200);
+
+    const adminCredentials = buildAdminCredentials();
+    const adminUser = await createAdminAccount(adminCredentials);
+    const adminLogin = await loginAs(adminCredentials);
+    assert.equal(adminLogin.status, 200);
+
+    const salesControlResponse = await request(app)
+      .put('/api/fees/admin/token-sales-control')
+      .set(authHeader(adminLogin.body.token))
+      .send({ sessionId: session.id, term: 'First Term', enabled: true });
+    assert.equal(salesControlResponse.status, 200, JSON.stringify(salesControlResponse.body));
+
     const parentLogin = await request(app)
       .post('/api/auth/login')
       .send({ email: parentEmail, password: parentPassword });
@@ -208,14 +240,11 @@ test('approved receipt can release a result token to parent and student fee dash
       });
     assert.equal(receiptResponse.status, 201, JSON.stringify(receiptResponse.body));
 
-    const admissionsCredentials = buildAdminCredentials();
-    const admissionsUser = await createAdminAccount({
-      ...admissionsCredentials,
-      role: 'admissions',
-      fullName: 'Token Release Desk'
-    });
-    const admissionsLogin = await loginAs(admissionsCredentials);
-    assert.equal(admissionsLogin.status, 200);
+    const feePlanResponse = await request(app)
+      .post('/api/fees/admin/plans')
+      .set(authHeader(admissionsLogin.body.token))
+      .send({ classId, term: 'First Term', amount: 40000, sessionId: session.id, published: true });
+    assert.equal(feePlanResponse.status, 201, JSON.stringify(feePlanResponse.body));
 
     const reviewResponse = await request(app)
       .put(`/api/fees/admin/payment-requests/${receiptResponse.body.paymentRequest.id}`)
@@ -235,12 +264,18 @@ test('approved receipt can release a result token to parent and student fee dash
       .set(authHeader(parentLogin.body.token));
     assert.equal(parentFees.status, 200, JSON.stringify(parentFees.body));
     assert.equal(parentFees.body.releasedToken?.token, releaseResponse.body.releasedToken.token);
+    assert.equal(parentFees.body.summary?.totalPlan, 40000);
+    assert.equal(parentFees.body.summary?.totalPaid, 0);
+    assert.equal(parentFees.body.summary?.balance, 40000);
 
     const studentFees = await request(app)
       .get(`/api/fees/student?term=First%20Term&sessionId=${encodeURIComponent(session.id)}`)
       .set(authHeader(studentLogin.body.token));
     assert.equal(studentFees.status, 200, JSON.stringify(studentFees.body));
     assert.equal(studentFees.body.releasedToken?.token, releaseResponse.body.releasedToken.token);
+    assert.equal(studentFees.body.summary?.totalPlan, 40000);
+    assert.equal(studentFees.body.summary?.totalPaid, 0);
+    assert.equal(studentFees.body.summary?.balance, 40000);
 
     async function safeDelete(tableName, whereSql, params) {
       const existsResult = await query('SELECT to_regclass($1) as table_name', [tableName]);
@@ -256,11 +291,13 @@ test('approved receipt can release a result token to parent and student fee dash
 
     adminStore.paymentRequests = (adminStore.paymentRequests || []).filter((item) => item.studentId !== studentId);
     adminStore.payments = adminStore.payments.filter((item) => item.studentId !== studentId);
+    adminStore.feePlans = adminStore.feePlans.filter((item) => item.classId !== classId);
     adminStore.classes = adminStore.classes.filter((item) => item.id !== classId);
     adminStore.students = adminStore.students.filter((item) => item.id !== studentId);
     adminStore.studentEnrollments = (adminStore.studentEnrollments || []).filter((item) => item.studentId !== studentId);
     await cleanupUser(parentUser.id);
     await cleanupUser(studentUser.id);
     await cleanupUser(admissionsUser.id);
+    await cleanupUser(adminUser.id);
   });
 });

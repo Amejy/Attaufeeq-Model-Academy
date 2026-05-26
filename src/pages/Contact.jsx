@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import ErrorState from '../components/ErrorState';
+import SectionPhotoGrid from '../components/public/SectionPhotoGrid';
 import { GlassPanel, PremiumHero, SectionIntro } from '../components/public/PremiumPublic';
 import { useSiteContent } from '../context/SiteContentContext';
 import { apiJson } from '../utils/publicApi';
+import { getSectionMedia } from '../utils/publicSectionImages';
 
 const MAP_EMBED_URL = 'https://www.google.com/maps?q=10.47547,7.43232&output=embed';
 const DIRECTIONS_URL = 'https://www.google.com/maps/dir/?api=1&destination=10.47547,7.43232';
@@ -23,6 +25,7 @@ function Contact() {
   const { siteContent } = useSiteContent();
   const branding = siteContent.branding || {};
   const contact = siteContent.contact || {};
+  const contactMedia = getSectionMedia('contact');
   const phoneNumbers = splitPhoneNumbers(branding.phone);
   const [form, setForm] = useState({ fullName: '', email: '', message: '' });
   const [submitting, setSubmitting] = useState(false);
@@ -65,7 +68,7 @@ function Contact() {
         title={contact.title}
         kicker="Speak with the school"
         description={contact.formDescription}
-        image="/images/schoolweb4.png"
+        image={contactMedia.headerImage?.url || '/images/logo.png'}
         imageAlt="School contact"
       />
 
@@ -182,6 +185,14 @@ function Contact() {
         </GlassPanel>
       </div>
       </section>
+
+      <SectionPhotoGrid
+        eyebrow="Campus Contact Views"
+        title="A quick look around the school contact spaces"
+        description="The contact page header and support images now come from the contact folder."
+        photos={contactMedia.supportingImages}
+        fallbackSrc={contactMedia.headerImage?.url || '/images/logo.png'}
+      />
 
       <section className="section-wrap pb-20">
       <GlassPanel className="interactive-card p-6">

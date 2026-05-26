@@ -3,16 +3,28 @@ import multer from 'multer';
 import { createFileUpload } from '../repositories/fileUploadRepository.js';
 
 const memoryStorage = multer.memoryStorage();
+const MAX_PUBLIC_UPLOAD_BYTES = 10 * 1024 * 1024;
+const MAX_PRIVATE_UPLOAD_BYTES = 15 * 1024 * 1024;
 
 const publicUpload = multer({
   storage: memoryStorage,
-  limits: { fileSize: 50 * 1024 * 1024 }
+  limits: { fileSize: MAX_PUBLIC_UPLOAD_BYTES }
 });
 
 const privateUpload = multer({
   storage: memoryStorage,
-  limits: { fileSize: 25 * 1024 * 1024 }
+  limits: { fileSize: MAX_PRIVATE_UPLOAD_BYTES }
 });
+
+function sanitizeUploadName(value) {
+  const normalized = String(value || '')
+    .replace(/[/\\?%*:|"<>]/g, '-')
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return normalized.slice(0, 180) || 'upload';
+}
 
 function bufferStartsWith(buffer, signature) {
   if (!buffer || buffer.length < signature.length) return false;
@@ -96,7 +108,7 @@ async function saveUploadedFile(file, { visibility, allowedMimes }) {
   }
 
   const upload = await createFileUpload({
-    originalName: file.originalname || 'upload',
+    originalName: sanitizeUploadName(file.originalname),
     visibility,
     mime: detected.mime,
     extension: detected.ext,

@@ -57,6 +57,13 @@ Required setup:
 - `POST /api/results/teacher/scores` (teacher only)
 - `GET /api/results/teacher/records` (teacher only)
 - `GET /api/results/admin/overview` (admin only)
+- `GET /api/results/admin/remarks` (admin only)
+- `POST /api/results/admin/remarks` (admin only)
+- `POST /api/results/admin/remarks/generate` (admin only)
+- `GET /api/results/admin/report-settings` (admin only)
+- `PUT /api/results/admin/report-settings` (admin only)
+- `POST /api/results/admin/report-settings/signature` (admin only)
+- `DELETE /api/results/admin/report-settings/signature` (admin only)
 - `POST /api/results/admin/publish` (admin only)
 - `GET /api/results/student` (student only)
 - `GET /api/results/parent` (parent only)
@@ -144,3 +151,29 @@ Required setup:
 - Clean legacy demo users with `npm run db:cleanup:legacy-users`.
 - Replace the final legacy admin safely with `npm run db:replace:legacy-admin` after setting `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD`.
 - Security hardening enabled: Redis-backed distributed rate limiting, login throttling, strict startup validation, and request audit logs.
+
+## Security Operations
+
+- Supabase public access hardening is enforced through database migration `030_supabase_public_lockdown.sql`. Public API roles should not have direct table access.
+- Refresh sessions are stored as token hashes, not raw tokens.
+- Production runtime should use:
+  - `USE_DATABASE=true`
+  - `RATE_LIMIT_STORE=redis`
+  - strong `JWT_SECRET` and `REFRESH_SECRET`
+  - `AUTH_COOKIE_SECURE=true`
+  - a restricted `CORS_ORIGINS` list
+- Admin password resets should be delivered by email when possible. Avoid copying temporary passwords into chat tools or unsecured notes.
+- Backup exports from `/api/admin/system/backup` are administrative snapshots and should be stored only in restricted school-controlled storage.
+
+## Recovery Checklist
+
+1. Confirm PostgreSQL connectivity and the latest successful backup export.
+2. Run `npm run db:migrate` on the target environment before restoring application usage.
+3. Validate bootstrap admin access with the configured `BOOTSTRAP_ADMIN_EMAIL`.
+4. Refresh portal state from the admin tools or restart the backend cleanly after a restore.
+5. Verify critical flows after recovery:
+   - admin login
+   - admissions review
+   - result approval and report-card preview
+   - teacher submission flow
+   - promotions rollover preview

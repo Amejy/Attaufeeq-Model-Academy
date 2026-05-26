@@ -11,6 +11,7 @@ import {
   SectionIntro
 } from '../components/public/PremiumPublic';
 import { getInstitutionImageFallback } from '../utils/defaultImages';
+import { getSectionMedia } from '../utils/publicSectionImages';
 
 function normalizeText(value, fallback = '') {
   const normalized = String(value || '').trim();
@@ -115,6 +116,8 @@ function Landing() {
   const admissionsAvailable = !isLoading && periodOpen;
   const branding = siteContent.branding || {};
   const landing = siteContent.landing || {};
+  const schoolWebsiteMedia = getSectionMedia('schoolwebsite');
+  const madrasaMedia = getSectionMedia('madrasawebsite');
   const featureItems = buildFeatureItems(landing, branding);
   const heading = normalizeText(landing.title, branding.name || 'School Portal');
   const description = normalizeText(
@@ -129,7 +132,7 @@ function Landing() {
         title={heading}
         kicker={branding.motto}
         description={description}
-        image={getInstitutionImageFallback('campus')}
+        image={schoolWebsiteMedia.headerImage?.url || getInstitutionImageFallback('campus')}
         imageAlt={branding.name || 'School campus'}
         stats={(landing.stats || []).slice(0, 3)}
         primaryAction={{ to: admissionsAvailable ? '/admissions' : '/login', label: admissionsAvailable ? 'Start Admission' : 'Open Portal' }}
@@ -151,7 +154,9 @@ function Landing() {
               badge={item.badge}
               description={item.description}
               to={item.to || '/'}
-              image={item.image || getInstitutionImageFallback(item.title)}
+              image={index === 0
+                ? (schoolWebsiteMedia.headerImage?.url || item.image || getInstitutionImageFallback(item.title))
+                : (madrasaMedia.headerImage?.url || item.image || getInstitutionImageFallback(item.title))}
               imageAlt={item.title}
               accent={index === 0 ? 'school' : 'madrasa'}
             />

@@ -25,6 +25,11 @@ import { sendAdminNotificationEmail, sendPasswordResetEmail } from '../utils/mai
 import { generateTemporaryPassword, hashPassword } from '../utils/passwords.js';
 import { normalizeAdmissionPeriod } from '../utils/admissionPeriod.js';
 import {
+  findAcademicCalendarEntry,
+  normalizeAcademicCalendarEntry,
+  validateAcademicCalendarEntry
+} from '../utils/academicCalendar.js';
+import {
   computeAcademicOrder,
   describePromotionStep,
   getNextTerm,
@@ -33,11 +38,13 @@ import {
   resolveNextClass
 } from '../utils/academicProgression.js';
 import { normalizeInstitution } from '../utils/institution.js';
+import { toPublicBulkError, toPublicErrorMessage } from '../utils/publicError.js';
 import {
   findMatchingStudentForAdmission,
   hasProvisionedStudentPortal,
   normalizeStudentAccountStatus
 } from '../utils/studentLifecycle.js';
+import { logger } from '../utils/logger.js';
 import {
   createBulkStudentUploadSession,
   getBulkStudentUploadSession,
@@ -81,7 +88,6 @@ function validateAdmissionPeriodConfig(period = {}) {
     { key: 'madrasa', label: 'Madrastul ATTAUFEEQ', ...programs.madrasa },
     { key: 'memorization', label: 'Quran Memorization', ...programs.memorization }
   ];
-  const activeWindows = [];
 
   for (const window of windows) {
     const startDate = String(window.startDate || '').trim();
@@ -98,14 +104,6 @@ function validateAdmissionPeriodConfig(period = {}) {
     if (start != null && end != null && start > end) {
       return `${window.label} start date must be before its end date.`;
     }
-
-    if (period.enabled !== false && window.enabled !== false) {
-      activeWindows.push(window);
-    }
-  }
-
-  if (activeWindows.length > 1) {
-    return 'Only one admission window can stay active at a time. Disable the other programs before saving.';
   }
 
   return '';
@@ -1014,7 +1012,7 @@ adminRouter.post('/teachers', async (req, res) => {
     if (isUniqueViolation(error)) {
       return res.status(409).json({ message: 'Teacher email already exists.' });
     }
-    return res.status(400).json({ message: error.message || 'Unable to provision teacher account.' });
+    return res.status(400).json({ message: toPublicErrorMessage(error, 'We could not create the teacher account.') });
   }
 });
 
@@ -1051,7 +1049,7 @@ adminRouter.put('/teachers/:id', async (req, res) => {
     if (isUniqueViolation(error)) {
       return res.status(409).json({ message: 'Teacher email already exists.' });
     }
-    return res.status(400).json({ message: error.message || 'Unable to update teacher account.' });
+    return res.status(400).json({ message: toPublicErrorMessage(error, 'We could not update the teacher account.') });
   }
 });
 
@@ -1120,7 +1118,7 @@ adminRouter.post('/students', async (req, res) => {
     if (isUniqueViolation(error)) {
       return res.status(409).json({ message: 'Student record conflicts with an existing database record.' });
     }
-    return res.status(400).json({ message: error.message || 'Unable to provision student accounts.' });
+    return res.status(400).json({ message: toPublicErrorMessage(error, 'We could not create the student account.') });
   }
 });
 
@@ -1159,7 +1157,7 @@ adminRouter.put('/students/:id', async (req, res) => {
     if (isUniqueViolation(error)) {
       return res.status(409).json({ message: 'Student record conflicts with an existing database record.' });
     }
-    return res.status(400).json({ message: error.message || 'Unable to update student accounts.' });
+    return res.status(400).json({ message: toPublicErrorMessage(error, 'We could not update the student account.') });
   }
 });
 
@@ -1197,7 +1195,7 @@ adminRouter.post('/students/bulk', async (req, res) => {
         }))
       );
     } catch (error) {
-      errors.push({ index, error: error.message || 'Provisioning failed.', row });
+      errors.push({ index, error: toPublicBulkError(error?.message, 'This student record could not be processed.'), row });
     }
   }
 
@@ -1219,7 +1217,7 @@ adminRouter.get('/bulk-uploads/students', async (req, res) => {
     const uploads = await listBulkStudentUploadSessions({ limit, offset });
     return res.json({ uploads });
   } catch (error) {
-    return res.status(500).json({ message: error.message || 'Unable to load upload history.' });
+    return res.status(500).json({ message: toPublicErrorMessage(error, 'We could not load upload history right now.') });
   }
 });
 
@@ -1231,7 +1229,7 @@ adminRouter.get('/bulk-uploads/students/:id', async (req, res) => {
     }
     return res.json({ upload });
   } catch (error) {
-    return res.status(500).json({ message: error.message || 'Unable to load upload session.' });
+    return res.status(500).json({ message: toPublicErrorMessage(error, 'We could not load that upload session right now.') });
   }
 });
 
@@ -1251,7 +1249,7 @@ adminRouter.post('/bulk-uploads/students', async (req, res) => {
     });
     return res.status(201).json({ upload });
   } catch (error) {
-    return res.status(500).json({ message: error.message || 'Unable to save upload history.' });
+    return res.status(500).json({ message: toPublicErrorMessage(error, 'We could not save upload history right now.') });
   }
 });
 
@@ -1260,7 +1258,7 @@ adminRouter.delete('/bulk-uploads/students', async (_req, res) => {
     await clearBulkStudentUploadSessions();
     return res.status(204).send();
   } catch (error) {
-    return res.status(500).json({ message: error.message || 'Unable to clear upload history.' });
+    return res.status(500).json({ message: toPublicErrorMessage(error, 'We could not clear upload history right now.') });
   }
 });
 
@@ -1284,7 +1282,7 @@ adminRouter.delete('/students/:id', async (req, res) => {
     removeStoreRecord('students', id);
     return res.status(204).send();
   } catch (error) {
-    return res.status(400).json({ message: error.message || 'Unable to delete student.' });
+    return res.status(400).json({ message: toPublicErrorMessage(error, 'We could not remove the student record.') });
   }
 });
 
@@ -1334,7 +1332,7 @@ adminRouter.post('/classes', async (req, res) => {
     if (isUniqueViolation(error)) {
       return res.status(409).json({ message: 'This class already exists for the selected institution.' });
     }
-    return res.status(400).json({ message: error.message || 'Unable to create class.' });
+    return res.status(400).json({ message: toPublicErrorMessage(error, 'We could not create the class.') });
   }
 });
 
@@ -1446,6 +1444,53 @@ adminRouter.put('/terms/closures', async (req, res) => {
   }
 
   return res.json({ termClosures: adminStore.termClosures, sessionId });
+});
+
+adminRouter.get('/academic-calendar', async (req, res) => {
+  const activeSession = await ensureActiveAcademicSession();
+  const sessionId = req.query.sessionId ? String(req.query.sessionId) : activeSession?.id || '';
+  const term = req.query.term ? normalizeTerm(String(req.query.term)) : '';
+  const rows = Array.isArray(adminStore.academicCalendar) ? adminStore.academicCalendar : [];
+  const calendar = sessionId ? rows.filter((entry) => entry.sessionId === sessionId) : rows;
+  const entry = term && sessionId ? findAcademicCalendarEntry(adminStore, sessionId, term) : null;
+  return res.json({ sessionId, term, calendar, entry });
+});
+
+adminRouter.put('/academic-calendar', async (req, res) => {
+  const activeSession = await ensureActiveAcademicSession();
+  const sessionId = req.body?.sessionId ? String(req.body.sessionId).trim() : activeSession?.id || '';
+  const term = normalizeTerm(String(req.body?.term || ''));
+
+  if (!sessionId) {
+    return res.status(400).json({ message: 'Active academic session is required.' });
+  }
+  if (!term) {
+    return res.status(400).json({ message: `term must be one of ${TERM_OPTIONS.join(', ')}.` });
+  }
+
+  const record = normalizeAcademicCalendarEntry({
+    ...req.body,
+    sessionId,
+    term,
+    updatedAt: new Date().toISOString()
+  });
+  const validationError = validateAcademicCalendarEntry(record);
+  if (validationError) {
+    return res.status(400).json({ message: validationError });
+  }
+
+  adminStore.academicCalendar = Array.isArray(adminStore.academicCalendar) ? adminStore.academicCalendar : [];
+  const index = adminStore.academicCalendar.findIndex(
+    (entry) => entry.sessionId === sessionId && entry.term === term
+  );
+  if (index >= 0) {
+    adminStore.academicCalendar[index] = record;
+  } else {
+    adminStore.academicCalendar.unshift(record);
+  }
+
+  const calendar = adminStore.academicCalendar.filter((entry) => entry.sessionId === sessionId);
+  return res.json({ sessionId, term, entry: record, calendar });
 });
 
 adminRouter.get('/promotions/preview', async (req, res) => {
@@ -1924,7 +1969,7 @@ adminRouter.post('/academic-sessions/rollover', async (req, res) => {
       skipped
     });
   } catch (error) {
-    console.error('Promotion rollover failed', error);
+    logger.error('Promotion rollover failed.', { error });
     addActivityLog({
       action: 'promotions.rollover.failed',
       method: 'POST',
@@ -1937,7 +1982,7 @@ adminRouter.post('/academic-sessions/rollover', async (req, res) => {
         message: error?.message || 'Promotion rollover failed.'
       }
     });
-    return res.status(500).json({ message: 'Promotion rollover failed. Check server logs for details.' });
+    return res.status(500).json({ message: 'We could not complete the promotion rollover right now.' });
   }
 });
 
@@ -1979,7 +2024,7 @@ adminRouter.put('/classes/:id', async (req, res) => {
     if (isUniqueViolation(error)) {
       return res.status(409).json({ message: 'This class already exists for the selected institution.' });
     }
-    return res.status(400).json({ message: error.message || 'Unable to update class.' });
+    return res.status(400).json({ message: toPublicErrorMessage(error, 'We could not update the class.') });
   }
 });
 
@@ -2028,7 +2073,7 @@ adminRouter.post('/subjects', async (req, res) => {
     if (isUniqueViolation(error)) {
       return res.status(409).json({ message: 'This subject already exists for the selected institution.' });
     }
-    return res.status(400).json({ message: error.message || 'Unable to create subject.' });
+    return res.status(400).json({ message: toPublicErrorMessage(error, 'We could not create the subject.') });
   }
 });
 
@@ -2054,7 +2099,7 @@ adminRouter.put('/subjects/:id', async (req, res) => {
     if (isUniqueViolation(error)) {
       return res.status(409).json({ message: 'This subject already exists for the selected institution.' });
     }
-    return res.status(400).json({ message: error.message || 'Unable to update subject.' });
+    return res.status(400).json({ message: toPublicErrorMessage(error, 'We could not update the subject.') });
   }
 });
 
@@ -2192,7 +2237,7 @@ adminRouter.put('/teacher-assignments/:id', async (req, res) => {
     if (isUniqueViolation(error)) {
       return res.status(409).json({ message: 'This teacher assignment already exists for the selected term.' });
     }
-    return res.status(400).json({ message: error.message || 'Unable to update assignment.' });
+    return res.status(400).json({ message: toPublicErrorMessage(error, 'We could not update the teacher assignment.') });
   }
 });
 
@@ -2332,6 +2377,7 @@ adminRouter.post('/admissions/bulk-fix', (req, res) => {
 });
 
 adminRouter.get('/admissions/archive', (_req, res) => {
+  res.setHeader('Cache-Control', 'private, no-store');
   return res.json({ archive: adminStore.admissionArchive || [] });
 });
 
@@ -2376,8 +2422,17 @@ adminRouter.post('/users/reset-password', async (req, res) => {
     ip: req.ip || req.socket?.remoteAddress || 'unknown'
   });
 
+  const canRevealTemporaryPassword = (
+    !contact.recipientEmail ||
+    delivery.status === 'manual-only' ||
+    delivery.status === 'disabled' ||
+    delivery.status === 'skipped'
+  );
+
   return res.status(201).json({
-    message: 'Temporary password generated successfully.',
+    message: canRevealTemporaryPassword
+      ? 'Temporary password generated successfully for manual handover.'
+      : 'Password reset instructions sent successfully.',
     user: {
       id: nextUser.id,
       fullName: nextUser.fullName,
@@ -2391,7 +2446,8 @@ adminRouter.post('/users/reset-password', async (req, res) => {
       recipientEmail: contact.recipientEmail,
       role: nextUser.role,
       email: nextUser.email,
-      password: temporaryPassword,
+      password: canRevealTemporaryPassword ? temporaryPassword : '',
+      passwordVisible: canRevealTemporaryPassword,
       reused: false,
       mustChangePassword: true,
       emailDeliveryStatus: delivery.status,
@@ -2481,7 +2537,7 @@ adminRouter.post('/users/admissions-handlers', async (req, res) => {
       return res.status(409).json({ message: 'Admissions handler email already exists.' });
     }
 
-    return res.status(400).json({ message: error.message || 'Unable to provision admissions handler account.' });
+    return res.status(400).json({ message: toPublicErrorMessage(error, 'We could not create the admissions account.') });
   }
 });
 
@@ -2595,7 +2651,7 @@ adminRouter.put('/admissions/:id', async (req, res) => {
         deleted: result.deleted,
         archived: result.archived || null
       }))
-      .catch((error) => res.status(400).json({ message: error.message || 'Unable to provision portal accounts for admission.' }));
+      .catch((error) => res.status(400).json({ message: toPublicErrorMessage(error, 'We could not complete the admission setup right now.') }));
   }
 
   if (status === 'approved') {
@@ -2679,7 +2735,7 @@ adminRouter.put('/admissions/:id/verification', (req, res) => {
         deleted: result.deleted,
         archived: result.archived || null
       }))
-      .catch((error) => res.status(400).json({ message: error.message || 'Unable to provision portal accounts for admission.' }));
+      .catch((error) => res.status(400).json({ message: toPublicErrorMessage(error, 'We could not complete the admission setup right now.') }));
   }
 
   return res.json({ admission: enrichAdmission(updated) });
@@ -2730,7 +2786,7 @@ adminRouter.put('/admissions/:id/payment', (req, res) => {
         deleted: result.deleted,
         archived: result.archived || null
       }))
-      .catch((error) => res.status(400).json({ message: error.message || 'Unable to provision portal accounts for admission.' }));
+      .catch((error) => res.status(400).json({ message: toPublicErrorMessage(error, 'We could not complete the admission setup right now.') }));
   }
 
   return res.json({ admission: enrichAdmission(updated) });
@@ -2975,7 +3031,7 @@ adminRouter.post('/admissions/:id/promote', async (req, res) => {
       archived: result.archived || null
     });
   } catch (error) {
-    return res.status(400).json({ message: error.message || 'Unable to provision portal accounts for admission.' });
+    return res.status(400).json({ message: toPublicErrorMessage(error, 'We could not complete the admission setup right now.') });
   }
 });
 
@@ -3011,12 +3067,13 @@ adminRouter.post('/system/reconcile-students', async (req, res) => {
       report
     });
   } catch (error) {
-    return res.status(400).json({ message: error.message || 'Unable to reconcile admissions and students.' });
+    return res.status(400).json({ message: toPublicErrorMessage(error, 'We could not complete the admissions cleanup right now.') });
   }
 });
 
 adminRouter.get('/system/backup', async (_req, res) => {
   await saveStoreToDatabase({ force: true });
+  res.setHeader('Cache-Control', 'private, no-store');
   return res.json({
     generatedAt: new Date().toISOString(),
     store: adminStore
@@ -3032,6 +3089,7 @@ adminRouter.get('/audit-logs', async (req, res) => {
 
   const rows = await listActivityLogs({ actorRole, method, statusCode, search, limit });
 
+  res.setHeader('Cache-Control', 'private, no-store');
   return res.json({ logs: rows, total: rows.length });
 });
 

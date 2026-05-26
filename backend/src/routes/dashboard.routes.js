@@ -3,6 +3,7 @@ import { adminStore } from '../data/adminStore.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { countFullyAdmittedStudents, filterCountableActiveStudents } from '../utils/studentLifecycle.js';
 import { buildUserScope, findChildForParent, findChildrenForParent, findClassLead, findStudentByUser, findTeacherByUser } from '../utils/portalScope.js';
+import { toPublicErrorMessage } from '../utils/publicError.js';
 
 const dashboardRouter = Router();
 const TERM_ORDER = ['First Term', 'Second Term', 'Third Term'];
@@ -25,6 +26,70 @@ function resolveLatestTerm(values = []) {
     if (!latest) return normalized;
     return TERM_ORDER.indexOf(normalized) > TERM_ORDER.indexOf(latest) ? normalized : latest;
   }, '');
+}
+
+function resolveCurrentTokenTerm(sessionId = '') {
+  const publishedResultsTerm = resolveLatestTerm(
+    (adminStore.results || [])
+      .filter((item) => item.published && matchesSession(item.sessionId, sessionId))
+      .map((item) => item.term)
+  );
+  if (publishedResultsTerm) return publishedResultsTerm;
+
+  const requestTerm = resolveLatestTerm(
+    (adminStore.paymentRequests || [])
+      .filter((item) => matchesSession(item.sessionId, sessionId))
+      .map((item) => item.term)
+  );
+  if (requestTerm) return requestTerm;
+
+  const paymentTerm = resolveLatestTerm(
+    (adminStore.payments || [])
+      .filter((item) => matchesSession(item.sessionId, sessionId))
+      .map((item) => item.term)
+  );
+  return paymentTerm || 'First Term';
+}
+
+function getTokenSalesControl(sessionId = '', term = '') {
+  return (adminStore.tokenSalesControls || []).find(
+    (item) => matchesSession(item.sessionId, sessionId) && String(item.term || '').trim() === String(term || '').trim()
+  ) || null;
+}
+
+function buildTokenSalesControlOptions(sessionId = '') {
+  return TERM_ORDER.map((term) => ({
+    term,
+    enabled: Boolean(getTokenSalesControl(sessionId, term)?.enabled)
+  }));
+}
+
+function resolveTokenSalesMetrics() {
+  const activeSessionId = getActiveSessionId();
+  const latestTerm = resolveCurrentTokenTerm(activeSessionId);
+  const requests = (adminStore.paymentRequests || []).filter((item) => matchesSession(item.sessionId, activeSessionId));
+  const approvedRequests = requests.filter((item) => String(item.status || '').trim().toLowerCase() === 'approved');
+  const paidRequests = approvedRequests.filter((item) => Number(item.amountPaid || 0) > 0);
+  const tokenSalesControl = getTokenSalesControl(activeSessionId, latestTerm);
+
+  const activeTermApproved = latestTerm
+    ? paidRequests.filter((item) => String(item.term || '').trim() === latestTerm)
+    : paidRequests;
+  const activeTermPending = latestTerm
+    ? requests.filter(
+        (item) => String(item.term || '').trim() === latestTerm && String(item.status || 'pending').trim().toLowerCase() === 'pending'
+      )
+    : requests.filter((item) => String(item.status || 'pending').trim().toLowerCase() === 'pending');
+
+  return {
+    tokenSalesTerm: latestTerm,
+    tokenSalesEnabled: Boolean(tokenSalesControl?.enabled),
+    tokenSalesControls: buildTokenSalesControlOptions(activeSessionId),
+    tokenSalesCount: activeTermApproved.length,
+    tokenSalesRevenue: activeTermApproved.reduce((sum, item) => sum + Number(item.amountPaid || 0), 0),
+    tokenSalesReleasedCount: activeTermApproved.filter((item) => item.releasedTokenId).length,
+    tokenSalesPendingCount: activeTermPending.length
+  };
 }
 
 function isActiveUpcomingItem(item) {
@@ -710,6 +775,7 @@ dashboardRouter.get('/admin', requireAuth, requireRole('admin'), (_req, res) => 
   const modernAdmitted = countFullyAdmittedStudents(adminStore.students, 'ATTAUFEEQ Model Academy');
   const madrasaAdmitted = countFullyAdmittedStudents(adminStore.students, 'Madrastul ATTAUFEEQ');
   const memorizationAdmitted = countFullyAdmittedStudents(adminStore.students, 'Quran Memorization Academy');
+  const tokenSalesMetrics = resolveTokenSalesMetrics();
 
   return res.json({
     dashboard: 'admin',
@@ -722,12 +788,14 @@ dashboardRouter.get('/admin', requireAuth, requireRole('admin'), (_req, res) => 
       memorizationAdmitted,
       totalStudents: activeStudents.length,
       pendingReceiptUploads: (adminStore.paymentRequests || []).filter((item) => String(item.status || 'pending').toLowerCase() === 'pending').length,
-      releasedTokens: (adminStore.paymentRequests || []).filter((item) => item.releasedTokenId).length
+      releasedTokens: (adminStore.paymentRequests || []).filter((item) => item.releasedTokenId).length,
+      ...tokenSalesMetrics
     }
   });
 });
 
 dashboardRouter.get('/admissions', requireAuth, requireRole('admissions'), (_req, res) => {
+  const tokenSalesMetrics = resolveTokenSalesMetrics();
   return res.json({
     dashboard: 'admissions',
     metrics: {
@@ -745,7 +813,8 @@ dashboardRouter.get('/admissions', requireAuth, requireRole('admissions'), (_req
       memorizationAdmitted: countFullyAdmittedStudents(adminStore.students, 'Quran Memorization Academy'),
       totalApprovedAdmissions: countFullyAdmittedStudents(adminStore.students),
       pendingReceiptUploads: (adminStore.paymentRequests || []).filter((item) => String(item.status || 'pending').toLowerCase() === 'pending').length,
-      tokenReadyCount: (adminStore.paymentRequests || []).filter((item) => item.releasedTokenId).length
+      tokenReadyCount: (adminStore.paymentRequests || []).filter((item) => item.releasedTokenId).length,
+      ...tokenSalesMetrics
     }
   });
 });
@@ -800,8 +869,10 @@ dashboardRouter.get('/student', requireAuth, requireRole('student'), (req, res) 
   const student = findStudentByUser(req.user);
   const institution = student?.institution || '';
   const classLead = findClassLead(student?.classId || '');
+  const sessionId = String(req.query.sessionId || '').trim() || getActiveSessionId();
+  const sessionName = (adminStore.academicSessions || []).find((session) => session.id === sessionId)?.sessionName || sessionId;
   const allAttendance = student
-    ? adminStore.attendanceRecords.filter((record) => record.studentId === student.id)
+    ? adminStore.attendanceRecords.filter((record) => record.studentId === student.id && matchesSession(record.sessionId, sessionId))
     : [];
   const attendanceTerm = resolveLatestTerm(allAttendance.map((record) => record.term));
   const attendance = attendanceTerm
@@ -829,6 +900,8 @@ dashboardRouter.get('/student', requireAuth, requireRole('student'), (req, res) 
     student,
     institution,
     classLead,
+    sessionId,
+    sessionName,
     attendance: attendanceRate,
     attendanceTerm: attendanceTerm || 'All Terms',
     upcomingItems
@@ -840,7 +913,8 @@ dashboardRouter.get('/parent', requireAuth, requireRole('parent'), (req, res) =>
   const child = findChildForParent(req.user, String(req.query.childId || '')) || children[0] || null;
   const classLead = findClassLead(child?.classId || '');
   const termQuery = String(req.query.term || '').trim();
-  const sessionId = getActiveSessionId();
+  const sessionId = String(req.query.sessionId || '').trim() || getActiveSessionId();
+  const sessionName = (adminStore.academicSessions || []).find((session) => session.id === sessionId)?.sessionName || sessionId;
 
   const plans = child
     ? adminStore.feePlans.filter((plan) => plan.classId === child.classId && matchesSession(plan.sessionId, sessionId))
@@ -849,7 +923,7 @@ dashboardRouter.get('/parent', requireAuth, requireRole('parent'), (req, res) =>
     ? adminStore.payments.filter((payment) => payment.studentId === child.id && matchesSession(payment.sessionId, sessionId))
     : [];
   const allAttendance = child
-    ? adminStore.attendanceRecords.filter((record) => record.studentId === child.id)
+    ? adminStore.attendanceRecords.filter((record) => record.studentId === child.id && matchesSession(record.sessionId, sessionId))
     : [];
   const activeTerm = termQuery || resolveLatestTerm([
     ...plans.map((plan) => plan.term),
@@ -874,6 +948,8 @@ dashboardRouter.get('/parent', requireAuth, requireRole('parent'), (req, res) =>
     child,
     children,
     classLead,
+    sessionId,
+    sessionName,
     attendance: attendanceRate,
     attendanceTerm: attendanceTerm || 'All Terms',
     paymentStatus: child ? (planTotal - paidTotal > 0 ? 'Outstanding Balance' : 'Paid Up') : 'No linked child',
@@ -885,7 +961,7 @@ dashboardRouter.get('/search', requireAuth, requireRole('admin', 'admissions', '
   try {
     return res.json(buildDashboardSearchResults(req));
   } catch (error) {
-    return res.status(500).json({ message: error.message || 'Unable to run dashboard search.' });
+    return res.status(500).json({ message: toPublicErrorMessage(error, 'We could not complete the dashboard search right now.') });
   }
 });
 

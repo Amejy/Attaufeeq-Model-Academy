@@ -6,9 +6,12 @@ import PortalLayout from '../components/PortalLayout';
 import { useAuth } from '../context/AuthContext';
 import { canonicalInstitution, institutionAccent } from '../utils/adminInstitution';
 import { buildStudentCode } from '../utils/studentCode';
+import { getRequestErrorMessage, sanitizeUserMessage } from '../utils/userMessage';
 
 const AVATAR_TYPES = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
+const SIGNATURE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const MAX_AVATAR_SIZE = 4 * 1024 * 1024;
+const MAX_SIGNATURE_SIZE = 2 * 1024 * 1024;
 const ROLE_LABELS = {
   admin: 'Administrator',
   admissions: 'Admissions Officer',
@@ -91,6 +94,17 @@ function syncAvatarIntoUser(previous, avatarUrl) {
   };
 }
 
+function syncTeacherSignatureIntoUser(previous, signatureImage) {
+  const nextSignatureImage = String(signatureImage || '').trim();
+  return {
+    ...(previous || {}),
+    profile: {
+      ...(previous?.profile || {}),
+      signatureImage: nextSignatureImage
+    }
+  };
+}
+
 function Settings() {
   const { user, apiFetch, apiJson, updateUser, login, logout } = useAuth();
   const role = user?.role || 'student';
@@ -98,6 +112,9 @@ function Settings() {
   const [avatarSuccess, setAvatarSuccess] = useState('');
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [avatarHover, setAvatarHover] = useState(false);
+  const [signatureError, setSignatureError] = useState('');
+  const [signatureSuccess, setSignatureSuccess] = useState('');
+  const [signatureBusy, setSignatureBusy] = useState(false);
   const [passwordBusy, setPasswordBusy] = useState(false);
   const [passwordError, setPasswordError] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState('');
@@ -112,8 +129,11 @@ function Settings() {
   const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [touched, setTouched] = useState({ currentPassword: false, newPassword: false, confirmPassword: false });
   const fileInputRef = useRef(null);
+  const signatureInputRef = useRef(null);
 
   const avatarUrl = user?.avatarUrl || user?.profile?.avatarUrl || '';
+  const signatureImage = user?.profile?.signatureImage || '';
+  const signaturePreviewKey = user?.signatureVersion || signatureImage || 'teacher-signature';
   const avatarPreviewKey = user?.avatarVersion || avatarUrl || 'default-avatar';
   const currentPasswordValue = form.currentPassword.trim();
   const newPasswordValue = form.newPassword;
@@ -159,6 +179,16 @@ function Settings() {
     fileInputRef.current?.click();
   }
 
+  function resetSignatureMessages() {
+    setSignatureError('');
+    setSignatureSuccess('');
+  }
+
+  function triggerSignaturePicker() {
+    resetSignatureMessages();
+    signatureInputRef.current?.click();
+  }
+
   async function handleAvatarChange(event) {
     const file = event.target.files?.[0];
     resetAvatarMessages();
@@ -184,7 +214,11 @@ function Settings() {
       });
       const data = await response.json();
       if (!response.ok) {
-        throw new Error(data.message || 'Unable to upload profile image.');
+        throw new Error(getRequestErrorMessage({
+          status: response.status,
+          message: data?.message || '',
+          fallback: 'We could not upload the profile image.'
+        }));
       }
       updateUser((prev) => ({
         ...syncAvatarIntoUser(prev, data.avatarUrl || data.user?.avatarUrl || ''),
@@ -192,7 +226,7 @@ function Settings() {
       }));
       setAvatarSuccess('Profile image updated successfully.');
     } catch (err) {
-      setAvatarError(err.message || 'Unable to upload profile image.');
+      setAvatarError(sanitizeUserMessage(err.message, 'We could not upload the profile image.'));
     } finally {
       setAvatarBusy(false);
       if (fileInputRef.current) {
@@ -219,11 +253,84 @@ function Settings() {
       }));
       setAvatarSuccess('Profile image removed successfully.');
     } catch (err) {
-      setAvatarError(err.message || 'Unable to remove profile image.');
+      setAvatarError(sanitizeUserMessage(err.message, 'We could not remove the profile image.'));
     } finally {
       setAvatarBusy(false);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
+      }
+    }
+  }
+
+  async function handleSignatureChange(event) {
+    const file = event.target.files?.[0];
+    resetSignatureMessages();
+    if (!file) return;
+
+    if (!SIGNATURE_TYPES.has(file.type)) {
+      setSignatureError('Only JPG, PNG, or WebP signature images are allowed.');
+      return;
+    }
+    if (file.size > MAX_SIGNATURE_SIZE) {
+      setSignatureError('Signature image must be 2MB or smaller.');
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      setSignatureBusy(true);
+      const response = await apiFetch('/profile/teacher-signature', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(getRequestErrorMessage({
+          status: response.status,
+          message: data?.message || '',
+          fallback: 'We could not upload the signature image.'
+        }));
+      }
+      updateUser((prev) => ({
+        ...syncTeacherSignatureIntoUser(prev, data.signatureImage || data.teacher?.signatureImage || ''),
+        signatureVersion: Date.now()
+      }));
+      setSignatureSuccess('Teacher signature updated successfully.');
+    } catch (err) {
+      setSignatureError(sanitizeUserMessage(err.message, 'We could not upload the signature image.'));
+    } finally {
+      setSignatureBusy(false);
+      if (signatureInputRef.current) {
+        signatureInputRef.current.value = '';
+      }
+    }
+  }
+
+  async function handleSignatureRemove() {
+    resetSignatureMessages();
+    if (!signatureImage) {
+      setSignatureSuccess('No teacher signature to remove.');
+      return;
+    }
+
+    try {
+      setSignatureBusy(true);
+      const data = await apiJson('/profile/teacher-signature', {
+        method: 'DELETE'
+      });
+      updateUser((prev) => ({
+        ...syncTeacherSignatureIntoUser(prev, data.signatureImage || data.teacher?.signatureImage || ''),
+        signatureVersion: Date.now()
+      }));
+      setSignatureSuccess('Teacher signature removed successfully.');
+    } catch (err) {
+      setSignatureError(sanitizeUserMessage(err.message, 'We could not remove the signature image.'));
+    } finally {
+      setSignatureBusy(false);
+      if (signatureInputRef.current) {
+        signatureInputRef.current.value = '';
       }
     }
   }
@@ -269,7 +376,7 @@ function Settings() {
       setForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setShowPasswords({ currentPassword: false, newPassword: false, confirmPassword: false });
     } catch (err) {
-      setPasswordError(err.message || 'Unable to change password.');
+      setPasswordError(sanitizeUserMessage(err.message, 'We could not change the password right now.'));
     } finally {
       setPasswordBusy(false);
     }
@@ -283,7 +390,7 @@ function Settings() {
       const data = await apiJson('/admin/system/refresh', { method: 'POST' });
       setRefreshSuccess(data?.message || 'Portal data refreshed.');
     } catch (err) {
-      setRefreshError(err.message || 'Unable to refresh portal data.');
+      setRefreshError(sanitizeUserMessage(err.message, 'We could not refresh the portal data right now.'));
     } finally {
       setRefreshBusy(false);
     }
@@ -297,7 +404,7 @@ function Settings() {
     >
       <div className="grid gap-6 xl:grid-cols-[minmax(0,0.95fr),minmax(0,1.05fr)] 2xl:gap-7">
         <div className="space-y-6">
-          <section className="glass-card interactive-card p-5 sm:p-6">
+          <section className="glass-card p-5 sm:p-6">
             <p className="text-wrap-safe text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 sm:tracking-[0.22em]">Account Overview</p>
             <div className="mt-4 grid gap-4 md:grid-cols-[auto,minmax(0,1fr)] md:items-center">
               <div className="h-20 w-20 overflow-hidden rounded-[24px] border border-slate-200 bg-slate-100 shadow-sm">
@@ -333,7 +440,7 @@ function Settings() {
             </div>
           </section>
 
-          <section className="glass-card interactive-card p-5 sm:p-6">
+          <section className="glass-card p-5 sm:p-6">
             <p className="text-wrap-safe text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 sm:tracking-[0.22em]">Security Check</p>
             <h2 className="text-wrap-safe mt-2 font-heading text-[clamp(1.25rem,3.8vw,2rem)] text-primary">Password readiness</h2>
             <p className="text-wrap-safe mt-2 text-sm text-slate-600">
@@ -366,7 +473,7 @@ function Settings() {
         </div>
 
         <div className="space-y-6">
-          <section className="glass-card interactive-card p-5 sm:p-6">
+          <section className="glass-card p-5 sm:p-6">
           <p className="text-wrap-safe text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 sm:tracking-[0.22em]">Profile Image</p>
           <h2 className="text-wrap-safe mt-2 font-heading text-[clamp(1.25rem,3.8vw,2rem)] text-primary">Update your avatar</h2>
           <p className="text-wrap-safe mt-2 text-sm text-slate-600">
@@ -431,7 +538,69 @@ function Settings() {
           </div>
           </section>
 
-          <section className="glass-card interactive-card p-5 sm:p-6">
+          {role === 'teacher' && (
+            <section className="glass-card p-5 sm:p-6">
+              <p className="text-wrap-safe text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 sm:tracking-[0.22em]">Report Signature</p>
+              <h2 className="text-wrap-safe mt-2 font-heading text-[clamp(1.25rem,3.8vw,2rem)] text-primary">Class teacher signature</h2>
+              <p className="text-wrap-safe mt-2 text-sm text-slate-600">
+                Upload a clean signature image. It will appear on report sheets for the class you lead.
+              </p>
+
+              <div className="mt-5 grid gap-5 xl:grid-cols-[180px,minmax(0,1fr)] xl:items-center">
+                <button
+                  type="button"
+                  onClick={triggerSignaturePicker}
+                  disabled={signatureBusy}
+                  className="flex h-28 w-full items-center justify-center rounded-[20px] border border-slate-200 bg-white p-3 shadow-sm"
+                  aria-label={signatureImage ? 'Change teacher signature' : 'Upload teacher signature'}
+                >
+                  {signatureImage ? (
+                    <SmartImage
+                      key={signaturePreviewKey}
+                      src={signatureImage}
+                      fallbackSrc="/images/logo.png"
+                      alt="Teacher signature preview"
+                      className="max-h-full max-w-full object-contain"
+                    />
+                  ) : (
+                    <span className="text-center text-sm font-semibold text-slate-500">No signature uploaded</span>
+                  )}
+                </button>
+                <div className="min-w-0 space-y-3">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
+                    <button
+                      type="button"
+                      onClick={triggerSignaturePicker}
+                      disabled={signatureBusy}
+                      className="interactive-button w-full sm:w-auto"
+                    >
+                      {signatureBusy ? 'Uploading...' : signatureImage ? 'Change Signature' : 'Upload Signature'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSignatureRemove}
+                      disabled={signatureBusy || !signatureImage}
+                      className="interactive-button w-full border-red-200 text-red-700 sm:w-auto"
+                    >
+                      Remove Signature
+                    </button>
+                  </div>
+                  <p className="text-wrap-safe text-xs text-slate-500">Use JPG, PNG, or WebP. Transparent PNG is best. Max 2MB.</p>
+                  <input
+                    ref={signatureInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp"
+                    onChange={handleSignatureChange}
+                    className="sr-only"
+                  />
+                  {signatureError && <ErrorState compact title="Signature update failed" message={signatureError} onRetry={triggerSignaturePicker} />}
+                  {signatureSuccess && <p className="status-banner text-xs">{signatureSuccess}</p>}
+                </div>
+              </div>
+            </section>
+          )}
+
+          <section className="glass-card p-5 sm:p-6">
           <p className="text-wrap-safe text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 sm:tracking-[0.22em]">Password</p>
           <h2 className="text-wrap-safe mt-2 font-heading text-[clamp(1.25rem,3.8vw,2rem)] text-primary">Change your password</h2>
           <p className="text-wrap-safe mt-2 text-sm text-slate-600">
@@ -497,7 +666,7 @@ function Settings() {
       </div>
 
       {role === 'admin' && (
-        <section className="glass-card interactive-card mt-6 flex flex-col items-start justify-between gap-4 p-5 sm:p-6 lg:flex-row lg:items-center">
+        <section className="glass-card mt-6 flex flex-col items-start justify-between gap-4 p-5 sm:p-6 lg:flex-row lg:items-center">
           <div className="min-w-0">
             <p className="text-wrap-safe text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 sm:tracking-[0.22em]">Admin Tools</p>
             <h2 className="text-wrap-safe mt-2 font-heading text-[clamp(1.25rem,3.8vw,2rem)] text-primary">Refresh portal data</h2>
@@ -518,7 +687,7 @@ function Settings() {
         </section>
       )}
 
-      <section className="glass-card interactive-card mt-6 flex flex-col items-start justify-between gap-4 p-5 sm:p-6 lg:flex-row lg:items-center">
+      <section className="glass-card mt-6 flex flex-col items-start justify-between gap-4 p-5 sm:p-6 lg:flex-row lg:items-center">
         <div className="min-w-0">
           <p className="text-wrap-safe text-xs font-semibold uppercase tracking-[0.16em] text-slate-500 sm:tracking-[0.22em]">Session</p>
           <h2 className="text-wrap-safe mt-2 font-heading text-[clamp(1.25rem,3.8vw,2rem)] text-primary">Sign out safely</h2>

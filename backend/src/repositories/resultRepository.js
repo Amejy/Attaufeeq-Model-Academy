@@ -19,6 +19,8 @@ function mapDbResult(row) {
     sessionId: row.session_id || '',
     subjectId: row.subject_id,
     term: row.term,
+    test1: Number(row.test1 || 0),
+    test2: Number(row.test2 || 0),
     ca: Number(row.ca || 0),
     exam: Number(row.exam || 0),
     caNote: row.ca_note || '',
@@ -42,6 +44,11 @@ function mapDbResult(row) {
 }
 
 function normalizeResultInput(record) {
+  const normalizedCa = Number(record?.ca || 0);
+  const hasExplicitTestBreakdown = record?.test1 !== undefined || record?.test2 !== undefined;
+  const derivedTest1 = hasExplicitTestBreakdown ? Number(record?.test1 || 0) : Number((normalizedCa / 2).toFixed(2));
+  const derivedTest2 = hasExplicitTestBreakdown ? Number(record?.test2 || 0) : Number((normalizedCa - Number((normalizedCa / 2).toFixed(2))).toFixed(2));
+  const derivedCa = Number((derivedTest1 + derivedTest2).toFixed(2));
   return {
     id: String(record?.id || '').trim(),
     studentId: String(record?.studentId || '').trim(),
@@ -49,7 +56,9 @@ function normalizeResultInput(record) {
     sessionId: String(record?.sessionId || '').trim(),
     subjectId: String(record?.subjectId || '').trim(),
     term: String(record?.term || '').trim(),
-    ca: Number(record?.ca || 0),
+    test1: derivedTest1,
+    test2: derivedTest2,
+    ca: derivedCa,
     exam: Number(record?.exam || 0),
     caNote: String(record?.caNote || '').trim(),
     examNote: String(record?.examNote || '').trim(),
@@ -101,7 +110,8 @@ export async function listResults({
         if (item.institution) return item.institution === institution;
         const classItem = adminStore.classes.find((entry) => entry.id === item.classId);
         return classItem?.institution === institution;
-      });
+      })
+      .map((item) => normalizeResultInput(item));
   }
 
   const clauses = [];
@@ -182,16 +192,18 @@ export async function upsertResult(record) {
 
   const result = await query(
     `INSERT INTO results (
-      id, student_id, class_id, session_id, subject_id, term, ca, exam, ca_note, exam_note, total, grade, remark,
+      id, student_id, class_id, session_id, subject_id, term, test1, test2, ca, exam, ca_note, exam_note, total, grade, remark,
       published, approved_at, approved_by_user_id, approved_by_name, approved_by_email,
       institution, entered_by_teacher_id, submitted_at, submitted_by_teacher_id, created_at, updated_at
     ) VALUES (
-      $1, $2, $3, NULLIF($4, ''), $5, $6, $7, $8, $9, $10, $11, $12, $13,
-      $14, CAST(NULLIF($15, '') AS TIMESTAMPTZ), NULLIF($16, ''), NULLIF($17, ''), NULLIF($18, ''),
-      NULLIF($19, ''), NULLIF($20, ''), CAST(NULLIF($21, '') AS TIMESTAMPTZ), NULLIF($22, ''), $23::TIMESTAMPTZ, $24::TIMESTAMPTZ
+      $1, $2, $3, NULLIF($4, ''), $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15,
+      $16, CAST(NULLIF($17, '') AS TIMESTAMPTZ), NULLIF($18, ''), NULLIF($19, ''), NULLIF($20, ''),
+      NULLIF($21, ''), NULLIF($22, ''), CAST(NULLIF($23, '') AS TIMESTAMPTZ), NULLIF($24, ''), $25::TIMESTAMPTZ, $26::TIMESTAMPTZ
     )
     ON CONFLICT (student_id, class_id, subject_id, term, session_id)
     DO UPDATE SET
+      test1 = EXCLUDED.test1,
+      test2 = EXCLUDED.test2,
       ca = EXCLUDED.ca,
       exam = EXCLUDED.exam,
       ca_note = EXCLUDED.ca_note,
@@ -218,6 +230,8 @@ export async function upsertResult(record) {
       item.sessionId,
       item.subjectId,
       item.term,
+      item.test1,
+      item.test2,
       item.ca,
       item.exam,
       item.caNote,
@@ -546,7 +560,7 @@ export async function upsertManyResults(records = []) {
   for (const batch of chunkItems(normalized)) {
     const values = [];
     const placeholders = batch.map((item, index) => {
-      const offset = index * 22;
+      const offset = index * 26;
       values.push(
         item.id,
         item.studentId,
@@ -554,8 +568,12 @@ export async function upsertManyResults(records = []) {
         item.sessionId,
         item.subjectId,
         item.term,
+        item.test1,
+        item.test2,
         item.ca,
         item.exam,
+        item.caNote,
+        item.examNote,
         item.total,
         item.grade,
         item.remark,
@@ -574,23 +592,28 @@ export async function upsertManyResults(records = []) {
       return `(
         $${offset + 1}, $${offset + 2}, $${offset + 3}, NULLIF($${offset + 4}, ''), $${offset + 5}, $${offset + 6},
         $${offset + 7}, $${offset + 8}, $${offset + 9}, $${offset + 10}, $${offset + 11}, $${offset + 12},
-        CAST(NULLIF($${offset + 13}, '') AS TIMESTAMPTZ), NULLIF($${offset + 14}, ''), NULLIF($${offset + 15}, ''),
-        NULLIF($${offset + 16}, ''), NULLIF($${offset + 17}, ''), NULLIF($${offset + 18}, ''),
-        CAST(NULLIF($${offset + 19}, '') AS TIMESTAMPTZ), NULLIF($${offset + 20}, ''), $${offset + 21}::TIMESTAMPTZ,
-        $${offset + 22}::TIMESTAMPTZ
+        $${offset + 13}, $${offset + 14}, $${offset + 15}, $${offset + 16},
+        CAST(NULLIF($${offset + 17}, '') AS TIMESTAMPTZ), NULLIF($${offset + 18}, ''), NULLIF($${offset + 19}, ''),
+        NULLIF($${offset + 20}, ''), NULLIF($${offset + 21}, ''), NULLIF($${offset + 22}, ''),
+        CAST(NULLIF($${offset + 23}, '') AS TIMESTAMPTZ), NULLIF($${offset + 24}, ''), $${offset + 25}::TIMESTAMPTZ,
+        $${offset + 26}::TIMESTAMPTZ
       )`;
     });
 
     await query(
       `INSERT INTO results (
-        id, student_id, class_id, session_id, subject_id, term, ca, exam, total, grade, remark,
+        id, student_id, class_id, session_id, subject_id, term, test1, test2, ca, exam, ca_note, exam_note, total, grade, remark,
         published, approved_at, approved_by_user_id, approved_by_name, approved_by_email,
         institution, entered_by_teacher_id, submitted_at, submitted_by_teacher_id, created_at, updated_at
       ) VALUES ${placeholders.join(', ')}
       ON CONFLICT (student_id, class_id, subject_id, term, session_id)
       DO UPDATE SET
+        test1 = EXCLUDED.test1,
+        test2 = EXCLUDED.test2,
         ca = EXCLUDED.ca,
         exam = EXCLUDED.exam,
+        ca_note = EXCLUDED.ca_note,
+        exam_note = EXCLUDED.exam_note,
         total = EXCLUDED.total,
         grade = EXCLUDED.grade,
         remark = EXCLUDED.remark,

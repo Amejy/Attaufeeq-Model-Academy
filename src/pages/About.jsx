@@ -1,12 +1,15 @@
 import SmartImage from '../components/SmartImage';
+import SectionPhotoGrid from '../components/public/SectionPhotoGrid';
 import { GlassPanel, PremiumHero, SectionIntro } from '../components/public/PremiumPublic';
 import { useSiteContent } from '../context/SiteContentContext';
 import { DEFAULT_IMAGES } from '../utils/defaultImages';
+import { getSectionMedia } from '../utils/publicSectionImages';
 
 function About() {
   const { siteContent } = useSiteContent();
   const about = siteContent.about || {};
   const historySections = Array.isArray(about.historySections) ? about.historySections : [];
+  const aboutMedia = getSectionMedia('about');
 
   return (
     <main className="premium-page">
@@ -16,7 +19,7 @@ function About() {
         title={about.title}
         kicker={about.historyTitle}
         description={about.historyText}
-        image={about.image || DEFAULT_IMAGES.campus}
+        image={aboutMedia.headerImage?.url || about.image || DEFAULT_IMAGES.campus}
         imageAlt="ATTAUFEEQ campus"
       />
 
@@ -66,7 +69,7 @@ function About() {
           )}
         </div>
         <SmartImage
-          src={about.image || DEFAULT_IMAGES.campus}
+          src={aboutMedia.supportingImages[0]?.url || about.image || DEFAULT_IMAGES.campus}
           fallbackSrc={DEFAULT_IMAGES.campus}
           alt="ATTAUFEEQ campus"
           className="h-72 w-full rounded-[28px] object-cover shadow-[0_20px_50px_rgba(8,_112,_184,_0.07)] lg:sticky lg:top-24"
@@ -74,6 +77,14 @@ function About() {
         />
         </div>
       </section>
+
+      <SectionPhotoGrid
+        eyebrow="School Views"
+        title="More scenes from the school environment"
+        description="These images come from the school website image folder and support the story of the campus."
+        photos={aboutMedia.supportingImages.slice(1)}
+        fallbackSrc={DEFAULT_IMAGES.campus}
+      />
 
       <section className="section-wrap pb-10">
         <div className="grid gap-6 md:grid-cols-2">

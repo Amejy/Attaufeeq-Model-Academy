@@ -21,6 +21,14 @@ function gradeFromTotal(total) {
   return 'F';
 }
 
+function getCaScore(row = {}) {
+  return Number(row.test1 || 0) + Number(row.test2 || 0);
+}
+
+function getTotalScore(row = {}) {
+  return getCaScore(row) + Number(row.exam || 0);
+}
+
 function matchesPerformance(total, filter) {
   if (filter === 'high') return total >= 70;
   if (filter === 'mid') return total >= 50 && total < 70;
@@ -48,12 +56,18 @@ function nextPromotionLabel(term = '') {
 }
 
 function rowStatus(row, baseline) {
-  const total = Number(row.ca || 0) + Number(row.exam || 0);
+  const total = getTotalScore(row);
 
   if (row.published) return 'Approved';
   if (row.submittedAt) return 'Submitted';
   if (!baseline) return total > 0 || row.caNote || row.examNote ? 'New draft' : 'Pending';
-  if (baseline.ca !== row.ca || baseline.exam !== row.exam || baseline.caNote !== row.caNote || baseline.examNote !== row.examNote) return 'Edited';
+  if (
+    baseline.test1 !== row.test1 ||
+    baseline.test2 !== row.test2 ||
+    baseline.exam !== row.exam ||
+    baseline.caNote !== row.caNote ||
+    baseline.examNote !== row.examNote
+  ) return 'Edited';
   if (total > 0 || row.caNote || row.examNote) return 'Saved';
   return 'Pending';
 }
@@ -86,6 +100,11 @@ function TeacherResults() {
   const [promotionStatus, setPromotionStatus] = useState({ error: '', success: '' });
   const [promotionSaving, setPromotionSaving] = useState(false);
   const [promotionDecisions, setPromotionDecisions] = useState({});
+  const [remarkRows, setRemarkRows] = useState([]);
+  const [remarksSaving, setRemarksSaving] = useState(false);
+  const [remarksGenerating, setRemarksGenerating] = useState(false);
+  const [regeneratingStudentId, setRegeneratingStudentId] = useState('');
+  const [remarksStatus, setRemarksStatus] = useState({ error: '', success: '' });
   const [performanceFilter, setPerformanceFilter] = useState('all');
   const [showRosterRows, setShowRosterRows] = useState(true);
   const [showSavedRows, setShowSavedRows] = useState(true);
@@ -120,6 +139,8 @@ function TeacherResults() {
     setExpandedStudents({});
     setPromotionStatus({ error: '', success: '' });
     setPromotionDecisions({});
+    setRemarkRows([]);
+    setRemarksStatus({ error: '', success: '' });
 
     try {
       const [optionsData, recordsData] = await Promise.all([
@@ -287,6 +308,139 @@ function TeacherResults() {
   }, [apiJson, canRecommendPromotion, form.classId, form.term, options.sessionId]);
 
   useEffect(() => {
+    if (!canRecommendPromotion || !form.term || !form.classId || !options.sessionId) {
+      setRemarkRows([]);
+      return;
+    }
+
+    let active = true;
+
+    async function loadRemarks() {
+      setRemarksStatus({ error: '', success: '' });
+      try {
+        const params = new URLSearchParams({
+          classId: form.classId,
+          term: form.term,
+          sessionId: options.sessionId
+        });
+        const data = await apiJson(`/results/teacher/remarks?${params.toString()}`);
+        if (!active) return;
+        setRemarkRows(data.remarks || []);
+      } catch (err) {
+        if (!active) return;
+        setRemarksStatus({ error: err.message || 'Unable to load report remarks.', success: '' });
+      }
+    }
+
+    loadRemarks();
+
+    return () => {
+      active = false;
+    };
+  }, [apiJson, canRecommendPromotion, form.classId, form.term, options.sessionId]);
+
+  function updateRemarkRow(studentId, value) {
+    setRemarkRows((prev) =>
+      prev.map((row) => (row.studentId === studentId ? { ...row, classTeacherRemark: value } : row))
+    );
+  }
+
+  function updateRemarkGuide(studentId, key, value) {
+    setRemarkRows((prev) =>
+      prev.map((row) => (row.studentId === studentId ? { ...row, [key]: value } : row))
+    );
+  }
+
+  async function saveClassTeacherRemarks() {
+    if (!canRecommendPromotion || !form.classId || !form.term || !options.sessionId) return;
+    setRemarksSaving(true);
+    setRemarksStatus({ error: '', success: '' });
+
+    try {
+      const data = await apiJson('/results/teacher/remarks', {
+        method: 'POST',
+        body: {
+          classId: form.classId,
+          term: form.term,
+          sessionId: options.sessionId,
+          rows: remarkRows
+        }
+      });
+      setRemarksStatus({ error: '', success: `${data.savedCount || 0} class teacher remark(s) saved.` });
+    } catch (err) {
+      setRemarksStatus({ error: err.message || 'Unable to save class teacher remarks.', success: '' });
+    } finally {
+      setRemarksSaving(false);
+    }
+  }
+
+  async function generateClassTeacherRemarks({ preserveExisting = true } = {}) {
+    if (!canRecommendPromotion || !form.classId || !form.term || !options.sessionId) return;
+    setRemarksGenerating(true);
+    setRemarksStatus({ error: '', success: '' });
+
+    try {
+      const data = await apiJson('/results/teacher/remarks/generate', {
+        method: 'POST',
+        body: {
+          classId: form.classId,
+          term: form.term,
+          sessionId: options.sessionId,
+          preserveExisting
+        }
+      });
+      setRemarkRows(data.remarks || []);
+      setRemarksStatus({
+        error: '',
+        success: preserveExisting
+          ? `Blank remark drafts filled for ${data.remarks?.length || 0} student(s). Existing remarks were preserved.`
+          : `Draft remarks regenerated for ${data.remarks?.length || 0} student(s). Review and edit before saving.`
+      });
+    } catch (err) {
+      setRemarksStatus({ error: err.message || 'Unable to generate class teacher remarks.', success: '' });
+    } finally {
+      setRemarksGenerating(false);
+    }
+  }
+
+  function confirmRegenerateAllClassTeacherRemarks() {
+    if (typeof window !== 'undefined') {
+      const confirmed = window.confirm(
+        'This will replace all current class teacher draft remarks for this class and term. Continue?'
+      );
+      if (!confirmed) return;
+    }
+    void generateClassTeacherRemarks({ preserveExisting: false });
+  }
+
+  async function regenerateClassTeacherRemark(studentId) {
+    if (!canRecommendPromotion || !form.classId || !form.term || !options.sessionId || !studentId) return;
+    setRegeneratingStudentId(studentId);
+    setRemarksStatus({ error: '', success: '' });
+
+    try {
+      const data = await apiJson('/results/teacher/remarks/generate', {
+        method: 'POST',
+        body: {
+          classId: form.classId,
+          term: form.term,
+          sessionId: options.sessionId,
+          studentId
+        }
+      });
+      const [generated] = data.remarks || [];
+      if (generated) {
+        setRemarkRows((prev) => prev.map((row) => (row.studentId === studentId ? { ...row, ...generated } : row)));
+        setRemarksStatus({ error: '', success: `Draft remark regenerated for ${generated.studentName}.` });
+      }
+    } catch (err) {
+      setRemarksStatus({ error: err.message || 'Unable to regenerate class teacher remark.', success: '' });
+    } finally {
+      setRegeneratingStudentId('');
+    }
+  }
+
+  useEffect(() => {
     if (!form.term) return;
 
     if (!termClasses.length) {
@@ -330,11 +484,15 @@ function TeacherResults() {
 
     const nextRows = classStudents.map((student) => {
       const existing = recordMap.get(student.id);
+      const fallbackTest1 = Number(((Number(existing?.ca || 0)) / 2).toFixed(2));
+      const fallbackTest2 = Number((Number(existing?.ca || 0) - fallbackTest1).toFixed(2));
 
       return {
         studentId: student.id,
         fullName: student.fullName,
         studentCode: buildStudentCode(student),
+        test1: existing?.test1 ?? fallbackTest1,
+        test2: existing?.test2 ?? fallbackTest2,
         ca: Number(existing?.ca || 0),
         exam: Number(existing?.exam || 0),
         caNote: existing?.caNote || '',
@@ -359,7 +517,7 @@ function TeacherResults() {
 
   const visibleRows = useMemo(() => {
     return rows.filter((row) => {
-      const total = Number(row.ca || 0) + Number(row.exam || 0);
+      const total = getTotalScore(row);
       const byPerformance = matchesPerformance(total, performanceFilter);
       if (!deferredSearch) return byPerformance;
       const searchable = `${row.fullName} ${row.studentCode || buildStudentCode({ id: row.studentId, institution })}`.toLowerCase();
@@ -371,14 +529,20 @@ function TeacherResults() {
     () =>
       rows.filter((row) => {
         const baseline = baselineMap.get(row.studentId);
-        if (!baseline) return Number(row.ca || 0) + Number(row.exam || 0) > 0 || row.caNote || row.examNote;
-        return baseline.ca !== row.ca || baseline.exam !== row.exam || baseline.caNote !== row.caNote || baseline.examNote !== row.examNote;
+        if (!baseline) return getTotalScore(row) > 0 || row.caNote || row.examNote;
+        return (
+          baseline.test1 !== row.test1 ||
+          baseline.test2 !== row.test2 ||
+          baseline.exam !== row.exam ||
+          baseline.caNote !== row.caNote ||
+          baseline.examNote !== row.examNote
+        );
       }).length,
     [baselineMap, rows]
   );
 
   const completedCount = useMemo(
-    () => rows.filter((row) => Number(row.ca || 0) + Number(row.exam || 0) > 0 || row.caNote || row.examNote).length,
+    () => rows.filter((row) => getTotalScore(row) > 0 || row.caNote || row.examNote).length,
     [rows]
   );
   const editableRows = useMemo(
@@ -398,9 +562,15 @@ function TeacherResults() {
     () =>
       editableRows.filter((row) => {
         const baseline = baselineMap.get(row.studentId);
-        const hasEntry = Number(row.ca || 0) + Number(row.exam || 0) > 0 || row.caNote || row.examNote;
+        const hasEntry = getTotalScore(row) > 0 || row.caNote || row.examNote;
         if (!baseline) return hasEntry;
-        return baseline.ca !== row.ca || baseline.exam !== row.exam || baseline.caNote !== row.caNote || baseline.examNote !== row.examNote;
+        return (
+          baseline.test1 !== row.test1 ||
+          baseline.test2 !== row.test2 ||
+          baseline.exam !== row.exam ||
+          baseline.caNote !== row.caNote ||
+          baseline.examNote !== row.examNote
+        );
       }),
     [baselineMap, editableRows]
   );
@@ -410,7 +580,7 @@ function TeacherResults() {
 
   const classAverage = useMemo(() => {
     if (!rows.length) return 0;
-    const total = rows.reduce((sum, row) => sum + Number(row.ca || 0) + Number(row.exam || 0), 0);
+    const total = rows.reduce((sum, row) => sum + getTotalScore(row), 0);
     return Number((total / rows.length).toFixed(1));
   }, [rows]);
 
@@ -508,7 +678,8 @@ function TeacherResults() {
   const actionBusy = saving || submitting || clearing || clearingPublished || promotionSaving;
 
   function updateScore(studentId, field, value) {
-    const nextValue = clampScore(value, 0, field === 'ca' ? 40 : 60);
+    const max = field === 'exam' ? 60 : 20;
+    const nextValue = clampScore(value, 0, max);
 
     setRows((prev) =>
       prev.map((row) => (row.studentId === studentId ? { ...row, [field]: nextValue } : row))
@@ -544,7 +715,8 @@ function TeacherResults() {
 
       const payloadRows = savableRows.map((row) => ({
         studentId: row.studentId,
-        ca: Number(row.ca || 0),
+        test1: Number(row.test1 || 0),
+        test2: Number(row.test2 || 0),
         exam: Number(row.exam || 0),
         caNote: row.caNote || '',
         examNote: row.examNote || ''
@@ -754,6 +926,115 @@ function TeacherResults() {
         </p>
       )}
 
+      {canRecommendPromotion && (
+        <section className="mt-6 rounded-[28px] border border-emerald-900/10 bg-white/95 p-5 shadow-sm">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Report Remarks</p>
+              <h2 className="mt-2 font-heading text-2xl text-primary">Class teacher remarks</h2>
+            </div>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+              <button
+                type="button"
+                onClick={() => generateClassTeacherRemarks({ preserveExisting: true })}
+                disabled={remarksGenerating || !remarkRows.length}
+                className="interactive-button w-full sm:w-auto"
+              >
+                {remarksGenerating ? 'Generating Drafts...' : 'Generate Blank Remarks'}
+              </button>
+              <button
+                type="button"
+                onClick={confirmRegenerateAllClassTeacherRemarks}
+                disabled={remarksGenerating || !remarkRows.length}
+                className="interactive-button w-full sm:w-auto"
+              >
+                {remarksGenerating ? 'Generating Drafts...' : 'Regenerate All Drafts'}
+              </button>
+              <button
+                type="button"
+                onClick={saveClassTeacherRemarks}
+                disabled={remarksSaving || !remarkRows.length}
+                className="interactive-button w-full sm:w-auto"
+              >
+                {remarksSaving ? 'Saving Remarks...' : 'Save Remarks'}
+              </button>
+            </div>
+          </div>
+          {remarksStatus.error && <p className="mt-3 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{remarksStatus.error}</p>}
+          {remarksStatus.success && <p className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{remarksStatus.success}</p>}
+          <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-200">
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-50 text-left">
+                <tr>
+                  <th className="px-4 py-3 font-semibold text-slate-600">Student</th>
+                  <th className="px-4 py-3 font-semibold text-slate-600">Insight</th>
+                  <th className="px-4 py-3 font-semibold text-slate-600">Strengths / Weaknesses</th>
+                  <th className="px-4 py-3 font-semibold text-slate-600">Class Teacher&apos;s Remark</th>
+                </tr>
+              </thead>
+              <tbody>
+                {remarkRows.map((row) => (
+                  <tr key={row.studentId} className="border-t border-slate-100">
+                    <td className="px-4 py-3 font-semibold text-slate-800">{row.studentName}</td>
+                    <td className="px-4 py-3 text-xs text-slate-600">
+                      <div className="space-y-1">
+                        <p>Avg: {row.insight?.averageScore || 0} • Grade: {row.insight?.overallGrade || '—'} • Attendance: {row.insight?.attendanceRate || 0}%</p>
+                        <p>
+                          Strong: {row.insight?.strengths?.length ? row.insight.strengths.join(', ') : '—'}
+                          {' '}• Focus: {row.insight?.weaknesses?.length ? row.insight.weaknesses.join(', ') : '—'}
+                        </p>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="grid gap-2">
+                        <input
+                          value={row.strengths || ''}
+                          onChange={(event) => updateRemarkGuide(row.studentId, 'strengths', event.target.value)}
+                          className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                          placeholder="Editable strengths, comma separated"
+                        />
+                        <input
+                          value={row.weaknesses || ''}
+                          onChange={(event) => updateRemarkGuide(row.studentId, 'weaknesses', event.target.value)}
+                          className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                          placeholder="Editable weaknesses, comma separated"
+                        />
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="mb-2 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => regenerateClassTeacherRemark(row.studentId)}
+                          disabled={regeneratingStudentId === row.studentId}
+                          className="interactive-button rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {regeneratingStudentId === row.studentId ? 'Regenerating...' : 'Regenerate'}
+                        </button>
+                      </div>
+                      <textarea
+                        value={row.classTeacherRemark || ''}
+                        onChange={(event) => updateRemarkRow(row.studentId, event.target.value)}
+                        rows={2}
+                        className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                        placeholder="Enter a professional class teacher remark"
+                      />
+                    </td>
+                  </tr>
+                ))}
+                {!remarkRows.length && (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-6 text-center text-slate-500">
+                      No students are available for remarks in this class.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
       <form
         onSubmit={handleSaveScores}
         className="mt-6 rounded-[28px] border border-emerald-900/10 bg-white/95 p-5 shadow-sm"
@@ -901,6 +1182,8 @@ function TeacherResults() {
             <thead className="bg-slate-50 text-left">
               <tr>
                 <th className="px-4 py-3 font-semibold text-slate-600">Student</th>
+                <th className="px-4 py-3 font-semibold text-slate-600">Test 1 / 20</th>
+                <th className="px-4 py-3 font-semibold text-slate-600">Test 2 / 20</th>
                 <th className="px-4 py-3 font-semibold text-slate-600">CA / 40</th>
                 <th className="px-4 py-3 font-semibold text-slate-600">Exam / 60</th>
                 <th className="px-4 py-3 font-semibold text-slate-600">Total / 100</th>
@@ -911,14 +1194,14 @@ function TeacherResults() {
             <tbody>
               {!showRosterRows && (
                 <tr>
-                  <td className="px-4 py-10 text-center text-slate-500" colSpan={6}>
+                  <td className="px-4 py-10 text-center text-slate-500" colSpan={8}>
                     Rows are hidden. Click “Show rows” to display students.
                   </td>
                 </tr>
               )}
               {loading && (
                 <tr>
-                  <td className="px-4 py-10 text-center text-slate-500" colSpan={6}>
+                  <td className="px-4 py-10 text-center text-slate-500" colSpan={8}>
                     Loading class roster and saved results...
                   </td>
                 </tr>
@@ -926,7 +1209,7 @@ function TeacherResults() {
 
               {showRosterRows && !loading && !visibleRows.length && (
                 <tr>
-                  <td className="px-4 py-10 text-center text-slate-500" colSpan={6}>
+                  <td className="px-4 py-10 text-center text-slate-500" colSpan={8}>
                     No students match this class and search scope.
                   </td>
                 </tr>
@@ -934,18 +1217,25 @@ function TeacherResults() {
 
               {showRosterRows && !loading &&
                 visibleRows.map((row) => {
-                  const total = Number(row.ca || 0) + Number(row.exam || 0);
+                  const ca = getCaScore(row);
+                  const total = getTotalScore(row);
                   const baseline = baselineMap.get(row.studentId);
                   const status = rowStatus(row, baseline);
-                  const isDirty = baseline && (baseline.ca !== row.ca || baseline.exam !== row.exam);
+                  const isDirty = baseline && (
+                    baseline.test1 !== row.test1 ||
+                    baseline.test2 !== row.test2 ||
+                    baseline.exam !== row.exam ||
+                    baseline.caNote !== row.caNote ||
+                    baseline.examNote !== row.examNote
+                  );
                   const rowLocked = row.published || row.submittedAt;
                   const statusDetail = row.approvedAt
                     ? `${row.approvedByName ? `Approved by ${row.approvedByName} • ` : ''}${formatDateTime(row.approvedAt)}`
                     : row.submittedAt
                       ? `Submitted ${formatDateTime(row.submittedAt)}`
                       : formatDateTime(row.savedAt);
-                  const caNeedsNote = Number(row.ca || 0) === 0 && !row.caNote && (row.examNote || Number(row.exam || 0) > 0);
-                  const examNeedsNote = Number(row.exam || 0) === 0 && !row.examNote && (row.caNote || Number(row.ca || 0) > 0);
+                  const assessmentNeedsNote = ca === 0 && !row.caNote && (row.examNote || Number(row.exam || 0) > 0);
+                  const examNeedsNote = Number(row.exam || 0) === 0 && !row.examNote && (row.caNote || ca > 0);
 
                   return (
                     <tr
@@ -962,18 +1252,34 @@ function TeacherResults() {
                         <input
                           type="number"
                           min="0"
-                          max="40"
-                          value={row.ca}
-                          onChange={(event) => updateScore(row.studentId, 'ca', event.target.value)}
+                          max="20"
+                          value={row.test1}
+                          onChange={(event) => updateScore(row.studentId, 'test1', event.target.value)}
                           disabled={rowLocked}
                           className="w-24 rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
                         />
+                      </td>
+                      <td className="px-4 py-3">
+                        <input
+                          type="number"
+                          min="0"
+                          max="20"
+                          value={row.test2}
+                          onChange={(event) => updateScore(row.studentId, 'test2', event.target.value)}
+                          disabled={rowLocked}
+                          className="w-24 rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500"
+                        />
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="w-24 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-700">
+                          {ca}
+                        </div>
                         <input
                           value={row.caNote}
                           onChange={(event) => updateScoreNote(row.studentId, 'caNote', event.target.value)}
                           disabled={rowLocked}
-                          placeholder="CA note"
-                          className={`mt-2 w-36 rounded-xl border px-3 py-2 text-xs outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 ${caNeedsNote ? 'border-amber-300 bg-amber-50' : 'border-slate-200'}`}
+                          placeholder="Assessment note"
+                          className={`mt-2 w-36 rounded-xl border px-3 py-2 text-xs outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/10 disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500 ${assessmentNeedsNote ? 'border-amber-300 bg-amber-50' : 'border-slate-200'}`}
                         />
                         {!rowLocked && (
                           <div className="mt-1 flex flex-wrap gap-1">
@@ -1252,43 +1558,47 @@ function TeacherResults() {
                                 <tr>
                                   <th className="px-4 py-3 font-semibold text-slate-600">Subject</th>
                                   <th className="px-4 py-3 font-semibold text-slate-600">Term</th>
+                                  <th className="px-4 py-3 font-semibold text-slate-600">Test 1</th>
+                                  <th className="px-4 py-3 font-semibold text-slate-600">Test 2</th>
                                   <th className="px-4 py-3 font-semibold text-slate-600">CA</th>
-                                <th className="px-4 py-3 font-semibold text-slate-600">Exam</th>
-                                <th className="px-4 py-3 font-semibold text-slate-600">Total</th>
-                                <th className="px-4 py-3 font-semibold text-slate-600">Grade</th>
-                                <th className="px-4 py-3 font-semibold text-slate-600">Assessment Notes</th>
-                                <th className="px-4 py-3 font-semibold text-slate-600">Approval</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {group.subjects.map((subject) => (
-                                <tr key={subject.id} className="border-t border-slate-100">
+                                  <th className="px-4 py-3 font-semibold text-slate-600">Exam</th>
+                                  <th className="px-4 py-3 font-semibold text-slate-600">Total</th>
+                                  <th className="px-4 py-3 font-semibold text-slate-600">Grade</th>
+                                  <th className="px-4 py-3 font-semibold text-slate-600">Assessment Notes</th>
+                                  <th className="px-4 py-3 font-semibold text-slate-600">Approval</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {group.subjects.map((subject) => (
+                                  <tr key={subject.id} className="border-t border-slate-100">
                                     <td className="px-4 py-3 text-slate-800">{subject.subjectName}</td>
                                     <td className="px-4 py-3 text-slate-700">{subject.term}</td>
+                                    <td className="px-4 py-3 text-slate-700">{subject.test1 ?? 0}</td>
+                                    <td className="px-4 py-3 text-slate-700">{subject.test2 ?? 0}</td>
                                     <td className="px-4 py-3 text-slate-700">
                                       {subject.ca}
                                       {subject.caNote ? <div className="mt-1 text-[11px] font-semibold text-amber-700">{subject.caNote}</div> : null}
                                     </td>
-                                  <td className="px-4 py-3 text-slate-700">
-                                    {subject.exam}
-                                    {subject.examNote ? <div className="mt-1 text-[11px] font-semibold text-amber-700">{subject.examNote}</div> : null}
-                                  </td>
-                                  <td className="px-4 py-3 font-semibold text-slate-900">{subject.total}</td>
-                                  <td className="px-4 py-3 text-slate-700">{subject.grade}</td>
-                                  <td className="px-4 py-3 text-slate-700">
-                                    {[subject.caNote && `CA: ${subject.caNote}`, subject.examNote && `Exam: ${subject.examNote}`].filter(Boolean).join(' • ') || '—'}
-                                  </td>
-                                  <td className="px-4 py-3 text-slate-700">
-                                    {subject.published ? 'Approved' : 'Pending'}
-                                    {subject.approvedAt && (
-                                      <div className="mt-1 text-[11px] text-slate-500">
-                                        {subject.approvedByName ? `${subject.approvedByName} • ` : ''}
-                                        {formatDateTime(subject.approvedAt)}
-                                      </div>
-                                    )}
-                                  </td>
-                                </tr>
-                              ))}
+                                    <td className="px-4 py-3 text-slate-700">
+                                      {subject.exam}
+                                      {subject.examNote ? <div className="mt-1 text-[11px] font-semibold text-amber-700">{subject.examNote}</div> : null}
+                                    </td>
+                                    <td className="px-4 py-3 font-semibold text-slate-900">{subject.total}</td>
+                                    <td className="px-4 py-3 text-slate-700">{subject.grade}</td>
+                                    <td className="px-4 py-3 text-slate-700">
+                                      {[subject.caNote && `Assessment: ${subject.caNote}`, subject.examNote && `Exam: ${subject.examNote}`].filter(Boolean).join(' • ') || '—'}
+                                    </td>
+                                    <td className="px-4 py-3 text-slate-700">
+                                      {subject.published ? 'Approved' : 'Pending'}
+                                      {subject.approvedAt && (
+                                        <div className="mt-1 text-[11px] text-slate-500">
+                                          {subject.approvedByName ? `${subject.approvedByName} • ` : ''}
+                                          {formatDateTime(subject.approvedAt)}
+                                        </div>
+                                      )}
+                                    </td>
+                                  </tr>
+                                ))}
                               </tbody>
                             </table>
                           </div>

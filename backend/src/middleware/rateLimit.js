@@ -1,4 +1,5 @@
 import { env } from '../config/env.js';
+import { logger } from '../utils/logger.js';
 import { evalRedis } from '../services/redisClient.js';
 
 const RATE_LIMIT_SCRIPT = `
@@ -59,7 +60,7 @@ export function createRateLimiter({ name, windowMs, maxRequests, keyFromReq }) {
 
       return next();
     } catch (error) {
-      console.error(`Rate limiter error: ${error.message || error}`);
+      logger.error('Rate limiter failed.', { error, scope });
       if (env.rateLimitFailOpen) {
         return next();
       }

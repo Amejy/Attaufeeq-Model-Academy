@@ -5,6 +5,7 @@ import { useSiteContent } from '../context/SiteContentContext';
 import useAdmissionPeriod from '../hooks/useAdmissionPeriod';
 import { GlassPanel, LiveTicker, PremiumHero, SectionIntro } from '../components/public/PremiumPublic';
 import { DEFAULT_IMAGES } from '../utils/defaultImages';
+import { getSectionMedia } from '../utils/publicSectionImages';
 
 function Home() {
   const { isLoading, periodOpen } = useAdmissionPeriod();
@@ -13,6 +14,23 @@ function Home() {
   const home = siteContent.home || {};
   const highlights = home.highlights || [];
   const academicPrograms = home.programs || [];
+  const homeMedia = getSectionMedia('home');
+  const schoolWebsiteMedia = getSectionMedia('schoolwebsite');
+  const madrasaMedia = getSectionMedia('madrasawebsite');
+  const heroImages = homeMedia.allImages.length
+    ? homeMedia.allImages.slice(0, 3).map((photo) => ({ url: photo.url, alt: photo.alt }))
+    : (home.heroImages || []);
+  const highlightImages = homeMedia.supportingImages.length ? homeMedia.supportingImages : schoolWebsiteMedia.supportingImages;
+  const homepageHighlights = highlights.map((item, index) => ({
+    ...item,
+    image: highlightImages[index % Math.max(highlightImages.length, 1)]?.url || item.image
+  }));
+  const homepagePrograms = academicPrograms.map((program, index) => ({
+    ...program,
+    image: index === 0
+      ? schoolWebsiteMedia.headerImage?.url || schoolWebsiteMedia.supportingImages[0]?.url || program.image
+      : madrasaMedia.headerImage?.url || madrasaMedia.supportingImages[0]?.url || program.image
+  }));
 
   return (
     <main className="premium-page">
@@ -22,8 +40,8 @@ function Home() {
         title={home.heroTitle}
         kicker={siteContent.branding?.motto}
         description={home.heroDescription || siteContent.branding?.intro}
-        image={home.heroImages?.[0]?.url || DEFAULT_IMAGES.campus}
-        imageAlt={home.heroImages?.[0]?.alt || 'ATTAUFEEQ campus'}
+        image={heroImages[0]?.url || DEFAULT_IMAGES.campus}
+        imageAlt={heroImages[0]?.alt || 'ATTAUFEEQ campus'}
         stats={home.heroStats || []}
         primaryAction={{ to: admissionsAvailable ? '/admissions' : '/contact', label: admissionsAvailable ? 'Apply Now' : 'Contact School' }}
         secondaryAction={{ to: '/result-checker', label: 'Check Result' }}
@@ -47,7 +65,7 @@ function Home() {
           ) : null}
         </div>
         <div className="mt-8 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-          {highlights.map((item) => (
+          {homepageHighlights.map((item) => (
             <FeatureCard key={item.title} {...item} className="card-feature" />
           ))}
         </div>
@@ -73,7 +91,7 @@ function Home() {
 
           <div className="premium-media-card">
             <SmartImage
-              src={home.storyImage || DEFAULT_IMAGES.campus}
+              src={homeMedia.supportingImages[0]?.url || home.storyImage || DEFAULT_IMAGES.campus}
               fallbackSrc={DEFAULT_IMAGES.campus}
               alt="School campus"
               className="relative h-full min-h-[340px] w-full object-cover"
@@ -91,7 +109,7 @@ function Home() {
           align="center"
         />
         <div className="grid gap-6 lg:grid-cols-2">
-          {academicPrograms.map((program) => (
+          {homepagePrograms.map((program) => (
             <article key={program.title} className="premium-glass card-feature p-5 sm:p-6">
               <SmartImage
                 src={program.image}

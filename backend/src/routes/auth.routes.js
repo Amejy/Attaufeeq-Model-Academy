@@ -20,6 +20,7 @@ import {
 import { env } from '../config/env.js';
 import { queuePasswordResetCodeDelivery } from '../services/credentialDeliveryService.js';
 import { resolvePortalAccessState } from '../utils/authAccessPolicy.js';
+import { logger } from '../utils/logger.js';
 import { hashPassword, verifyPassword } from '../utils/passwords.js';
 import { createAccessToken, createRefreshToken, verifyRefreshToken } from '../utils/tokens.js';
 
@@ -191,8 +192,8 @@ authRouter.post('/forgot-password', async (req, res) => {
       expiresAt
     });
   } catch (error) {
-    console.error('Forgot password request failed:', error.message || error);
-    return res.status(500).json({ message: 'Unable to process reset request.' });
+    logger.error('Forgot password request failed.', { error });
+    return res.status(500).json({ message: 'We could not process the password reset request right now.' });
   }
 });
 
@@ -203,7 +204,7 @@ authRouter.post('/reset-password', async (req, res) => {
     const normalizedCode = String(code || '').trim();
 
     if (!normalizedEmail || !normalizedCode || !newPassword || !confirmPassword) {
-      return res.status(400).json({ message: 'email, code, newPassword, and confirmPassword are required.' });
+      return res.status(400).json({ message: 'Email address, reset code, new password, and password confirmation are required.' });
     }
     if (!isValidEmail(normalizedEmail)) {
       return res.status(400).json({ message: 'A valid email address is required.' });
@@ -222,7 +223,7 @@ authRouter.post('/reset-password', async (req, res) => {
 
     if (!request) {
       return res.status(400).json({
-        message: 'Reset code is invalid or has expired. Note: the reset code is different from your temporary password.'
+        message: 'That reset code is invalid or has expired. Please request a new code and try again.'
       });
     }
 
@@ -254,8 +255,8 @@ authRouter.post('/reset-password', async (req, res) => {
       user: serializeUser(updatedUser || { ...user, mustChangePassword: false })
     });
   } catch (error) {
-    console.error('Reset password failed:', error.message || error);
-    return res.status(500).json({ message: 'Unable to reset password.' });
+    logger.error('Password reset failed.', { error });
+    return res.status(500).json({ message: 'We could not reset the password right now.' });
   }
 });
 
@@ -317,8 +318,9 @@ authRouter.post('/login', async (req, res) => {
       token,
       user: serializeUser(user)
     });
-  } catch {
-    return res.status(500).json({ message: 'Login failed.' });
+  } catch (error) {
+    logger.error('Login failed.', { error });
+    return res.status(500).json({ message: 'We could not sign you in right now.' });
   }
 });
 
@@ -385,7 +387,7 @@ authRouter.post('/change-password', requireAuth, async (req, res) => {
     const normalizedConfirm = String(confirmPassword ?? '');
 
     if (!normalizedCurrent || !normalizedNew || !normalizedConfirm) {
-      return res.status(400).json({ message: 'currentPassword, newPassword, and confirmPassword are required.' });
+      return res.status(400).json({ message: 'Current password, new password, and password confirmation are required.' });
     }
 
     if (normalizedNew !== normalizedConfirm) {
@@ -406,7 +408,7 @@ authRouter.post('/change-password', requireAuth, async (req, res) => {
     }
 
     if (await verifyPassword(normalizedNew, user.passwordHash)) {
-      return res.status(400).json({ message: 'Choose a new password different from the temporary password.' });
+      return res.status(400).json({ message: 'Please choose a new password that is different from your current one.' });
     }
 
     const updatedUser = await updateUserPassword(user.id, {
@@ -434,8 +436,9 @@ authRouter.post('/change-password', requireAuth, async (req, res) => {
       token: next.token,
       user: serializeUser(nextSessionUser)
     });
-  } catch {
-    return res.status(500).json({ message: 'Password change failed.' });
+  } catch (error) {
+    logger.error('Password change failed.', { error });
+    return res.status(500).json({ message: 'We could not change the password right now.' });
   }
 });
 
@@ -448,8 +451,9 @@ authRouter.post('/logout', async (req, res) => {
     }
     clearRefreshCookie(res);
     return res.json({ message: 'Logged out successfully.' });
-  } catch {
-    return res.status(500).json({ message: 'Logout failed.' });
+  } catch (error) {
+    logger.error('Logout failed.', { error });
+    return res.status(500).json({ message: 'We could not sign you out right now.' });
   }
 });
 

@@ -1,4 +1,5 @@
 import { env } from '../config/env.js';
+import { logger } from '../utils/logger.js';
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -17,7 +18,7 @@ async function pingOnce() {
     });
     clearTimeout(timeout);
   } catch (error) {
-    console.warn(`Uptime ping failed: ${error.message || error}`);
+    logger.warn('Uptime ping failed.', { error });
   }
 }
 
@@ -33,7 +34,7 @@ export function startUptimePinger() {
   }
 
   loop().catch((error) => {
-    console.warn(`Uptime ping loop stopped: ${error.message || error}`);
+    logger.warn('Uptime ping loop stopped.', { error });
   });
 
   return () => {

@@ -24,6 +24,7 @@ function RoleFeeStatus({ role, section = 'fees' }) {
   const [success, setSuccess] = useState('');
   const [scratchCard, setScratchCard] = useState(null);
   const [releasedToken, setReleasedToken] = useState(null);
+  const [tokenSalesControl, setTokenSalesControl] = useState({ term: 'First Term', enabled: false });
 
   useEffect(() => {
     if (role === 'parent') {
@@ -71,6 +72,7 @@ function RoleFeeStatus({ role, section = 'fees' }) {
       setPaymentRequests([]);
       setScratchCard(null);
       setReleasedToken(null);
+      setTokenSalesControl({ term, enabled: false });
       try {
         const params = new URLSearchParams();
         params.set('term', term);
@@ -89,6 +91,7 @@ function RoleFeeStatus({ role, section = 'fees' }) {
         setPaymentRequests(data.paymentRequests || []);
         setScratchCard(data.scratchCard || null);
         setReleasedToken(data.releasedToken || null);
+        setTokenSalesControl(data.tokenSalesControl || { term, enabled: false });
         if (role === 'parent' && data.child?.id && data.child.id !== selectedChildId) {
           setSelectedChildId(data.child.id);
         }
@@ -166,6 +169,7 @@ function RoleFeeStatus({ role, section = 'fees' }) {
       setSummary(data.summary || null);
       setScratchCard(data.scratchCard || null);
       setReleasedToken(data.releasedToken || null);
+      setTokenSalesControl(data.tokenSalesControl || { term, enabled: false });
     } catch (err) {
       setError(err.message || 'Unable to submit receipt.');
     } finally {
@@ -176,6 +180,7 @@ function RoleFeeStatus({ role, section = 'fees' }) {
   const isReceiptSection = section === 'receipt-upload';
   const isScratchCardSection = section === 'scratch-card';
   const isSchoolFeesSection = section === 'fees';
+  const tokenSalesEnabled = Boolean(tokenSalesControl?.enabled);
   const receiptPath = `/portal/${role}/receipt-upload`;
   const scratchCardPath = `/portal/${role}/scratch-card`;
 
@@ -235,6 +240,11 @@ function RoleFeeStatus({ role, section = 'fees' }) {
       )}
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
       {success && <p className="mt-4 text-sm text-emerald-700">{success}</p>}
+      {!loading && (isScratchCardSection || isReceiptSection) && !tokenSalesEnabled && (
+        <p className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Result token sales are closed for {tokenSalesControl?.term || term}. Wait for the admin to open token sales after results are out before uploading any receipt.
+        </p>
+      )}
       {child && (
         <p className="text-wrap-safe mt-4 text-sm text-slate-600">
           Profile: <span className="font-semibold text-slate-900">{child.fullName}</span>{' '}
@@ -279,13 +289,21 @@ function RoleFeeStatus({ role, section = 'fees' }) {
             <div className="flex flex-wrap gap-2">
               <Link
                 to={scratchCardPath}
-                className="rounded-full border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700"
+                className={`rounded-full px-4 py-2 text-sm font-semibold ${
+                  tokenSalesEnabled
+                    ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
+                    : 'cursor-not-allowed border border-slate-200 bg-slate-100 text-slate-400 pointer-events-none'
+                }`}
               >
                 Open Scratch Card
               </Link>
               <Link
                 to={receiptPath}
-                className="rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-sm font-semibold text-slate-700"
+                className={`rounded-full px-4 py-2 text-sm font-semibold ${
+                  tokenSalesEnabled
+                    ? 'border border-slate-200 bg-slate-50 text-slate-700'
+                    : 'cursor-not-allowed border border-slate-200 bg-slate-100 text-slate-400 pointer-events-none'
+                }`}
               >
                 Upload Scratch Receipt
               </Link>
@@ -311,7 +329,11 @@ function RoleFeeStatus({ role, section = 'fees' }) {
               {!isReceiptSection && (
                 <Link
                   to={receiptPath}
-                  className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-center text-xs font-semibold text-emerald-700"
+                  className={`rounded-full px-3 py-1 text-center text-xs font-semibold ${
+                    tokenSalesEnabled
+                      ? 'border border-emerald-200 bg-emerald-50 text-emerald-700'
+                      : 'cursor-not-allowed border border-slate-200 bg-slate-100 text-slate-400 pointer-events-none'
+                  }`}
                 >
                   Open Receipt Upload
                 </Link>
@@ -330,17 +352,20 @@ function RoleFeeStatus({ role, section = 'fees' }) {
             </div>
           </div>
 
-          <div className="mt-5">
-            <ResultScratchCard
-              studentName={child.fullName || '—'}
-              admissionNo={child.id || '—'}
-              institution={child.institution || 'Model Academy'}
-              studentCode={buildStudentCode(child) || child.id || '—'}
-              term={releasedToken?.term || term}
-              sessionId={releasedToken?.sessionId || sessionId}
-              token={releasedToken?.token || ''}
-            />
-          </div>
+          {isScratchCardSection && (
+            <div className="mt-5">
+              <ResultScratchCard
+                studentName={child.fullName || '—'}
+                admissionNo={child.id || '—'}
+                institution={child.institution || 'Model Academy'}
+                studentCode={buildStudentCode(child) || child.id || '—'}
+                term={releasedToken?.term || term}
+                sessionId={releasedToken?.sessionId || sessionId}
+                token={releasedToken?.token || ''}
+                revealOnInteract
+              />
+            </div>
+          )}
 
           <div className="mt-4 grid gap-3 lg:grid-cols-[1.05fr,0.95fr]">
             <article className="surface-outline rounded-2xl p-4">
@@ -379,12 +404,14 @@ function RoleFeeStatus({ role, section = 'fees' }) {
                 type="number"
                 min="1"
                 required
+                disabled={!tokenSalesEnabled}
                 value={receiptForm.amountPaid}
                 onChange={(event) => setReceiptForm((prev) => ({ ...prev, amountPaid: event.target.value }))}
                 placeholder="Amount paid"
                 className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
               />
               <select
+                disabled={!tokenSalesEnabled}
                 value={receiptForm.method}
                 onChange={(event) => setReceiptForm((prev) => ({ ...prev, method: event.target.value }))}
                 className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
@@ -397,12 +424,13 @@ function RoleFeeStatus({ role, section = 'fees' }) {
                 type="file"
                 accept="image/*,.pdf"
                 required
+                disabled={!tokenSalesEnabled}
                 onChange={handleReceiptFile}
                 className="rounded-xl border border-slate-300 px-3 py-2 text-sm"
               />
               <button
                 type="submit"
-                disabled={submittingReceipt || !receiptForm.receiptDataUrl}
+                disabled={!tokenSalesEnabled || submittingReceipt || !receiptForm.receiptDataUrl}
                 className="rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {submittingReceipt ? 'Submitting...' : 'Submit Receipt'}
@@ -419,19 +447,21 @@ function RoleFeeStatus({ role, section = 'fees' }) {
             </div>
           )}
 
-          {releasedToken && (
+          {releasedToken && isReceiptSection && (
             <article className="payment-guide-card mt-4 rounded-2xl p-4">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Released Token</p>
-                  <p className="text-code-break mt-2 text-2xl font-bold tracking-[0.14em] text-emerald-950 sm:tracking-[0.2em]">{releasedToken.token}</p>
+                  <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">Released Token Ready</p>
                   <p className="text-wrap-safe mt-2 text-sm text-emerald-900">
-                    This token is now available for {role === 'student' ? 'your' : 'this child’s'} result access for {releasedToken.term}. Keep it exactly like a real scratch card credential.
+                    Your token has been released for {releasedToken.term}. Open the scratch-card page to view and reveal it there.
                   </p>
                 </div>
-                <span className="max-w-full rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-700">
-                  Ready to use
-                </span>
+                <Link
+                  to={scratchCardPath}
+                  className="rounded-full border border-emerald-200 bg-white px-3 py-1 text-xs font-semibold text-emerald-700"
+                >
+                  Open Scratch Card
+                </Link>
               </div>
             </article>
           )}

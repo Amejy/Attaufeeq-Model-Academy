@@ -1,4 +1,5 @@
 import { processPendingMailOutbox } from '../services/credentialDeliveryService.js';
+import { logger } from '../utils/logger.js';
 
 export function startMailOutboxWorker({ intervalMs = 5000, batchSize = 10 } = {}) {
   let isRunning = false;
@@ -10,7 +11,7 @@ export function startMailOutboxWorker({ intervalMs = 5000, batchSize = 10 } = {}
     try {
       await processPendingMailOutbox({ limit: batchSize });
     } catch (error) {
-      console.error('Mail outbox worker error:', error.message || error);
+      logger.error('Mail outbox worker failed.', { error });
     } finally {
       isRunning = false;
     }

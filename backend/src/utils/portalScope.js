@@ -71,6 +71,7 @@ export function findClassLead(classId = '') {
     fullName: teacher.fullName,
     email: teacher.email || teacher.portalEmail || '',
     institution: teacher.institution || '',
+    signatureImage: teacher.signatureImage || '',
     assignmentRole: preferred.assignmentRole || 'Subject Teacher',
     note: preferred.note || ''
   };

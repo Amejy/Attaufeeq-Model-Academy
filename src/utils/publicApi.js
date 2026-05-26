@@ -1,6 +1,8 @@
 import { resolveApiBaseUrl } from './apiBase';
+import { getRequestErrorMessage } from './userMessage';
 
 const API_BASE_URL = resolveApiBaseUrl();
+const DEFAULT_REQUEST_TIMEOUT_MS = 15_000;
 
 async function parseJsonSafely(response) {
   const raw = await response.text();
@@ -14,13 +16,24 @@ async function parseJsonSafely(response) {
 }
 
 export async function apiFetch(path, options = {}) {
-  const { headers, credentials = 'same-origin', ...rest } = options;
+  const { headers, credentials = 'same-origin', timeoutMs = DEFAULT_REQUEST_TIMEOUT_MS, signal, ...rest } = options;
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), Math.max(1, Number(timeoutMs) || DEFAULT_REQUEST_TIMEOUT_MS));
+
+  if (signal) {
+    if (signal.aborted) {
+      controller.abort();
+    } else {
+      signal.addEventListener('abort', () => controller.abort(), { once: true });
+    }
+  }
 
   try {
     return await fetch(path.startsWith('http') ? path : `${API_BASE_URL}${path}`, {
       ...rest,
       headers,
-      credentials
+      credentials,
+      signal: controller.signal
     });
   } catch (error) {
     if (error?.name === 'AbortError') {
@@ -32,6 +45,8 @@ export async function apiFetch(path, options = {}) {
         ? 'Cannot reach the server right now. Check your connection and try again.'
         : 'Cannot reach the server. Frontend API configuration is missing.'
     );
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -55,7 +70,11 @@ export async function apiJson(path, options = {}) {
   const data = await parseJsonSafely(response);
 
   if (!response.ok) {
-    const error = new Error(data?.message || `Request failed (HTTP ${response.status}).`);
+    const error = new Error(getRequestErrorMessage({
+      status: response.status,
+      message: data?.message || '',
+      fallback: 'We could not complete that request right now.'
+    }));
     error.status = response.status;
     error.payload = data;
     throw error;

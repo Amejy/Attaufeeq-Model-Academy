@@ -8,6 +8,7 @@ import {
   listUsersByEmails,
   updateUserPassword
 } from '../repositories/userRepository.js';
+import { logger } from '../utils/logger.js';
 import { hashPassword, verifyPassword } from '../utils/passwords.js';
 
 const REQUIRED_AUTH_TABLES = [
@@ -160,7 +161,7 @@ export async function ensureBootstrapAdmin(options = {}) {
       mustChangePassword: true
     }, { executor });
 
-    console.log(`Bootstrap admin created for ${user.email}. Rotate the password immediately after first login.`);
+    logger.warn(`Bootstrap admin created for ${user.email}. Rotate the password immediately after first login.`);
     return { created: true, userId: user.id, email: user.email };
   });
 }
@@ -174,7 +175,7 @@ export async function verifyLegacyDemoUsers(options = {}) {
     throw new Error(`Legacy demo accounts exist in production: ${emails}. Remove or rotate them before startup.`);
   }
 
-  console.warn(`Legacy demo accounts detected: ${emails}`);
+  logger.warn(`Legacy demo accounts detected: ${emails}`);
 }
 
 export async function cleanupLegacyDemoUsers(options = {}) {

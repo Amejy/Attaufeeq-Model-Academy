@@ -1,5 +1,6 @@
 import process from 'node:process';
 import { env } from '../config/env.js';
+import { logger } from '../utils/logger.js';
 
 let pool = null;
 
@@ -63,12 +64,13 @@ async function executeQuery(executor, textOrConfig, params = []) {
   } finally {
     const durationMs = Number(process.hrtime.bigint() - startedAt) / 1_000_000;
     if (durationMs >= env.dbSlowQueryMs) {
-      console.warn(
-        `[db] Slow query ${durationMs.toFixed(1)}ms: ${String(config.text || '')
+      logger.warn('Slow database query detected.', {
+        durationMs: Number(durationMs.toFixed(1)),
+        query: String(config.text || '')
           .replace(/\s+/g, ' ')
           .trim()
-          .slice(0, 240)}`
-      );
+          .slice(0, 240)
+      });
     }
   }
 }
@@ -79,7 +81,7 @@ export async function getDbPool() {
   const { Pool } = await import('pg');
   pool = new Pool(createPoolConfig());
   pool.on('error', (error) => {
-    console.error('Unexpected PostgreSQL pool error:', error.message || error);
+    logger.error('Unexpected PostgreSQL pool error.', { error });
   });
 
   return pool;

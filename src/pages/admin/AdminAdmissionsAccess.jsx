@@ -21,7 +21,6 @@ function validateAdmissionPeriod(period = {}) {
     { label: 'Madrastul ATTAUFEEQ', ...programs.madrasa },
     { label: 'Quran Memorization', ...programs.memorization }
   ];
-  const enabledWindows = [];
 
   for (const window of windows) {
     const start = window.startDate ? new Date(window.startDate).getTime() : null;
@@ -35,14 +34,6 @@ function validateAdmissionPeriod(period = {}) {
     if (start != null && end != null && start > end) {
       return `${window.label} start date must be before its end date.`;
     }
-
-    if (period.enabled !== false && window.enabled !== false) {
-      enabledWindows.push(window.label);
-    }
-  }
-
-  if (enabledWindows.length > 1) {
-    return 'Only one admission window can stay active at a time. Disable the others before saving.';
   }
 
   return '';

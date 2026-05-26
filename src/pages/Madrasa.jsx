@@ -1,13 +1,16 @@
 import { Link } from 'react-router-dom';
 import SmartImage from '../components/SmartImage';
+import SectionPhotoGrid from '../components/public/SectionPhotoGrid';
 import { GlassPanel, LiveTicker, PremiumHero, SectionIntro } from '../components/public/PremiumPublic';
 import { useSiteContent } from '../context/SiteContentContext';
 import { DEFAULT_IMAGES } from '../utils/defaultImages';
+import { getSectionMedia } from '../utils/publicSectionImages';
 
 function Madrasa() {
   const { siteContent } = useSiteContent();
   const madrasa = siteContent.madrasa || {};
   const madrasaModules = madrasa.modules || [];
+  const madrasaMedia = getSectionMedia('madrasawebsite');
 
   return (
     <main className="premium-page">
@@ -17,7 +20,7 @@ function Madrasa() {
         title={madrasa.title}
         kicker="Madrasa Website"
         description={madrasa.description}
-        image={madrasa.image || DEFAULT_IMAGES.madrasa}
+        image={madrasaMedia.headerImage?.url || madrasa.image || DEFAULT_IMAGES.madrasa}
         imageAlt="Madrasa learning"
         primaryAction={{ to: '/admissions', label: 'Apply Now' }}
         secondaryAction={{ to: '/', label: 'Switch Campus' }}
@@ -51,7 +54,7 @@ function Madrasa() {
         <GlassPanel className="premium-split-card p-6 sm:p-8">
           <div className="premium-media-card min-h-[280px]">
             <SmartImage
-              src={madrasa.image || DEFAULT_IMAGES.madrasa}
+              src={madrasaMedia.supportingImages[0]?.url || madrasa.image || DEFAULT_IMAGES.madrasa}
               fallbackSrc={DEFAULT_IMAGES.madrasa}
               alt="Madrasa learning"
               className="h-full w-full object-cover"
@@ -73,6 +76,14 @@ function Madrasa() {
           </div>
         </GlassPanel>
       </section>
+
+      <SectionPhotoGrid
+        eyebrow="Madrasa Views"
+        title="More images from the madrasa website folder"
+        description="The madrasa page now uses its folder main image for the hero and the remaining images inside the page."
+        photos={madrasaMedia.supportingImages.slice(1)}
+        fallbackSrc={DEFAULT_IMAGES.madrasa}
+      />
     </main>
   );
 }

@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { createContactSubmission, listContactSubmissions } from '../repositories/contactSubmissionRepository.js';
 import { defaultSiteContent, loadSiteContent, saveSiteContent } from '../services/siteContentService.js';
+import { logger } from '../utils/logger.js';
 
 const siteContentRouter = Router();
 
@@ -16,7 +17,7 @@ siteContentRouter.get('/', async (_req, res) => {
     res.setHeader('Cache-Control', 'public, max-age=60, stale-while-revalidate=120');
     return res.json({ content });
   } catch (error) {
-    console.error('Public site content fallback activated:', error.message || error);
+    logger.warn('Public site content fallback activated.', { error });
     res.setHeader('Cache-Control', 'public, max-age=15, stale-while-revalidate=30');
     return res.json({
       content: defaultSiteContent,

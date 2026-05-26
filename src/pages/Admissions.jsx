@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import ErrorState from '../components/ErrorState';
+import SectionPhotoGrid from '../components/public/SectionPhotoGrid';
 import { GlassPanel, LiveTicker, PremiumHero, SectionIntro } from '../components/public/PremiumPublic';
 import { apiFetch, apiJson } from '../utils/publicApi';
+import { getSectionMedia } from '../utils/publicSectionImages';
 
 const PROGRAM_INSTITUTIONS = {
   modern: 'ATTAUFEEQ Model Academy',
@@ -33,6 +35,7 @@ function isAllowedAdmissionDoc(file) {
 }
 
 function Admissions() {
+  const admissionMedia = getSectionMedia('admission');
   const [classes, setClasses] = useState([]);
   const [program, setProgram] = useState('');
   const [form, setForm] = useState({
@@ -365,7 +368,7 @@ function Admissions() {
         title="Apply into the digital campus"
         kicker={program ? selectedProgramLabel : 'School and Madrasa Pathways'}
         description="Submit your child&apos;s application and choose the exact class requested for placement after full admission confirmation."
-        image={isMadrasa || isMemorization ? '/images/gallery5.png' : '/images/schoolweb2.png'}
+        image={admissionMedia.headerImage?.url || (isMadrasa || isMemorization ? '/images/madrasawebsite/main image.png' : '/images/schoolwebsite/Pasted image (2).png')}
         imageAlt="Admissions"
       >
         <div className="mt-5 max-w-2xl">
@@ -381,6 +384,14 @@ function Admissions() {
         eyebrow="Admissions Flow"
         title="Select a program, complete the form, and submit for review"
         description="The public admissions system keeps school, madrasa, and memorization applicants separated while preserving one consistent application experience."
+      />
+
+      <SectionPhotoGrid
+        eyebrow="Admission View"
+        title="Admissions page visuals"
+        description="The admissions folder main image now drives the page header, and the remaining images show here when available."
+        photos={admissionMedia.supportingImages}
+        fallbackSrc={admissionMedia.headerImage?.url || '/images/logo.png'}
       />
 
       {!periodOpen ? (

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import SmartImage from './SmartImage';
 import { buildQrCodeUrl, buildResultCheckerUrl } from '../utils/resultVerification';
 
@@ -96,9 +97,15 @@ function ResultScratchCard({
   term = 'First Term',
   sessionId = '',
   token = '',
+  revealOnInteract = true,
+  revealedInitially = false,
   secureLabel = 'Secure Token',
   secureNote = 'Keep this card safe'
 }) {
+  const shouldRevealByDefault = revealedInitially || !token || !revealOnInteract;
+  const [revealedByUser, setRevealedByUser] = useState(false);
+  const revealed = shouldRevealByDefault || revealedByUser;
+
   const verificationUrl = buildResultCheckerUrl({
     studentIdentifier: studentCode || admissionNo || '',
     term: term || '',
@@ -141,6 +148,16 @@ function ResultScratchCard({
 
         <div className="result-scratch-card__qr-panel">
           <div className="result-scratch-card__wave" aria-hidden="true" />
+          <div className="mb-3 flex justify-end">
+            <div className="rounded-2xl border border-slate-200 bg-white/90 p-3 shadow-sm">
+              <SmartImage
+                src={logoSrc}
+                fallbackSrc="/images/logo.png"
+                alt={`${schoolName} logo mark`}
+                className="h-14 w-14 object-contain"
+              />
+            </div>
+          </div>
           <div className="result-scratch-card__qr-shell">
             <img src={qrCodeUrl} alt="Scan to verify result token" className="result-scratch-card__qr-image" />
             <p className="result-scratch-card__qr-caption">Scan to verify result token</p>
@@ -161,6 +178,17 @@ function ResultScratchCard({
 
         <div className="result-scratch-card__scratch-token">
           <span className="text-code-break">{token || 'PENDING TOKEN RELEASE'}</span>
+          {token && revealOnInteract && !revealed && (
+            <button
+              type="button"
+              className="result-scratch-card__scratch-cover"
+              onClick={() => setRevealedByUser(true)}
+              onTouchStart={() => setRevealedByUser(true)}
+              aria-label="Reveal scratch card token"
+            >
+              <span className="result-scratch-card__scratch-cover-text">Tap or click to reveal token</span>
+            </button>
+          )}
         </div>
       </div>
 

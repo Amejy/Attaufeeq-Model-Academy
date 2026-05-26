@@ -140,7 +140,7 @@ function AdminSystemTools() {
       <section className="mt-6 rounded-xl border border-slate-200 bg-white p-5">
         <h2 className="font-heading text-2xl text-primary">Data Persistence</h2>
         <p className="mt-2 text-sm text-slate-700">
-          Force a persistence sync and download an administrative backup snapshot for offline review.
+          Force a persistence sync and download an administrative backup snapshot for offline recovery. Store exported backups in a restricted school-controlled location.
         </p>
         <div className="mt-4 flex flex-wrap gap-3">
           <button

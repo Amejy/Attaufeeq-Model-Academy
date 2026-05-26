@@ -15,6 +15,10 @@ import {
   listResultTokens,
   recordResultTokenAttempt
 } from '../repositories/resultTokenRepository.js';
+import { resolveNextTermBegins } from '../utils/academicCalendar.js';
+import { findClassLead } from '../utils/portalScope.js';
+import { toPublicErrorMessage } from '../utils/publicError.js';
+import { hasAttendanceOverride, hasBehaviorOverride, normalizeReportOverride, normalizeReportSettings } from '../utils/reportConfig.js';
 import { resolveStudentByIdentifier } from '../utils/studentCode.js';
 import { filterCountableActiveStudents } from '../utils/studentLifecycle.js';
 
@@ -29,6 +33,24 @@ const tokenCheckLimiter = createRateLimiter({
 function matchesSession(recordSessionId, sessionId) {
   if (!sessionId) return true;
   return String(recordSessionId || '').trim() === sessionId;
+}
+
+function normalizeResultBreakdown(result = {}) {
+  const normalizedCa = Number(result.ca || 0);
+  const hasExplicitBreakdown = result.test1 !== undefined || result.test2 !== undefined;
+  const fallbackTest1 = Number((normalizedCa / 2).toFixed(2));
+  const fallbackTest2 = Number((normalizedCa - fallbackTest1).toFixed(2));
+  const test1 = hasExplicitBreakdown ? Number(result.test1 || 0) : fallbackTest1;
+  const test2 = hasExplicitBreakdown ? Number(result.test2 || 0) : fallbackTest2;
+
+  return {
+    ...result,
+    test1,
+    test2,
+    ca: Number((test1 + test2).toFixed(2)),
+    exam: Number(result.exam || 0),
+    total: Number(result.total || 0)
+  };
 }
 
 function normalizeSessionId(sessionId = '') {
@@ -59,6 +81,43 @@ function isResultsOpenForClass(classId) {
   return openList.includes(classId);
 }
 
+function findReportRemark({ studentId = '', classId = '', sessionId = '', term = '' } = {}) {
+  return (adminStore.reportRemarks || []).find(
+    (item) =>
+      item.studentId === studentId &&
+      item.classId === classId &&
+      matchesSession(item.sessionId, sessionId) &&
+      item.term === term
+  ) || null;
+}
+
+function mergeAttendanceSummary(base = {}, override = {}) {
+  if (!hasAttendanceOverride({ attendanceSummary: override })) return base;
+  const next = {
+    ...base,
+    totalSchoolDays: override.totalSchoolDays ?? base.totalSchoolDays ?? 0,
+    daysPresent: override.daysPresent ?? base.daysPresent ?? 0,
+    daysAbsent: override.daysAbsent ?? base.daysAbsent ?? 0,
+    lateComing: override.lateComing ?? base.lateComing ?? 0,
+    attendanceRemark: override.attendanceRemark || base.attendanceRemark || ''
+  };
+  next.attendanceRate = next.totalSchoolDays
+    ? Number(((Number(next.daysPresent || 0) / Number(next.totalSchoolDays || 1)) * 100).toFixed(1))
+    : 0;
+  return next;
+}
+
+function mergeBehaviorRatings(base = {}, override = {}) {
+  if (!hasBehaviorOverride({ behaviorRatings: override })) return base;
+  return {
+    discipline: override.discipline || base.discipline || '—',
+    responsibility: override.responsibility || base.responsibility || '—',
+    cooperation: override.cooperation || base.cooperation || '—',
+    respect: override.respect || base.respect || '—',
+    initiative: override.initiative || base.initiative || '—'
+  };
+}
+
 // Token-only access: fee checks removed by design.
 
 const TERM_ORDER = ['First Term', 'Second Term', 'Third Term'];
@@ -72,10 +131,35 @@ function resolveLatestTerm(values = []) {
   }, '');
 }
 
-function resolveAttendanceRate(studentId, term = '') {
+function resolveCurrentTokenTerm(sessionId = '') {
+  const publishedResultsTerm = resolveLatestTerm(
+    (adminStore.results || [])
+      .filter((item) => item.published && matchesSession(item.sessionId, sessionId))
+      .map((item) => item.term)
+  );
+  if (publishedResultsTerm) return publishedResultsTerm;
+
+  const requestTerm = resolveLatestTerm(
+    (adminStore.paymentRequests || [])
+      .filter((item) => matchesSession(item.sessionId, sessionId))
+      .map((item) => item.term)
+  );
+  if (requestTerm) return requestTerm;
+
+  return 'First Term';
+}
+
+function isTokenSaleEnabled(sessionId = '', term = '') {
+  return Boolean((adminStore.tokenSalesControls || []).find(
+    (item) => matchesSession(item.sessionId, sessionId) && String(item.term || '').trim() === String(term || '').trim() && item.enabled
+  ));
+}
+
+function resolveAttendanceRate(studentId, term = '', sessionId = '') {
   if (!studentId) return '—';
   const allRows = adminStore.attendanceRecords
-    .filter((record) => record.studentId === studentId);
+    .filter((record) => record.studentId === studentId)
+    .filter((record) => matchesSession(record.sessionId, sessionId));
   const activeTerm = term || resolveLatestTerm(allRows.map((record) => record.term));
   const rows = activeTerm
     ? allRows.filter((record) => String(record.term || '').trim() === activeTerm)
@@ -86,10 +170,11 @@ function resolveAttendanceRate(studentId, term = '') {
   return `${Number(((present / total) * 100).toFixed(1))}%`;
 }
 
-function resolveBehaviorRating(studentId, term = '') {
+function resolveBehaviorRating(studentId, term = '', sessionId = '') {
   if (!studentId) return '—';
   const allRows = adminStore.attendanceRecords
     .filter((record) => record.studentId === studentId)
+    .filter((record) => matchesSession(record.sessionId, sessionId))
     .filter((record) => record.remark);
   const activeTerm = term || resolveLatestTerm(allRows.map((record) => record.term));
   const rows = activeTerm
@@ -101,6 +186,78 @@ function resolveBehaviorRating(studentId, term = '') {
   if (negative > positive) return 'Needs Improvement';
   if (positive > 0) return 'Good';
   return 'Satisfactory';
+}
+
+function normalizeAttendanceStatus(value, present) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'late') return 'late';
+  if (normalized === 'absent') return 'absent';
+  if (normalized === 'present') return 'present';
+  return present === false ? 'absent' : 'present';
+}
+
+function resolveAttendanceSummary(studentId, term = '', sessionId = '') {
+  if (!studentId) {
+    return {
+      totalSchoolDays: 0,
+      daysPresent: 0,
+      daysAbsent: 0,
+      lateComing: 0,
+      attendanceRate: 0,
+      attendanceRemark: '—'
+    };
+  }
+
+  const allRows = adminStore.attendanceRecords
+    .filter((record) => record.studentId === studentId)
+    .filter((record) => matchesSession(record.sessionId, sessionId));
+  const activeTerm = term || resolveLatestTerm(allRows.map((record) => record.term));
+  const rows = activeTerm
+    ? allRows.filter((record) => String(record.term || '').trim() === activeTerm)
+    : allRows;
+  const totalSchoolDays = rows.length;
+  const daysAbsent = rows.filter((record) => normalizeAttendanceStatus(record.status, record.present) === 'absent').length;
+  const lateComing = rows.filter((record) => normalizeAttendanceStatus(record.status, record.present) === 'late').length;
+  const daysPresent = totalSchoolDays - daysAbsent;
+  const attendanceRate = totalSchoolDays ? Number(((daysPresent / totalSchoolDays) * 100).toFixed(1)) : 0;
+
+  let attendanceRemark = 'No attendance record yet';
+  if (totalSchoolDays) {
+    if (attendanceRate >= 95 && lateComing <= 1) attendanceRemark = 'Excellent attendance';
+    else if (attendanceRate >= 85) attendanceRemark = 'Good attendance';
+    else if (attendanceRate >= 70) attendanceRemark = 'Fair attendance';
+    else attendanceRemark = 'Attendance needs improvement';
+  }
+
+  return { totalSchoolDays, daysPresent, daysAbsent, lateComing, attendanceRate, attendanceRemark };
+}
+
+function resolveBehaviorRatings(studentId, term = '', sessionId = '') {
+  const fields = ['discipline', 'responsibility', 'cooperation', 'respect', 'initiative'];
+  const scoreMap = { A: 4, B: 3, C: 2, D: 1 };
+  const gradeFromAverage = (average) => {
+    if (!average) return '—';
+    if (average >= 3.5) return 'A';
+    if (average >= 2.5) return 'B';
+    if (average >= 1.5) return 'C';
+    return 'D';
+  };
+  const allRows = adminStore.attendanceRecords
+    .filter((record) => record.studentId === studentId)
+    .filter((record) => matchesSession(record.sessionId, sessionId));
+  const activeTerm = term || resolveLatestTerm(allRows.map((record) => record.term));
+  const rows = activeTerm
+    ? allRows.filter((record) => String(record.term || '').trim() === activeTerm)
+    : allRows;
+
+  return fields.reduce((summary, field) => {
+    const scores = rows
+      .map((record) => scoreMap[String(record.behavior?.[field] || '').trim().toUpperCase()])
+      .filter(Boolean);
+    const average = scores.length ? scores.reduce((sum, score) => sum + score, 0) / scores.length : 0;
+    summary[field] = gradeFromAverage(average);
+    return summary;
+  }, {});
 }
 
 function isClassRankingReady(term, classId, sessionId = '') {
@@ -188,10 +345,11 @@ function resolveSubjectsForClass(classId, institution) {
 }
 
 function enrichResult(row) {
+  const normalized = normalizeResultBreakdown(row);
   const subject = adminStore.subjects.find((entry) => entry.id === row.subjectId);
   const classItem = adminStore.classes.find((entry) => entry.id === row.classId);
   return {
-    ...row,
+    ...normalized,
     subjectName: subject?.name || row.subjectId,
     classLabel: classItem ? `${classItem.name} ${classItem.arm}` : row.classId
   };
@@ -219,7 +377,7 @@ function buildReportCard(student, term = '', sessionId = '') {
   const rows = filtered.map((item) => {
     const subject = adminStore.subjects.find((subjectItem) => subjectItem.id === item.subjectId);
     return {
-      ...item,
+      ...normalizeResultBreakdown(item),
       subjectName: subject?.name || item.subjectId
     };
   });
@@ -234,8 +392,20 @@ function buildReportCard(student, term = '', sessionId = '') {
   const classId = enrollment?.classId || student.classId;
   const classInfo = adminStore.classes.find((item) => item.id === classId);
   const institution = student.institution || classInfo?.institution || 'ATTAUFEEQ Model Academy';
-  const attendance = resolveAttendanceRate(student.id, term);
-  const behavior = resolveBehaviorRating(student.id, term);
+  const classLead = findClassLead(classId);
+  const reportRemark = findReportRemark({ studentId: student.id, classId, sessionId, term });
+  const attendanceSummary = mergeAttendanceSummary(
+    resolveAttendanceSummary(student.id, term, sessionId),
+    normalizeReportOverride(reportRemark?.override || {}).attendanceSummary
+  );
+  const behaviorRatings = mergeBehaviorRatings(
+    resolveBehaviorRatings(student.id, term, sessionId),
+    normalizeReportOverride(reportRemark?.override || {}).behaviorRatings
+  );
+  const attendance = attendanceSummary.totalSchoolDays ? `${attendanceSummary.attendanceRate}%` : resolveAttendanceRate(student.id, term, sessionId);
+  const behavior = Object.values(behaviorRatings).some((value) => value && value !== '—')
+    ? behaviorRatings
+    : resolveBehaviorRating(student.id, term, sessionId);
   let classRank = null;
   let classSize = null;
 
@@ -249,6 +419,7 @@ function buildReportCard(student, term = '', sessionId = '') {
   return {
     student,
     classInfo,
+    classLead,
     institution,
     term: term || 'All Terms',
     sessionId: sessionId || '',
@@ -260,7 +431,13 @@ function buildReportCard(student, term = '', sessionId = '') {
     classRank,
     classSize,
     attendance,
+    attendanceSummary,
     behavior,
+    behaviorRatings,
+    nextTermBegins: resolveNextTermBegins(adminStore, sessionId, term),
+    classTeacherRemark: reportRemark?.classTeacherRemark || '',
+    headTeacherRemark: reportRemark?.headTeacherRemark || '',
+    reportSettings: normalizeReportSettings(adminStore.reportSettings || {}),
     publishState: 'Published',
     rows
   };
@@ -304,7 +481,7 @@ resultTokenRouter.post('/admin/generate', requireAuth, requireRole('admin'), asy
     const stats = await getResultTokenStats();
     return res.status(201).json({ tokens, stats });
   } catch (error) {
-    return res.status(500).json({ message: error.message || 'Unable to generate tokens.' });
+    return res.status(500).json({ message: toPublicErrorMessage(error, 'We could not generate result tokens at the moment.') });
   }
 });
 
@@ -319,7 +496,7 @@ resultTokenRouter.get('/admin', requireAuth, requireRole('admin'), async (req, r
     const stats = await getResultTokenStats();
     return res.json({ tokens, stats });
   } catch (error) {
-    return res.status(500).json({ message: error.message || 'Unable to load result tokens.' });
+    return res.status(500).json({ message: toPublicErrorMessage(error, 'We could not load result tokens right now.') });
   }
 });
 
@@ -348,7 +525,7 @@ resultTokenRouter.get('/admin/export', requireAuth, requireRole('admin'), async 
     res.setHeader('Content-Disposition', 'attachment; filename="result-tokens.csv"');
     return res.send(csv);
   } catch (error) {
-    return res.status(500).json({ message: error.message || 'Unable to export tokens.' });
+    return res.status(500).json({ message: toPublicErrorMessage(error, 'We could not export result tokens right now.') });
   }
 });
 
@@ -363,7 +540,7 @@ resultTokenRouter.get('/admissions', requireAuth, requireRole('admissions'), asy
     const stats = await getResultTokenStats();
     return res.json({ tokens, stats });
   } catch (error) {
-    return res.status(500).json({ message: error.message || 'Unable to load result tokens.' });
+    return res.status(500).json({ message: toPublicErrorMessage(error, 'We could not load result tokens right now.') });
   }
 });
 
@@ -511,6 +688,18 @@ resultTokenRouter.post('/check', tokenCheckLimiter, async (req, res) => {
   }
 
   if (!tokenValue) {
+    const salesTerm = resolveCurrentTokenTerm(resolvedSessionId);
+    if (!isTokenSaleEnabled(resolvedSessionId, term || salesTerm)) {
+      await recordResultTokenAttempt({
+        tokenValue,
+        studentIdentifier,
+        success: false,
+        failureReason: 'Token sales closed for term.',
+        ipAddress: req.ip || req.socket?.remoteAddress || '',
+        userAgent: req.get('user-agent') || ''
+      });
+      return res.status(400).json({ message: `Result token sales are not open yet for ${term || salesTerm}. Wait for the school to open token sales after results are out.` });
+    }
     await recordResultTokenAttempt({
       tokenValue,
       studentIdentifier,

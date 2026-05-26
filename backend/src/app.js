@@ -11,6 +11,7 @@ import { auditRequests } from './middleware/audit.js';
 import { errorHandler, notFoundHandler } from './middleware/error.js';
 import { createRateLimiter } from './middleware/rateLimit.js';
 import apiRouter from './routes/index.js';
+import { getStartupState } from './services/startupState.js';
 
 const app = express();
 app.disable('x-powered-by');
@@ -49,7 +50,9 @@ app.use(
     credentials: true
   })
 );
-app.use(morgan('dev'));
+if (env.isDevelopment) {
+  app.use(morgan('dev'));
+}
 app.use(express.json({ limit: '1mb' }));
 app.use((req, res, next) => {
   const originalJson = res.json.bind(res);
@@ -77,12 +80,48 @@ app.get('/health', (_req, res) => {
   res.json({ status: 'OK' });
 });
 
+app.use((req, res, next) => {
+  if (req.path === '/health' || req.path.startsWith('/api/health')) {
+    return next();
+  }
+
+  const startup = getStartupState();
+  if (startup.ready) {
+    return next();
+  }
+
+  return res.status(503).json({
+    message: startup.failed
+      ? 'The school portal is temporarily unavailable while services recover.'
+      : 'The school portal is starting. Please try again in a moment.'
+  });
+});
+
 function requestIp(req) {
   return req.ip || req.socket?.remoteAddress || 'unknown';
 }
 
 function requestEmail(req) {
   return String(req.body?.email || '').trim().toLowerCase() || 'anonymous';
+}
+
+function toSafeInlineFilename(value) {
+  const normalized = String(value || '')
+    .replace(/["\\]/g, '')
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  return normalized.slice(0, 180) || 'download';
+}
+
+function sendUploadResponse(res, upload, { cacheControl = 'public, max-age=300, stale-while-revalidate=600' } = {}) {
+  res.setHeader('Content-Type', upload.mime);
+  res.setHeader('Content-Length', String(upload.size));
+  res.setHeader('Content-Disposition', `inline; filename="${toSafeInlineFilename(upload.originalName)}"`);
+  res.setHeader('Cache-Control', cacheControl);
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive');
+  return res.send(upload.data);
 }
 
 const apiLimiter = createRateLimiter({
@@ -159,10 +198,7 @@ app.get('/api/uploads/public/:id', async (req, res) => {
     return res.status(404).json({ message: 'File not found.' });
   }
 
-  res.setHeader('Content-Type', upload.mime);
-  res.setHeader('Content-Length', String(upload.size));
-  res.setHeader('Content-Disposition', `inline; filename="${upload.originalName}"`);
-  return res.send(upload.data);
+  return sendUploadResponse(res, upload);
 });
 
 app.get('/api/uploads/private/:id', requireAuth, requireRole('admin', 'admissions'), async (req, res) => {
@@ -171,10 +207,7 @@ app.get('/api/uploads/private/:id', requireAuth, requireRole('admin', 'admission
     return res.status(404).json({ message: 'File not found.' });
   }
 
-  res.setHeader('Content-Type', upload.mime);
-  res.setHeader('Content-Length', String(upload.size));
-  res.setHeader('Content-Disposition', `inline; filename="${upload.originalName}"`);
-  return res.send(upload.data);
+  return sendUploadResponse(res, upload, { cacheControl: 'private, no-store, max-age=0' });
 });
 
 app.use('/api', apiRouter);

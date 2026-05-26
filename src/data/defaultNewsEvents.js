@@ -12,7 +12,7 @@ export const defaultNewsEvents = [
     publishDate: '2026-01-12T09:00:00.000Z',
     createdAt: '2026-01-12T09:00:00.000Z',
     updatedAt: '2026-01-12T09:00:00.000Z',
-    images: ['/images/schoolwebsite1.png'],
+    images: ['/images/schoolwebsite/main image (6).png'],
     videos: []
   },
   {
@@ -28,7 +28,7 @@ export const defaultNewsEvents = [
     publishDate: '2026-02-06T10:30:00.000Z',
     createdAt: '2026-02-06T10:30:00.000Z',
     updatedAt: '2026-02-06T10:30:00.000Z',
-    images: ['/images/schoolweb3.png'],
+    images: ['/images/Home/Pasted image (2).png'],
     videos: []
   },
   {
@@ -44,7 +44,7 @@ export const defaultNewsEvents = [
     publishDate: '2026-03-01T08:15:00.000Z',
     createdAt: '2026-03-01T08:15:00.000Z',
     updatedAt: '2026-03-01T08:15:00.000Z',
-    images: ['/images/gallery5.png'],
+    images: ['/images/madrasawebsite/main image.png'],
     videos: []
   }
 ];

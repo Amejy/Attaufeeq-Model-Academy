@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import ResultCard from '../components/ResultCard';
+import ReportCardSheet from '../components/ReportCardSheet';
+import SectionPhotoGrid from '../components/public/SectionPhotoGrid';
 import { GlassPanel, PremiumHero } from '../components/public/PremiumPublic';
 import { apiJson } from '../utils/publicApi';
+import { getSectionMedia } from '../utils/publicSectionImages';
 
 const TERM_OPTIONS = ['First Term', 'Second Term', 'Third Term'];
 
 function ResultChecker() {
+  const resultMedia = getSectionMedia('result');
   const [searchParams] = useSearchParams();
   const [studentIdentifier, setStudentIdentifier] = useState('');
   const [term, setTerm] = useState('First Term');
@@ -107,50 +110,20 @@ function ResultChecker() {
   const remainingUses = payload?.remainingUses;
   const reportCard = payload?.reportCard || null;
 
-  function printResultCard(element) {
+  function printReportSheet(element) {
     if (!element) return;
-    const printWindow = window.open('', '_blank', 'width=900,height=650');
+    const printWindow = window.open('', '_blank', 'width=980,height=720');
     if (!printWindow) return;
-    const styles = `
-      <style>
-        body { margin: 24px; font-family: Arial, sans-serif; color: #0f172a; }
-        .result-card { background: #fff; border: none; border-radius: 0; padding: 0; box-shadow: none; }
-        .result-card__header { display: flex; justify-content: space-between; gap: 24px; border-bottom: 1px solid #e2e8f0; padding-bottom: 16px; }
-        .result-card__brand { display: flex; align-items: center; gap: 16px; }
-        .result-card__logo { width: 64px; height: 64px; object-fit: cover; border-radius: 16px; border: 1px solid #e2e8f0; }
-        .result-card__school { font-size: 20px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
-        .result-card__tag { margin-top: 4px; font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase; color: #64748b; }
-        .result-card__meta { font-size: 12px; text-align: right; color: #475569; }
-        .result-card__meta span { font-weight: 600; color: #0f172a; }
-        .result-card__student { display: grid; grid-template-columns: 120px 1fr; gap: 20px; margin-top: 20px; align-items: center; }
-        .result-card__photo { width: 120px; height: 140px; border-radius: 16px; border: 1px solid #e2e8f0; background: #f8fafc; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; color: #0f766e; }
-        .result-card__photo img { width: 100%; height: 100%; border-radius: 16px; object-fit: cover; }
-        .result-card__details { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 24px; font-size: 12px; color: #64748b; }
-        .result-card__details h3 { margin-top: 4px; font-size: 15px; font-weight: 700; color: #0f172a; }
-        .result-card__scores { margin-top: 20px; border: 1px solid #e2e8f0; border-radius: 18px; overflow: hidden; }
-        .result-card__scores table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        .result-card__scores thead { background: #f8fafc; text-transform: uppercase; letter-spacing: 0.12em; font-size: 10px; color: #64748b; }
-        .result-card__scores th, .result-card__scores td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; }
-        .result-card__summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-top: 18px; }
-        .result-card__summary div { background: #f8fafc; border-radius: 14px; padding: 10px 12px; font-size: 12px; color: #64748b; }
-        .result-card__summary h3 { margin-top: 4px; font-size: 15px; font-weight: 700; color: #0f172a; }
-        .result-card__footer { margin-top: 20px; display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; border-top: 1px dashed #e2e8f0; padding-top: 16px; }
-        .result-card__footer img { width: 140px; height: auto; object-fit: contain; }
-        .result-card__signature-line { width: 140px; height: 2px; background: #0f172a; margin-top: 24px; }
-        .result-card__verification { display: grid; grid-template-columns: 104px minmax(0, 1fr); gap: 14px; align-items: center; border: 1px solid #e2e8f0; border-radius: 18px; background: #f8fafc; padding: 12px; }
-        .result-card__verification-box { display: flex; align-items: center; justify-content: center; border-radius: 16px; background: #fff; padding: 8px; }
-        .result-card__verification-qr { width: 88px; height: 88px; object-fit: contain; }
-        .result-card__verification-copy { min-width: 0; display: grid; gap: 4px; color: #475569; font-size: 12px; }
-        .result-card__verification-copy h3 { margin: 0; color: #0f172a; font-size: 15px; font-weight: 700; }
-        .result-card__verification-copy span { font-size: 11px; overflow-wrap: anywhere; word-break: break-word; }
-      </style>
-    `;
     printWindow.document.open();
     printWindow.document.write(`
       <html>
         <head>
-          <title>Result Card</title>
-          ${styles}
+          <title>Report Sheet</title>
+          <style>
+            body { margin: 0; background: #fff; }
+            body * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .report-sheet { margin: 0 auto !important; box-shadow: none !important; }
+          </style>
         </head>
         <body>
           ${element.outerHTML}
@@ -170,7 +143,7 @@ function ResultChecker() {
         title="Student Result Access"
         kicker="School and Madrasa Results"
         description="Use a student ID or code with a valid token to access published academic or madrasa results."
-        image="/images/schoolweb3.png"
+        image={resultMedia.headerImage?.url || '/images/Home/Pasted image (2).png'}
         imageAlt="Student result access"
       />
     <section className="section-wrap pb-20">
@@ -180,6 +153,9 @@ function ResultChecker() {
             <h1 className="break-words font-heading text-3xl text-primary sm:text-4xl">Check Your Result</h1>
             <p className="text-sm text-slate-600">
               Enter your student ID or student code with a valid result token to view your published results.
+            </p>
+            <p className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+              First-time result access depends on the school opening token sales for the term. If sales are still closed, receipt upload and new token access will stay unavailable.
             </p>
           </div>
 
@@ -257,13 +233,15 @@ function ResultChecker() {
 
               {!holdReason && reportCard && (
                 <div className="space-y-3">
-                  <ResultCard reportCard={reportCard} />
+                  <div id="result-card-print">
+                    <ReportCardSheet reportCard={reportCard} />
+                  </div>
                   <button
                     type="button"
-                    onClick={() => printResultCard(document.getElementById('result-card-print'))}
-                    className="rounded-2xl border border-slate-300 bg-white/80 px-4 py-3 text-sm font-semibold text-slate-700"
+                    onClick={() => printReportSheet(document.getElementById('result-card-print'))}
+                    className="interactive-button rounded-2xl border border-slate-300 bg-white/80 px-4 py-3 text-sm font-semibold text-slate-700"
                   >
-                    Download PDF
+                    Print / Save as PDF
                   </button>
                 </div>
               )}
@@ -271,6 +249,14 @@ function ResultChecker() {
           )}
       </GlassPanel>
     </section>
+
+    <SectionPhotoGrid
+      eyebrow="Result Access"
+      title="Result page visuals"
+      description="The result folder images are now connected to this page. The main image appears in the header and the remaining images appear here."
+      photos={resultMedia.supportingImages}
+      fallbackSrc={resultMedia.headerImage?.url || '/images/logo.png'}
+    />
     </main>
   );
 }

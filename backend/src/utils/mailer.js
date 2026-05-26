@@ -1,6 +1,7 @@
 import { env } from '../config/env.js';
 import sendgridMail from '@sendgrid/mail';
 import { Resend } from 'resend';
+import { logger } from './logger.js';
 
 let resendClient = null;
 let sendgridReady = false;
@@ -91,7 +92,7 @@ async function sendWithResend({ recipientEmail, subject, text, html }) {
     });
 
     if (response?.id) {
-      console.info('Resend email sent', { recipientEmail, messageId: response.id });
+      logger.info('Resend email sent.', { recipientEmail, messageId: response.id });
     }
 
     return {

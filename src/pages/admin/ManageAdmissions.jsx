@@ -236,57 +236,7 @@ function ManageAdmissions() {
 
       if (previewWindow) {
         if (PREVIEWABLE_DOCUMENT_MIMES.has(mime)) {
-          const previewBody = mime.startsWith('image/')
-            ? `<img src="${objectUrl}" alt="${safeFileName}" style="max-width:100%;height:auto;display:block;margin:0 auto;" />`
-            : `<iframe src="${objectUrl}" title="${safeFileName}" style="width:100%;height:100%;border:0;" />`;
-
-          previewWindow.document.write(`
-            <!doctype html>
-            <html lang="en">
-              <head>
-                <meta charset="utf-8" />
-                <title>${safeFileName}</title>
-                <style>
-                  body {
-                    margin: 0;
-                    background: #0f172a;
-                    color: white;
-                    font-family: Arial, sans-serif;
-                  }
-                  .shell {
-                    min-height: 100vh;
-                    display: grid;
-                    grid-template-rows: auto 1fr;
-                  }
-                  .topbar {
-                    padding: 12px 16px;
-                    background: rgba(15, 23, 42, 0.96);
-                    border-bottom: 1px solid rgba(148, 163, 184, 0.24);
-                    font-size: 14px;
-                    font-weight: 600;
-                  }
-                  .viewer {
-                    min-height: calc(100vh - 49px);
-                    background: #f8fafc;
-                  }
-                  .viewer iframe,
-                  .viewer img {
-                    width: 100%;
-                    min-height: calc(100vh - 49px);
-                    object-fit: contain;
-                    background: #f8fafc;
-                  }
-                </style>
-              </head>
-              <body>
-                <div class="shell">
-                  <div class="topbar">${safeFileName}</div>
-                  <div class="viewer">${previewBody}</div>
-                </div>
-              </body>
-            </html>
-          `);
-          previewWindow.document.close();
+          previewWindow.location.replace(objectUrl);
         } else {
           previewWindow.document.write(`
             <!doctype html>
@@ -1132,18 +1082,19 @@ function ManageAdmissions() {
             </div>
 
             <div className="data-table-shell mt-5">
-              <table className="min-w-full text-sm">
+              <div className="data-table-shell__content">
+                <table className="min-w-[1120px] w-full text-sm">
                 <thead className="bg-slate-50 text-left">
                   <tr>
-                    <th className="px-4 py-3">Applicant</th>
+                    <th className="min-w-[15rem] px-4 py-3">Applicant</th>
                     <th className="px-4 py-3">Class</th>
                     <th className="px-4 py-3">Status</th>
                     <th className="px-4 py-3">Verification</th>
                     <th className="px-4 py-3">Payment</th>
-                    <th className="px-4 py-3">Portal Delivery</th>
+                    <th className="min-w-[8rem] px-4 py-3">Portal Delivery</th>
                     <th className="px-4 py-3">Documents</th>
-                    <th className="px-4 py-3">Workflow</th>
-                    <th className="px-4 py-3">Actions</th>
+                    <th className="min-w-[8rem] px-4 py-3">Workflow</th>
+                    <th className="min-w-[13.5rem] px-4 py-3">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1178,7 +1129,7 @@ function ManageAdmissions() {
                     return (
                       <Fragment key={admission.id}>
                         <tr className="border-t border-slate-100">
-                          <td className="px-4 py-3">
+                          <td className="min-w-[15rem] px-4 py-3">
                             <p className="font-semibold text-slate-800">{admission.fullName}</p>
                             <p className="text-wrap-safe mt-1 text-xs text-slate-500">{admission.guardianName} • {admission.phone}</p>
                             {admission.forwardedToAdminAt && (
@@ -1191,10 +1142,10 @@ function ManageAdmissions() {
                           <td className="px-4 py-3"><StatusBadge status={admission.status} /></td>
                           <td className="px-4 py-3"><VerificationBadge status={admission.verificationStatus} /></td>
                           <td className="px-4 py-3"><PaymentBadge status={admission.paymentStatus || 'pending'} /></td>
-                          <td className="px-4 py-3"><DeliveryBadge status={deliveryStatus} /></td>
+                          <td className="min-w-[8rem] px-4 py-3"><DeliveryBadge status={deliveryStatus} /></td>
                           <td className="px-4 py-3">{admission.documents?.length || 0}</td>
-                          <td className="px-4 py-3">{admission.workflowHistory?.length || 0} events</td>
-                          <td className="px-4 py-3">
+                          <td className="min-w-[8rem] px-4 py-3">{admission.workflowHistory?.length || 0} events</td>
+                          <td className="min-w-[13.5rem] px-4 py-3">
                             <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
                               <button type="button" onClick={() => toggleExpanded(admission.id)} className="interactive-button w-full">
                                 {open ? 'Hide' : 'Open'}
@@ -1388,7 +1339,8 @@ function ManageAdmissions() {
                     </tr>
                   )}
                 </tbody>
-              </table>
+                </table>
+              </div>
             </div>
           </section>
         ))}

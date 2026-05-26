@@ -6,12 +6,16 @@ import { listTeacherAssignments } from '../repositories/teacherAssignmentReposit
 import { createResultTokenAccess, findUsedTokenForStudentTerm, getResultTokenAccess } from '../repositories/resultTokenRepository.js';
 import { clearUnsubmittedResults, listResults, markResultsClearedForTeacher, publishResults, submitResults, upsertResult } from '../repositories/resultRepository.js';
 import { findUserById } from '../repositories/userRepository.js';
-import { findChildForParent, findStudentByUser, findTeacherByUser, findChildrenForParent } from '../utils/portalScope.js';
+import { findChildForParent, findClassLead, findStudentByUser, findTeacherByUser, findChildrenForParent } from '../utils/portalScope.js';
 import { institutionEquals, normalizeInstitution } from '../utils/institution.js';
-import { normalizeTerm } from '../utils/academicProgression.js';
+import { resolveNextTermBegins } from '../utils/academicCalendar.js';
+import { inferClassStage, normalizeTerm } from '../utils/academicProgression.js';
 import { resolveStudentByIdentifier } from '../utils/studentCode.js';
 import { filterCountableActiveStudents } from '../utils/studentLifecycle.js';
 import { sendAdminNotificationEmail } from '../utils/mailer.js';
+import { toPublicErrorMessage } from '../utils/publicError.js';
+import { hasAttendanceOverride, hasBehaviorOverride, normalizeReportOverride, normalizeReportSettings } from '../utils/reportConfig.js';
+import { publicUpload, saveUploadedFile } from './upload.js';
 import {
   compileFinalResultForGroup,
   createSubjectResult,
@@ -39,6 +43,24 @@ function gradeFromTotal(total) {
   if (total >= 45) return { grade: 'D', remark: 'Fair' };
   if (total >= 40) return { grade: 'E', remark: 'Pass' };
   return { grade: 'F', remark: 'Fail' };
+}
+
+function normalizeResultBreakdown(result = {}) {
+  const normalizedCa = Number(result.ca || 0);
+  const hasExplicitBreakdown = result.test1 !== undefined || result.test2 !== undefined;
+  const fallbackTest1 = Number((normalizedCa / 2).toFixed(2));
+  const fallbackTest2 = Number((normalizedCa - fallbackTest1).toFixed(2));
+  const test1 = hasExplicitBreakdown ? Number(result.test1 || 0) : fallbackTest1;
+  const test2 = hasExplicitBreakdown ? Number(result.test2 || 0) : fallbackTest2;
+
+  return {
+    ...result,
+    test1,
+    test2,
+    ca: Number((test1 + test2).toFixed(2)),
+    exam: Number(result.exam || 0),
+    total: Number(result.total || 0)
+  };
 }
 
 function matchesSession(recordSessionId, sessionId) {
@@ -114,10 +136,11 @@ function resolveLatestTerm(values = []) {
   }, '');
 }
 
-function resolveAttendanceRate(studentId, term = '') {
+function resolveAttendanceRate(studentId, term = '', sessionId = '') {
   if (!studentId) return '—';
   const allRows = adminStore.attendanceRecords
-    .filter((record) => record.studentId === studentId);
+    .filter((record) => record.studentId === studentId)
+    .filter((record) => matchesSession(record.sessionId, sessionId));
   const activeTerm = term || resolveLatestTerm(allRows.map((record) => record.term));
   const rows = activeTerm
     ? allRows.filter((record) => String(record.term || '').trim() === activeTerm)
@@ -128,10 +151,11 @@ function resolveAttendanceRate(studentId, term = '') {
   return `${Number(((present / total) * 100).toFixed(1))}%`;
 }
 
-function resolveBehaviorRating(studentId, term = '') {
+function resolveBehaviorRating(studentId, term = '', sessionId = '') {
   if (!studentId) return '—';
   const allRows = adminStore.attendanceRecords
     .filter((record) => record.studentId === studentId)
+    .filter((record) => matchesSession(record.sessionId, sessionId))
     .filter((record) => record.remark);
   const activeTerm = term || resolveLatestTerm(allRows.map((record) => record.term));
   const rows = activeTerm
@@ -143,6 +167,78 @@ function resolveBehaviorRating(studentId, term = '') {
   if (negative > positive) return 'Needs Improvement';
   if (positive > 0) return 'Good';
   return 'Satisfactory';
+}
+
+function normalizeAttendanceStatus(value, present) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'late') return 'late';
+  if (normalized === 'absent') return 'absent';
+  if (normalized === 'present') return 'present';
+  return present === false ? 'absent' : 'present';
+}
+
+function resolveAttendanceSummary(studentId, term = '', sessionId = '') {
+  if (!studentId) {
+    return {
+      totalSchoolDays: 0,
+      daysPresent: 0,
+      daysAbsent: 0,
+      lateComing: 0,
+      attendanceRate: 0,
+      attendanceRemark: '—'
+    };
+  }
+
+  const allRows = adminStore.attendanceRecords
+    .filter((record) => record.studentId === studentId)
+    .filter((record) => matchesSession(record.sessionId, sessionId));
+  const activeTerm = term || resolveLatestTerm(allRows.map((record) => record.term));
+  const rows = activeTerm
+    ? allRows.filter((record) => String(record.term || '').trim() === activeTerm)
+    : allRows;
+  const totalSchoolDays = rows.length;
+  const daysAbsent = rows.filter((record) => normalizeAttendanceStatus(record.status, record.present) === 'absent').length;
+  const lateComing = rows.filter((record) => normalizeAttendanceStatus(record.status, record.present) === 'late').length;
+  const daysPresent = totalSchoolDays - daysAbsent;
+  const attendanceRate = totalSchoolDays ? Number(((daysPresent / totalSchoolDays) * 100).toFixed(1)) : 0;
+
+  let attendanceRemark = 'No attendance record yet';
+  if (totalSchoolDays) {
+    if (attendanceRate >= 95 && lateComing <= 1) attendanceRemark = 'Excellent attendance';
+    else if (attendanceRate >= 85) attendanceRemark = 'Good attendance';
+    else if (attendanceRate >= 70) attendanceRemark = 'Fair attendance';
+    else attendanceRemark = 'Attendance needs improvement';
+  }
+
+  return { totalSchoolDays, daysPresent, daysAbsent, lateComing, attendanceRate, attendanceRemark };
+}
+
+function resolveBehaviorRatings(studentId, term = '', sessionId = '') {
+  const fields = ['discipline', 'responsibility', 'cooperation', 'respect', 'initiative'];
+  const scoreMap = { A: 4, B: 3, C: 2, D: 1 };
+  const gradeFromAverage = (average) => {
+    if (!average) return '—';
+    if (average >= 3.5) return 'A';
+    if (average >= 2.5) return 'B';
+    if (average >= 1.5) return 'C';
+    return 'D';
+  };
+  const allRows = adminStore.attendanceRecords
+    .filter((record) => record.studentId === studentId)
+    .filter((record) => matchesSession(record.sessionId, sessionId));
+  const activeTerm = term || resolveLatestTerm(allRows.map((record) => record.term));
+  const rows = activeTerm
+    ? allRows.filter((record) => String(record.term || '').trim() === activeTerm)
+    : allRows;
+
+  return fields.reduce((summary, field) => {
+    const scores = rows
+      .map((record) => scoreMap[String(record.behavior?.[field] || '').trim().toUpperCase()])
+      .filter(Boolean);
+    const average = scores.length ? scores.reduce((sum, score) => sum + score, 0) / scores.length : 0;
+    summary[field] = gradeFromAverage(average);
+    return summary;
+  }, {});
 }
 
 function resolveClassStudents(classId, sessionId = '') {
@@ -268,6 +364,273 @@ function isResultsOpenForClass(classId = '') {
   return openList.includes(classId);
 }
 
+function findReportRemark({ studentId = '', classId = '', sessionId = '', term = '' } = {}) {
+  return (adminStore.reportRemarks || []).find(
+    (item) =>
+      item.studentId === studentId &&
+      item.classId === classId &&
+      matchesSession(item.sessionId, sessionId) &&
+      item.term === term
+  ) || null;
+}
+
+function mergeAttendanceSummary(base = {}, override = {}) {
+  if (!hasAttendanceOverride({ attendanceSummary: override })) return base;
+  const next = {
+    ...base,
+    totalSchoolDays: override.totalSchoolDays ?? base.totalSchoolDays ?? 0,
+    daysPresent: override.daysPresent ?? base.daysPresent ?? 0,
+    daysAbsent: override.daysAbsent ?? base.daysAbsent ?? 0,
+    lateComing: override.lateComing ?? base.lateComing ?? 0,
+    attendanceRemark: override.attendanceRemark || base.attendanceRemark || ''
+  };
+  next.attendanceRate = next.totalSchoolDays
+    ? Number(((Number(next.daysPresent || 0) / Number(next.totalSchoolDays || 1)) * 100).toFixed(1))
+    : 0;
+  return next;
+}
+
+function mergeBehaviorRatings(base = {}, override = {}) {
+  if (!hasBehaviorOverride({ behaviorRatings: override })) return base;
+  return {
+    discipline: override.discipline || base.discipline || '—',
+    responsibility: override.responsibility || base.responsibility || '—',
+    cooperation: override.cooperation || base.cooperation || '—',
+    respect: override.respect || base.respect || '—',
+    initiative: override.initiative || base.initiative || '—'
+  };
+}
+
+function getReportSettings() {
+  return normalizeReportSettings(adminStore.reportSettings || {});
+}
+
+function upsertReportRemark({ studentId = '', classId = '', sessionId = '', term = '', strengths, weaknesses, classTeacherRemark, headTeacherRemark, override } = {}) {
+  const existingIndex = (adminStore.reportRemarks || []).findIndex(
+    (item) =>
+      item.studentId === studentId &&
+      item.classId === classId &&
+      matchesSession(item.sessionId, sessionId) &&
+      item.term === term
+  );
+  const existing = existingIndex >= 0 ? adminStore.reportRemarks[existingIndex] : null;
+  const next = {
+    id: existing?.id || makeId('rrm'),
+    studentId,
+    classId,
+    sessionId,
+    term,
+    strengths: strengths ?? existing?.strengths ?? '',
+    weaknesses: weaknesses ?? existing?.weaknesses ?? '',
+    classTeacherRemark: classTeacherRemark ?? existing?.classTeacherRemark ?? '',
+    headTeacherRemark: headTeacherRemark ?? existing?.headTeacherRemark ?? '',
+    override: override ? normalizeReportOverride(override) : (existing?.override || normalizeReportOverride({})),
+    updatedAt: new Date().toISOString()
+  };
+
+  if (existingIndex >= 0) {
+    adminStore.reportRemarks[existingIndex] = next;
+  } else {
+    adminStore.reportRemarks.unshift(next);
+  }
+
+  return next;
+}
+
+function summarizeSubjectPerformance(rows = []) {
+  const sorted = [...rows]
+    .filter((row) => row?.subjectName)
+    .sort((a, b) => Number(b.total || 0) - Number(a.total || 0));
+  const strengths = sorted.filter((row) => Number(row.total || 0) >= 70).slice(0, 2).map((row) => row.subjectName);
+  const weaknesses = [...sorted]
+    .reverse()
+    .filter((row) => Number(row.total || 0) < 50)
+    .slice(0, 2)
+    .map((row) => row.subjectName);
+  return { strengths, weaknesses };
+}
+
+function summarizeBehaviorForRemark(behaviorRatings = {}) {
+  if (!behaviorRatings || typeof behaviorRatings !== 'object') return { strong: [], weak: [] };
+  const labelMap = {
+    discipline: 'discipline',
+    responsibility: 'responsibility',
+    cooperation: 'cooperation',
+    respect: 'respect',
+    initiative: 'initiative'
+  };
+  const strong = [];
+  const weak = [];
+
+  Object.entries(behaviorRatings).forEach(([key, grade]) => {
+    const label = labelMap[key] || key;
+    if (grade === 'A' || grade === 'B') strong.push(label);
+    if (grade === 'D') weak.push(label);
+  });
+
+  return { strong: strong.slice(0, 2), weak: weak.slice(0, 2) };
+}
+
+function joinNatural(items = []) {
+  const values = items.filter(Boolean);
+  if (!values.length) return '';
+  if (values.length === 1) return values[0];
+  if (values.length === 2) return `${values[0]} and ${values[1]}`;
+  return `${values.slice(0, -1).join(', ')}, and ${values[values.length - 1]}`;
+}
+
+function resolveLearnerProfile(reportCard) {
+  const institution = String(reportCard?.institution || '').toLowerCase();
+  const classInfo = reportCard?.classInfo || null;
+  const stage = inferClassStage(classInfo);
+  const order = Number(stage?.order || 0);
+  const isMadrasa = institution.includes('madrasa');
+  const phase =
+    order && order <= 40
+      ? 'early-years'
+      : order && order <= 100
+        ? 'primary'
+        : order && order <= 130
+          ? 'junior'
+          : 'senior';
+
+  return { isMadrasa, phase };
+}
+
+function composeTeacherDraftRemark(reportCard, guided = {}) {
+  const average = Number(reportCard?.averageScore || 0);
+  const attendanceRate = Number(reportCard?.attendanceSummary?.attendanceRate || 0);
+  const inferred = summarizeSubjectPerformance(reportCard?.rows || []);
+  const strengths = guided.strengths?.length ? guided.strengths : inferred.strengths;
+  const weaknesses = guided.weaknesses?.length ? guided.weaknesses : inferred.weaknesses;
+  const behavior = summarizeBehaviorForRemark(reportCard?.behaviorRatings || {});
+  const profile = resolveLearnerProfile(reportCard);
+
+  const opener =
+    profile.phase === 'early-years'
+      ? average >= 60
+        ? 'The learner showed encouraging development and steady classroom growth this term.'
+        : 'The learner is still developing core classroom habits and needs patient guidance next term.'
+      : average >= 70
+        ? 'A very strong academic performance was maintained this term.'
+        : average >= 60
+          ? 'A solid academic performance was recorded this term.'
+          : average >= 50
+            ? 'A fair academic performance was recorded this term with room for growth.'
+            : 'Academic performance needs closer attention and steady support next term.';
+
+  const strengthLine = strengths.length
+    ? `The student showed clear strength in ${joinNatural(strengths)}.`
+    : profile.isMadrasa
+      ? 'The student showed willingness to engage across lessons and guided memorization activities.'
+      : 'The student showed willingness to engage across class activities.';
+  const attendanceLine =
+    attendanceRate >= 95
+      ? 'Attendance was excellent and supported consistent classroom progress.'
+      : attendanceRate >= 85
+        ? 'Attendance was good overall and supported steady learning.'
+        : attendanceRate >= 70
+          ? 'Attendance was fair, but more consistency will improve academic continuity.'
+          : 'Attendance needs improvement because missed school time affected continuity in learning.';
+  const behaviorLine = behavior.strong.length
+    ? `Behavioural strengths were seen in ${joinNatural(behavior.strong)}.`
+    : profile.phase === 'early-years'
+      ? 'Classroom conduct remained generally manageable and the learner responded to guidance.'
+      : 'Classroom conduct remained generally manageable during the term.';
+  const growthLine = weaknesses.length || behavior.weak.length
+    ? `More focused support is needed in ${joinNatural([...weaknesses, ...behavior.weak].slice(0, 3))} next term.`
+    : profile.isMadrasa
+      ? 'The next step is to maintain this pace and keep building confidence in both learning and discipline.'
+      : 'The next step is to maintain this pace and keep building confidence across all subjects.';
+
+  return [opener, strengthLine, attendanceLine, behaviorLine, growthLine].join(' ');
+}
+
+function composeHeadTeacherDraftRemark(reportCard, classTeacherRemark = '', guidedWeaknesses = []) {
+  const average = Number(reportCard?.averageScore || 0);
+  const overallGrade = String(reportCard?.overallGrade || '').trim();
+  const attendanceRate = Number(reportCard?.attendanceSummary?.attendanceRate || 0);
+  const { strengths, weaknesses } = summarizeSubjectPerformance(reportCard?.rows || []);
+  const finalWeaknesses = guidedWeaknesses.length ? guidedWeaknesses : weaknesses;
+  const profile = resolveLearnerProfile(reportCard);
+
+  const opener =
+    profile.phase === 'early-years'
+      ? average >= 60
+        ? 'The learner recorded an encouraging term outcome.'
+        : 'The learner needs closer foundational support in the coming term.'
+      : average >= 70
+        ? 'An excellent overall term result was achieved.'
+        : average >= 60
+          ? 'A very commendable overall term result was achieved.'
+          : average >= 50
+            ? 'A moderate overall result was achieved this term.'
+            : 'The overall result for the term requires stronger follow-through.';
+
+  const academicLine = strengths.length
+    ? `Performance was especially encouraging in ${joinNatural(strengths)}.`
+    : `The overall grade for the term stands at ${overallGrade || 'the recorded level'}.`;
+  const supportLine = finalWeaknesses.length
+    ? `Priority attention should now go to ${joinNatural(finalWeaknesses)}.`
+    : profile.isMadrasa
+      ? 'The focus now should be on preserving momentum, discipline, and consistent study next term.'
+      : 'The focus now should be on preserving momentum and consistency next term.';
+  const attendanceLine =
+    attendanceRate >= 85
+      ? 'Attendance was supportive of stable academic progress.'
+      : 'Attendance should improve further so classroom progress can remain stable.';
+  const teacherLine = classTeacherRemark
+    ? 'The class teacher remarks support the need for steady follow-up at home and in school.'
+    : 'Continued cooperation between home and school will help the student progress further.';
+
+  return [opener, academicLine, supportLine, attendanceLine, teacherLine].join(' ');
+}
+
+function buildGeneratedRemarkRows({ classId = '', term = '', sessionId = '', role = 'teacher', studentId = '', preserveExisting = false } = {}) {
+  const students = resolveClassStudents(classId, sessionId)
+    .filter((student) => !studentId || student.id === studentId);
+  return students.map((student) => {
+    const reportCard = buildReportCard(student, term, { includeUnpublished: true, sessionId });
+    const remark = findReportRemark({ studentId: student.id, classId, sessionId, term });
+    const guidedStrengths = String(remark?.strengths || '').trim();
+    const guidedWeaknesses = String(remark?.weaknesses || '').trim();
+    const strengths = guidedStrengths
+      ? guidedStrengths.split(',').map((item) => item.trim()).filter(Boolean)
+      : summarizeSubjectPerformance(reportCard?.rows || []).strengths;
+    const weaknesses = guidedWeaknesses
+      ? guidedWeaknesses.split(',').map((item) => item.trim()).filter(Boolean)
+      : summarizeSubjectPerformance(reportCard?.rows || []).weaknesses;
+    const generatedTeacherRemark = composeTeacherDraftRemark(reportCard, { strengths, weaknesses });
+    const existingTeacherRemark = String(remark?.classTeacherRemark || '').trim();
+    const classTeacherRemark = role === 'teacher'
+      ? (preserveExisting && existingTeacherRemark ? existingTeacherRemark : generatedTeacherRemark)
+      : (remark?.classTeacherRemark || generatedTeacherRemark);
+    const headTeacherRemark = composeHeadTeacherDraftRemark(reportCard, classTeacherRemark, weaknesses);
+    const existingHeadTeacherRemark = String(remark?.headTeacherRemark || '').trim();
+
+    return {
+      studentId: student.id,
+      studentName: student.fullName,
+      strengths: strengths.join(', '),
+      weaknesses: weaknesses.join(', '),
+      classTeacherRemark,
+      override: normalizeReportOverride(remark?.override || {}),
+      headTeacherRemark: role === 'admin'
+        ? (preserveExisting && existingHeadTeacherRemark ? existingHeadTeacherRemark : headTeacherRemark)
+        : remark?.headTeacherRemark || '',
+      insight: {
+        strengths,
+        weaknesses,
+        attendanceRate: reportCard?.attendanceSummary?.attendanceRate || 0,
+        overallGrade: reportCard?.overallGrade || '',
+        averageScore: reportCard?.averageScore || 0,
+        phase: resolveLearnerProfile(reportCard).phase,
+        institutionType: resolveLearnerProfile(reportCard).isMadrasa ? 'madrasa' : 'academy'
+      }
+    };
+  });
+}
+
 function buildReportCard(student, term = '', options = {}) {
   if (!student) return null;
   const includeUnpublished = Boolean(options.includeUnpublished);
@@ -284,7 +647,7 @@ function buildReportCard(student, term = '', options = {}) {
   const rows = filtered.map((item) => {
     const subject = adminStore.subjects.find((subjectItem) => subjectItem.id === item.subjectId);
     return {
-      ...item,
+      ...normalizeResultBreakdown(item),
       subjectName: subject?.name || item.subjectId
     };
   });
@@ -299,10 +662,18 @@ function buildReportCard(student, term = '', options = {}) {
   const classId = enrollment?.classId || student.classId;
   const classInfo = adminStore.classes.find((item) => item.id === classId);
   const institution = student.institution || classInfo?.institution || 'ATTAUFEEQ Model Academy';
+  const classLead = findClassLead(classId);
+  const reportRemark = findReportRemark({ studentId: student.id, classId, sessionId, term });
   let classRank = null;
   let classSize = null;
-  const attendance = resolveAttendanceRate(student.id, term);
-  const behavior = resolveBehaviorRating(student.id, term);
+  const baseAttendanceSummary = resolveAttendanceSummary(student.id, term, sessionId);
+  const baseBehaviorRatings = resolveBehaviorRatings(student.id, term, sessionId);
+  const attendanceSummary = mergeAttendanceSummary(baseAttendanceSummary, reportRemark?.override?.attendanceSummary || {});
+  const behaviorRatings = mergeBehaviorRatings(baseBehaviorRatings, reportRemark?.override?.behaviorRatings || {});
+  const attendance = attendanceSummary.totalSchoolDays ? `${attendanceSummary.attendanceRate}%` : resolveAttendanceRate(student.id, term, sessionId);
+  const behavior = Object.values(behaviorRatings).some((value) => value && value !== '—')
+    ? behaviorRatings
+    : resolveBehaviorRating(student.id, term, sessionId);
 
   if (term && classInfo && isClassRankingReady(term, classInfo.id, sessionId)) {
     const rankingResult = buildClassRanking(term, classInfo.id, sessionId);
@@ -314,6 +685,7 @@ function buildReportCard(student, term = '', options = {}) {
   return {
     student,
     classInfo,
+    classLead,
     institution,
     term: term || 'All Terms',
     sessionId: sessionId || '',
@@ -325,7 +697,13 @@ function buildReportCard(student, term = '', options = {}) {
     classRank,
     classSize,
     attendance,
+    attendanceSummary,
     behavior,
+    behaviorRatings,
+    nextTermBegins: resolveNextTermBegins(adminStore, sessionId, term),
+    classTeacherRemark: reportRemark?.classTeacherRemark || '',
+    headTeacherRemark: reportRemark?.headTeacherRemark || '',
+    reportSettings: getReportSettings(),
     publishState: includeUnpublished
       ? rows.every((item) => item.published)
         ? 'Published'
@@ -336,13 +714,14 @@ function buildReportCard(student, term = '', options = {}) {
 }
 
 function enrichResult(item) {
+  const normalized = normalizeResultBreakdown(item);
   const subject = adminStore.subjects.find((subjectEntry) => subjectEntry.id === item.subjectId);
   const classItem = adminStore.classes.find((classEntry) => classEntry.id === item.classId);
   const submittedTeacher = adminStore.teachers.find((teacher) => teacher.id === item.submittedByTeacherId);
   const enteredTeacher = adminStore.teachers.find((teacher) => teacher.id === item.enteredByTeacherId);
   const teacher = submittedTeacher || enteredTeacher || null;
   return {
-    ...item,
+    ...normalized,
     subjectName: subject?.name || item.subjectId,
     classLabel: classItem ? `${classItem.name} ${classItem.arm}` : item.classId,
     teacherName: teacher?.fullName || '',
@@ -582,6 +961,205 @@ resultsRouter.get('/sessions', requireAuth, async (_req, res) => {
   return res.json({ sessions, activeSession });
 });
 
+resultsRouter.get('/teacher/remarks', requireAuth, requireRole('teacher'), async (req, res) => {
+  const teacher = findTeacherByUser(req.user);
+  const classId = String(req.query.classId || '').trim();
+  const term = String(req.query.term || '').trim();
+  const activeSession = await ensureActiveAcademicSession();
+  const sessionId = String(req.query.sessionId || activeSession?.id || '').trim();
+
+  if (!teacher) return res.status(403).json({ message: 'Teacher profile not found.' });
+  if (!classId || !term || !sessionId) return res.status(400).json({ message: 'classId, term, and sessionId are required.' });
+
+  const classAssignments = adminStore.teacherAssignments.filter(
+    (item) => item.classId === classId && item.term === term
+  );
+  const lead = classAssignments.find((item) => isLeadTeacherAssignment(item));
+  if (lead && lead.teacherId !== teacher.id) {
+    return res.status(403).json({ message: 'Only the class lead teacher can manage class teacher remarks.' });
+  }
+
+  const students = resolveClassStudents(classId, sessionId);
+  const remarks = students.map((student) => {
+    const remark = findReportRemark({ studentId: student.id, classId, sessionId, term });
+    return {
+      studentId: student.id,
+      studentName: student.fullName,
+      strengths: remark?.strengths || '',
+      weaknesses: remark?.weaknesses || '',
+      classTeacherRemark: remark?.classTeacherRemark || ''
+    };
+  });
+
+  return res.json({ remarks });
+});
+
+resultsRouter.post('/teacher/remarks', requireAuth, requireRole('teacher'), async (req, res) => {
+  const teacher = findTeacherByUser(req.user);
+  const classId = String(req.body?.classId || '').trim();
+  const term = String(req.body?.term || '').trim();
+  const activeSession = await ensureActiveAcademicSession();
+  const sessionId = String(req.body?.sessionId || activeSession?.id || '').trim();
+  const rows = Array.isArray(req.body?.rows) ? req.body.rows : [];
+
+  if (!teacher) return res.status(403).json({ message: 'Teacher profile not found.' });
+  if (!classId || !term || !sessionId) return res.status(400).json({ message: 'classId, term, and sessionId are required.' });
+
+  const classAssignments = adminStore.teacherAssignments.filter(
+    (item) => item.classId === classId && item.term === term
+  );
+  const lead = classAssignments.find((item) => isLeadTeacherAssignment(item));
+  if (lead && lead.teacherId !== teacher.id) {
+    return res.status(403).json({ message: 'Only the class lead teacher can save class teacher remarks.' });
+  }
+
+  const validStudentIds = new Set(resolveClassStudents(classId, sessionId).map((student) => student.id));
+  const saved = rows
+    .filter((row) => validStudentIds.has(row?.studentId))
+    .map((row) => upsertReportRemark({
+      studentId: row.studentId,
+      classId,
+      sessionId,
+      term,
+      strengths: String(row.strengths || '').trim(),
+      weaknesses: String(row.weaknesses || '').trim(),
+      classTeacherRemark: String(row.classTeacherRemark || '').trim()
+    }));
+
+  return res.json({ savedCount: saved.length, remarks: saved });
+});
+
+resultsRouter.post('/teacher/remarks/generate', requireAuth, requireRole('teacher'), async (req, res) => {
+  const teacher = findTeacherByUser(req.user);
+  const classId = String(req.body?.classId || '').trim();
+  const term = String(req.body?.term || '').trim();
+  const activeSession = await ensureActiveAcademicSession();
+  const sessionId = String(req.body?.sessionId || activeSession?.id || '').trim();
+  const studentId = String(req.body?.studentId || '').trim();
+  const preserveExisting = Boolean(req.body?.preserveExisting);
+
+  if (!teacher) return res.status(403).json({ message: 'Teacher profile not found.' });
+  if (!classId || !term || !sessionId) return res.status(400).json({ message: 'classId, term, and sessionId are required.' });
+
+  const classAssignments = adminStore.teacherAssignments.filter(
+    (item) => item.classId === classId && item.term === term
+  );
+  const lead = classAssignments.find((item) => isLeadTeacherAssignment(item));
+  if (lead && lead.teacherId !== teacher.id) {
+    return res.status(403).json({ message: 'Only the class lead teacher can generate class teacher remarks.' });
+  }
+
+  const remarks = buildGeneratedRemarkRows({ classId, term, sessionId, role: 'teacher', studentId, preserveExisting });
+  return res.json({ remarks });
+});
+
+resultsRouter.get('/admin/remarks', requireAuth, requireRole('admin'), async (req, res) => {
+  const classId = String(req.query.classId || '').trim();
+  const term = String(req.query.term || '').trim();
+  const activeSession = await ensureActiveAcademicSession();
+  const sessionId = String(req.query.sessionId || activeSession?.id || '').trim();
+
+  if (!classId || !term || !sessionId) return res.status(400).json({ message: 'classId, term, and sessionId are required.' });
+
+  const students = resolveClassStudents(classId, sessionId);
+  const remarks = students.map((student) => {
+    const remark = findReportRemark({ studentId: student.id, classId, sessionId, term });
+    return {
+      studentId: student.id,
+      studentName: student.fullName,
+      strengths: remark?.strengths || '',
+      weaknesses: remark?.weaknesses || '',
+      classTeacherRemark: remark?.classTeacherRemark || '',
+      headTeacherRemark: remark?.headTeacherRemark || '',
+      override: normalizeReportOverride(remark?.override || {})
+    };
+  });
+
+  return res.json({ remarks });
+});
+
+resultsRouter.post('/admin/remarks', requireAuth, requireRole('admin'), async (req, res) => {
+  const classId = String(req.body?.classId || '').trim();
+  const term = String(req.body?.term || '').trim();
+  const activeSession = await ensureActiveAcademicSession();
+  const sessionId = String(req.body?.sessionId || activeSession?.id || '').trim();
+  const rows = Array.isArray(req.body?.rows) ? req.body.rows : [];
+
+  if (!classId || !term || !sessionId) return res.status(400).json({ message: 'classId, term, and sessionId are required.' });
+
+  const validStudentIds = new Set(resolveClassStudents(classId, sessionId).map((student) => student.id));
+  const saved = rows
+    .filter((row) => validStudentIds.has(row?.studentId))
+    .map((row) => upsertReportRemark({
+      studentId: row.studentId,
+      classId,
+      sessionId,
+      term,
+      strengths: String(row.strengths || '').trim(),
+      weaknesses: String(row.weaknesses || '').trim(),
+      headTeacherRemark: String(row.headTeacherRemark || '').trim(),
+      override: row.override || {}
+    }));
+
+  return res.json({ savedCount: saved.length, remarks: saved });
+});
+
+resultsRouter.get('/admin/report-settings', requireAuth, requireRole('admin'), async (_req, res) => {
+  return res.json({ settings: getReportSettings() });
+});
+
+resultsRouter.put('/admin/report-settings', requireAuth, requireRole('admin'), async (req, res) => {
+  adminStore.reportSettings = normalizeReportSettings({
+    ...(adminStore.reportSettings || {}),
+    ...req.body
+  });
+  return res.json({ settings: getReportSettings() });
+});
+
+resultsRouter.post('/admin/report-settings/signature', requireAuth, requireRole('admin'), publicUpload.single('file'), async (req, res) => {
+  const file = req.file;
+  if (!file) {
+    return res.status(400).json({ message: 'No signature image uploaded.' });
+  }
+
+  try {
+    const saved = await saveUploadedFile(file, {
+      visibility: 'public',
+      allowedMimes: ['image/jpeg', 'image/png', 'image/webp']
+    });
+    const signatureImage = `/api/uploads/public/${saved.id}`;
+    adminStore.reportSettings = normalizeReportSettings({
+      ...(adminStore.reportSettings || {}),
+      signatureImage
+    });
+    return res.status(200).json({ signatureImage, settings: getReportSettings() });
+  } catch (error) {
+    return res.status(400).json({ message: toPublicErrorMessage(error, 'We could not upload the report signature image.') });
+  }
+});
+
+resultsRouter.delete('/admin/report-settings/signature', requireAuth, requireRole('admin'), async (_req, res) => {
+  adminStore.reportSettings = normalizeReportSettings({
+    ...(adminStore.reportSettings || {}),
+    signatureImage: ''
+  });
+  return res.status(200).json({ signatureImage: '', settings: getReportSettings() });
+});
+
+resultsRouter.post('/admin/remarks/generate', requireAuth, requireRole('admin'), async (req, res) => {
+  const classId = String(req.body?.classId || '').trim();
+  const term = String(req.body?.term || '').trim();
+  const activeSession = await ensureActiveAcademicSession();
+  const sessionId = String(req.body?.sessionId || activeSession?.id || '').trim();
+  const studentId = String(req.body?.studentId || '').trim();
+  const preserveExisting = Boolean(req.body?.preserveExisting);
+
+  if (!classId || !term || !sessionId) return res.status(400).json({ message: 'classId, term, and sessionId are required.' });
+
+  const remarks = buildGeneratedRemarkRows({ classId, term, sessionId, role: 'admin', studentId, preserveExisting });
+  return res.json({ remarks });
+});
+
 resultsRouter.post('/teacher/scores', requireAuth, requireRole('teacher'), async (req, res) => {
   const teacher = findTeacherByUser(req.user);
   const classId = String(req.body?.classId || '').trim();
@@ -640,7 +1218,9 @@ resultsRouter.post('/teacher/scores', requireAuth, requireRole('teacher'), async
   }
 
   for (const row of rows) {
-    const ca = Number(row?.ca ?? 0);
+    const test1 = Number(row?.test1 ?? 0);
+    const test2 = Number(row?.test2 ?? 0);
+    const ca = test1 + test2;
     const exam = Number(row?.exam ?? 0);
     const caNote = String(row?.caNote || '').trim();
     const examNote = String(row?.examNote || '').trim();
@@ -666,13 +1246,18 @@ resultsRouter.post('/teacher/scores', requireAuth, requireRole('teacher'), async
       return res.status(400).json({ message: 'Submitted results are locked until admin publishes.' });
     }
 
-    if (Number.isNaN(ca) || Number.isNaN(exam) || ca < 0 || ca > 40 || exam < 0 || exam > 60) {
-      return res.status(400).json({ message: 'Scores must be within CA 0-40 and Exam 0-60.' });
+    if (
+      Number.isNaN(test1) || Number.isNaN(test2) || Number.isNaN(exam) ||
+      test1 < 0 || test1 > 20 ||
+      test2 < 0 || test2 > 20 ||
+      exam < 0 || exam > 60
+    ) {
+      return res.status(400).json({ message: 'Scores must be within Test 1 0-20, Test 2 0-20, and Exam 0-60.' });
     }
 
     if ((ca === 0 && !caNote) || (exam === 0 && !examNote)) {
       return res.status(400).json({
-        message: 'Add a short CA or exam note when a student has 0, for example Absent, Sick, or Did not write.'
+        message: 'Add a short assessment or exam note when a student has 0, for example Absent, Sick, or Did not write.'
       });
     }
   }
@@ -682,7 +1267,9 @@ resultsRouter.post('/teacher/scores', requireAuth, requireRole('teacher'), async
 
   for (const row of rows) {
     const studentId = row.studentId;
-    const ca = Number(row.ca || 0);
+    const test1 = Number(row.test1 || 0);
+    const test2 = Number(row.test2 || 0);
+    const ca = test1 + test2;
     const exam = Number(row.exam || 0);
     const caNote = String(row.caNote || '').trim();
     const examNote = String(row.examNote || '').trim();
@@ -699,6 +1286,8 @@ resultsRouter.post('/teacher/scores', requireAuth, requireRole('teacher'), async
       subjectId,
       institution,
       term,
+      test1,
+      test2,
       ca,
       exam,
       caNote,

@@ -1,6 +1,7 @@
 import { env } from '../config/env.js';
 import { getDbPool } from '../db/client.js';
 import { reloadAdminStoreFromDatabase, saveStoreToDatabaseWithExecutor } from '../data/adminStore.js';
+import { logger } from '../utils/logger.js';
 
 const ADMIN_STORE_WRITE_LOCK_KEY = 941_218;
 const MUTATION_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
@@ -57,7 +58,7 @@ export async function serializeAdminStoreWrites(req, res, next) {
         next(error);
         return;
       }
-      console.error('Failed to finalize admin store write:', error.message || error);
+      logger.error('Failed to finalize admin store write.', { error });
     });
     return res;
   };

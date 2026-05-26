@@ -105,7 +105,7 @@ function RoleResults({ role }) {
     });
   }, [selectedChildId, sessionId, term]);
 
-  function buildReportCardFromFinal(finalResultData, studentInfo) {
+  function buildReportCardFromFinal(finalResultData, studentInfo, fallbackReportCard = null) {
     if (!finalResultData) return null;
     const subjects = finalResultData.subjects || [];
     return {
@@ -113,6 +113,7 @@ function RoleResults({ role }) {
       classInfo: studentInfo?.classLabel
         ? { name: studentInfo.classLabel, arm: '' }
         : null,
+      classLead: fallbackReportCard?.classLead || payload?.reportCard?.classLead || reportCard?.classLead || null,
       institution: studentInfo?.institution || '',
       term: finalResultData.term,
       sessionId: finalResultData.sessionId,
@@ -123,17 +124,26 @@ function RoleResults({ role }) {
       overallGrade: finalResultData.gradeSummary,
       classRank: null,
       classSize: null,
-      attendance: reportCard?.attendance,
-      behavior: reportCard?.behavior,
+      attendance: fallbackReportCard?.attendance || payload?.reportCard?.attendance || reportCard?.attendance || '—',
+      attendanceSummary: fallbackReportCard?.attendanceSummary || payload?.reportCard?.attendanceSummary || reportCard?.attendanceSummary || null,
+      behavior: fallbackReportCard?.behavior || payload?.reportCard?.behavior || reportCard?.behavior || '—',
+      behaviorRatings: fallbackReportCard?.behaviorRatings || payload?.reportCard?.behaviorRatings || reportCard?.behaviorRatings || null,
+      classTeacherRemark: fallbackReportCard?.classTeacherRemark || payload?.reportCard?.classTeacherRemark || reportCard?.classTeacherRemark || '',
+      headTeacherRemark: fallbackReportCard?.headTeacherRemark || payload?.reportCard?.headTeacherRemark || reportCard?.headTeacherRemark || '',
+      reportSettings: fallbackReportCard?.reportSettings || payload?.reportCard?.reportSettings || reportCard?.reportSettings || null,
       publishState: 'Approved',
       rows: subjects.map((row, index) => ({
         id: row.id || `${row.subject}-${index}`,
         subjectName: row.subject,
-        ca: '',
-        exam: '',
-        total: row.score,
+        test1: row.test1,
+        test2: row.test2,
+        ca: row.ca ?? '',
+        exam: row.exam ?? '',
+        total: row.score ?? row.total ?? '',
         grade: row.grade,
-        remark: ''
+        remark: row.remark || '',
+        caNote: row.caNote || '',
+        examNote: row.examNote || ''
       }))
     };
   }
@@ -163,6 +173,7 @@ function RoleResults({ role }) {
       const params = new URLSearchParams();
       params.set('studentCode', studentCode);
       params.set('term', term);
+      if (role === 'parent' && selectedChildId) params.set('childId', selectedChildId);
       if (sessionId) params.set('sessionId', sessionId);
       const query = params.toString();
       const data = await apiJson(`/results/final?${query}`);
@@ -187,7 +198,18 @@ function RoleResults({ role }) {
       }
       setFinalResult(finalResultData);
       const studentInfo = data.student || studentForCode || null;
-      setReportCard(buildReportCardFromFinal(finalResultData, studentInfo));
+      const reportEndpoint = role === 'parent'
+        ? `/results/parent/report-card?${query}`
+        : `/results/student/report-card?${query}`;
+      let fallbackReportCard = null;
+      try {
+        const fallback = await apiJson(reportEndpoint);
+        fallbackReportCard = fallback?.reportCard || null;
+      } catch {
+        fallbackReportCard = null;
+      }
+      if (reportCardSeq.current !== requestId) return;
+      setReportCard(buildReportCardFromFinal(finalResultData, studentInfo, fallbackReportCard));
     } catch (err) {
       if (reportCardSeq.current !== requestId) return;
       setError(err.message || 'Unable to load report card.');
@@ -254,6 +276,7 @@ function RoleResults({ role }) {
       rows: reportCard.rows.filter((row) => String(row.subjectName || '').toLowerCase().includes(query))
     };
   }, [debouncedSubjectSearch, reportCard]);
+  const hasSubjectFilter = Boolean(debouncedSubjectSearch);
 
   return (
     <PortalLayout
@@ -278,7 +301,7 @@ function RoleResults({ role }) {
           {availableToken && (
             <div className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm text-emerald-900">
               <p className="text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">Released token</p>
-              <p className="text-code-break mt-2 text-lg font-bold tracking-[0.2em] text-emerald-950">{availableToken.token}</p>
+              <p className="text-code-break mt-2 text-base font-bold tracking-[0.12em] text-emerald-950 sm:text-lg">{availableToken.token}</p>
               <p className="text-wrap-safe mt-1 text-xs text-emerald-800">
                 This token has already been released to your dashboard for {availableToken.term}.
               </p>
@@ -404,8 +427,16 @@ function RoleResults({ role }) {
         </p>
       )}
 
-      {filteredReportCard && (
-        <ReportCardSheet reportCard={filteredReportCard} />
+      {filteredReportCard && !hasSubjectFilter && <ReportCardSheet reportCard={filteredReportCard} />}
+      {filteredReportCard && hasSubjectFilter && (
+        <>
+          <div className="print:hidden">
+            <ReportCardSheet reportCard={filteredReportCard} />
+          </div>
+          <div className="hidden print:block">
+            <ReportCardSheet reportCard={reportCard} />
+          </div>
+        </>
       )}
     </PortalLayout>
   );

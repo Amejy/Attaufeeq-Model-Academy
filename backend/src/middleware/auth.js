@@ -15,7 +15,7 @@ async function resolveAuthenticatedUser(req, strict) {
   }
 
   try {
-    const payload = jwt.verify(token, env.jwtSecret);
+    const payload = jwt.verify(token, env.jwtSecret, { algorithms: ['HS256'] });
     const user = await findUserById(payload.sub);
     if (!user) {
       return { status: 401, message: 'User not found or inactive.' };

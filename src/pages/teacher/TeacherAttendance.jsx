@@ -3,12 +3,29 @@ import { useAuth } from '../../context/AuthContext';
 import PortalLayout from '../../components/PortalLayout';
 
 const TERM_OPTIONS = ['First Term', 'Second Term', 'Third Term'];
+const ATTENDANCE_STATUS_OPTIONS = ['present', 'late', 'absent'];
+const BEHAVIOR_FIELDS = [
+  ['discipline', 'Discipline'],
+  ['responsibility', 'Responsibility'],
+  ['cooperation', 'Cooperation'],
+  ['respect', 'Respect'],
+  ['initiative', 'Initiative']
+];
+const BEHAVIOR_RATINGS = ['A', 'B', 'C', 'D'];
 const normalizeTerm = (value) => String(value || '').trim();
+
+function statusLabel(value) {
+  if (value === 'late') return 'Late';
+  if (value === 'absent') return 'Absent';
+  return 'Present';
+}
 
 function TeacherAttendance() {
   const { apiJson } = useAuth();
   const [options, setOptions] = useState({ classes: [], students: [] });
   const [records, setRecords] = useState([]);
+  const [sessions, setSessions] = useState([]);
+  const [sessionId, setSessionId] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [saving, setSaving] = useState(false);
@@ -31,16 +48,29 @@ function TeacherAttendance() {
     }
     setOptions({ classes: [], students: [] });
     setRecords([]);
+    setSessions([]);
     setRows([]);
     try {
+      const sessionsData = await apiJson('/results/sessions');
+      if (seq !== loadDataSeq.current) return;
+      const sessionRows = sessionsData.sessions || [];
+      const activeSession = sessionsData.activeSession || sessionRows.find((item) => item.isActive) || sessionRows[0] || null;
+      const effectiveSessionId = sessionId && sessionRows.some((item) => item.id === sessionId)
+        ? sessionId
+        : activeSession?.id || '';
+
       const [optionsData, recordsData] = await Promise.all([
-        apiJson('/attendance/teacher/options'),
-        apiJson('/attendance/teacher/records')
+        apiJson(`/attendance/teacher/options${effectiveSessionId ? `?sessionId=${encodeURIComponent(effectiveSessionId)}` : ''}`),
+        apiJson(`/attendance/teacher/records${effectiveSessionId ? `?sessionId=${encodeURIComponent(effectiveSessionId)}` : ''}`)
       ]);
       if (seq !== loadDataSeq.current) return;
 
+      setSessions(sessionRows);
       setOptions(optionsData);
       setRecords(recordsData.records || []);
+      if (sessionId !== effectiveSessionId) {
+        setSessionId(effectiveSessionId);
+      }
       setForm((prev) => ({
         ...prev,
         ...(() => {
@@ -67,7 +97,7 @@ function TeacherAttendance() {
       if (seq !== loadDataSeq.current) return;
       setError(err.message || 'Unable to load attendance module.');
     }
-  }, [apiJson]);
+  }, [apiJson, sessionId]);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -112,11 +142,12 @@ function TeacherAttendance() {
   const filteredRecords = useMemo(
     () =>
       records.filter((record) => {
+        if (sessionId && record.sessionId && record.sessionId !== sessionId) return false;
         if (normalizeTerm(record.term) !== normalizeTerm(form.term)) return false;
         if (form.classId && record.classId !== form.classId) return false;
         return true;
       }),
-    [form.classId, form.term, records]
+    [form.classId, form.term, records, sessionId]
   );
   const hasClassOptions = Boolean(termClasses.length);
   const canSaveAttendance = Boolean(form.classId && rows.length);
@@ -127,7 +158,15 @@ function TeacherAttendance() {
         classStudents.map((student) => ({
           studentId: student.id,
           fullName: student.fullName,
+          status: 'present',
           present: true,
+          behavior: {
+            discipline: 'A',
+            responsibility: 'A',
+            cooperation: 'A',
+            respect: 'A',
+            initiative: 'A'
+          },
           remark: ''
         }))
       );
@@ -136,6 +175,16 @@ function TeacherAttendance() {
 
   function updateRow(studentId, key, value) {
     setRows((prev) => prev.map((row) => (row.studentId === studentId ? { ...row, [key]: value } : row)));
+  }
+
+  function updateBehavior(studentId, key, value) {
+    setRows((prev) =>
+      prev.map((row) =>
+        row.studentId === studentId
+          ? { ...row, behavior: { ...(row.behavior || {}), [key]: value } }
+          : row
+      )
+    );
   }
 
   async function submitAttendance(event) {
@@ -147,7 +196,14 @@ function TeacherAttendance() {
     try {
       const data = await apiJson('/attendance/teacher/mark', {
         method: 'POST',
-        body: { ...form, rows }
+        body: {
+          ...form,
+          sessionId,
+          rows: rows.map((row) => ({
+            ...row,
+            present: row.status !== 'absent'
+          }))
+        }
       });
       setSuccess(`${data.savedCount || 0} attendance records saved.`);
       void loadData();
@@ -165,8 +221,12 @@ function TeacherAttendance() {
       subtitle="Mark daily attendance for assigned classes."
     >
       <form onSubmit={submitAttendance} className="rounded-xl border border-slate-200 bg-white p-4">
-        <div className="grid gap-3 sm:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-5">
           <input type="date" value={form.date} onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))} className="rounded-md border border-slate-300 px-3 py-2 text-sm" required />
+          <select value={sessionId} onChange={(e) => setSessionId(e.target.value)} className="rounded-md border border-slate-300 px-3 py-2 text-sm" required>
+            {!sessions.length && <option value="">No sessions available</option>}
+            {sessions.map((item) => <option key={item.id} value={item.id}>{item.sessionName} {item.isActive ? '(Active)' : ''}</option>)}
+          </select>
           {hasClassOptions ? (
             <select value={form.classId} onChange={(e) => setForm((p) => ({ ...p, classId: e.target.value }))} className="rounded-md border border-slate-300 px-3 py-2 text-sm" required>
               {termClasses.map((item) => <option key={item.id} value={item.id}>{item.name} {item.arm}</option>)}
@@ -203,14 +263,17 @@ function TeacherAttendance() {
             <thead className="bg-slate-50 text-left">
               <tr>
                 <th className="px-3 py-2">Student</th>
-                <th className="px-3 py-2">Present</th>
+                <th className="px-3 py-2">Status</th>
+                {BEHAVIOR_FIELDS.map(([, label]) => (
+                  <th key={label} className="px-3 py-2">{label}</th>
+                ))}
                 <th className="px-3 py-2">Remark</th>
               </tr>
             </thead>
             <tbody>
               {!showRosterRows && (
                 <tr>
-                  <td colSpan={3} className="px-3 py-4 text-sm text-slate-600 text-center">
+                  <td colSpan={8} className="px-3 py-4 text-sm text-slate-600 text-center">
                     Rows are hidden. Click “Show rows” to display the roster.
                   </td>
                 </tr>
@@ -219,8 +282,29 @@ function TeacherAttendance() {
                 <tr key={row.studentId} className="border-t border-slate-100">
                   <td className="px-3 py-2">{row.fullName}</td>
                   <td className="px-3 py-2">
-                    <input type="checkbox" checked={row.present} onChange={(e) => updateRow(row.studentId, 'present', e.target.checked)} />
+                    <select
+                      value={row.status || 'present'}
+                      onChange={(e) => updateRow(row.studentId, 'status', e.target.value)}
+                      className="rounded-md border border-slate-300 px-2 py-1"
+                    >
+                      {ATTENDANCE_STATUS_OPTIONS.map((status) => (
+                        <option key={status} value={status}>{statusLabel(status)}</option>
+                      ))}
+                    </select>
                   </td>
+                  {BEHAVIOR_FIELDS.map(([key]) => (
+                    <td key={key} className="px-3 py-2">
+                      <select
+                        value={row.behavior?.[key] || 'A'}
+                        onChange={(e) => updateBehavior(row.studentId, key, e.target.value)}
+                        className="rounded-md border border-slate-300 px-2 py-1"
+                      >
+                        {BEHAVIOR_RATINGS.map((rating) => (
+                          <option key={rating} value={rating}>{rating}</option>
+                        ))}
+                      </select>
+                    </td>
+                  ))}
                   <td className="px-3 py-2">
                     <input value={row.remark} onChange={(e) => updateRow(row.studentId, 'remark', e.target.value)} className="w-full rounded-md border border-slate-300 px-2 py-1" placeholder="Optional remark" />
                   </td>
@@ -228,7 +312,7 @@ function TeacherAttendance() {
               ))}
               {showRosterRows && !rows.length && (
                 <tr>
-                  <td colSpan={3} className="px-3 py-4 text-sm text-slate-600">
+                  <td colSpan={8} className="px-3 py-4 text-sm text-slate-600">
                     No enrolled students are available for the selected class.
                   </td>
                 </tr>
@@ -261,13 +345,15 @@ function TeacherAttendance() {
                 <th className="px-3 py-2">Class</th>
                 <th className="px-3 py-2">Subject</th>
                 <th className="px-3 py-2">Student</th>
-                <th className="px-3 py-2">Present</th>
+                <th className="px-3 py-2">Status</th>
+                <th className="px-3 py-2">Behaviour</th>
+                <th className="px-3 py-2">Remark</th>
               </tr>
             </thead>
             <tbody>
               {!showRecordRows && (
                 <tr>
-                  <td colSpan={5} className="px-3 py-4 text-sm text-slate-600 text-center">
+                  <td colSpan={7} className="px-3 py-4 text-sm text-slate-600 text-center">
                     Rows are hidden. Click “Show rows” to display attendance records.
                   </td>
                 </tr>
@@ -278,12 +364,16 @@ function TeacherAttendance() {
                   <td className="px-3 py-2">{record.classLabel}</td>
                   <td className="px-3 py-2">{record.subjectName}</td>
                   <td className="px-3 py-2">{record.studentName}</td>
-                  <td className="px-3 py-2">{record.present ? 'Yes' : 'No'}</td>
+                  <td className="px-3 py-2">{statusLabel(record.status || (record.present ? 'present' : 'absent'))}</td>
+                  <td className="px-3 py-2">
+                    {BEHAVIOR_FIELDS.map(([key, label]) => `${label}: ${record.behavior?.[key] || '—'}`).join(' • ')}
+                  </td>
+                  <td className="px-3 py-2">{record.remark || '—'}</td>
                 </tr>
               ))}
               {showRecordRows && !filteredRecords.length && (
                 <tr>
-                  <td colSpan={5} className="px-3 py-4 text-sm text-slate-600">
+                  <td colSpan={7} className="px-3 py-4 text-sm text-slate-600">
                     No attendance records match the selected term, class, and subject yet.
                   </td>
                 </tr>

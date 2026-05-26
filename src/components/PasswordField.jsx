@@ -68,12 +68,14 @@ function PasswordField({
   autoComplete,
   error = '',
   onBlur,
-  helperText = ''
+  helperText = '',
+  leadingIcon = null
 }) {
   return (
     <label className="field-shell block text-sm">
       <span className="field-label">{label}</span>
       <div className="relative">
+        {leadingIcon ? <span className="password-field__leading-icon" aria-hidden="true">{leadingIcon}</span> : null}
         <input
           name={name}
           type={showPassword ? 'text' : 'password'}

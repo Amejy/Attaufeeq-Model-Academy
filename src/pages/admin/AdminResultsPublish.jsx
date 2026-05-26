@@ -5,8 +5,95 @@ import { ADMIN_INSTITUTIONS, institutionAccent } from '../../utils/adminInstitut
 import { buildStudentCode } from '../../utils/studentCode';
 import ReportCardSheet from '../../components/ReportCardSheet';
 
+const emptyCalendarForm = {
+  termStartDate: '',
+  termEndDate: '',
+  examStartDate: '',
+  examEndDate: '',
+  holidayStartDate: '',
+  holidayEndDate: '',
+  resultPublishingDate: '',
+  nextTermBegins: '',
+  notes: ''
+};
+
+const emptyReportSettingsForm = {
+  headName: '',
+  headTitle: 'Head Teacher',
+  signatureImage: '',
+  parentAcknowledgementText: 'I have received and read this report.',
+  footerNote: ''
+};
+
+const emptyReportOverride = {
+  attendanceSummary: {
+    totalSchoolDays: '',
+    daysPresent: '',
+    daysAbsent: '',
+    lateComing: '',
+    attendanceRemark: ''
+  },
+  behaviorRatings: {
+    discipline: '',
+    responsibility: '',
+    cooperation: '',
+    respect: '',
+    initiative: ''
+  }
+};
+
+const TERM_ORDER = ['First Term', 'Second Term', 'Third Term'];
+
+function getNextTerm(term = '') {
+  const index = TERM_ORDER.indexOf(term);
+  return index >= 0 && index < TERM_ORDER.length - 1 ? TERM_ORDER[index + 1] : '';
+}
+
+function normalizeCalendarForm(entry = null) {
+  return {
+    termStartDate: entry?.termStartDate || '',
+    termEndDate: entry?.termEndDate || '',
+    examStartDate: entry?.examStartDate || '',
+    examEndDate: entry?.examEndDate || '',
+    holidayStartDate: entry?.holidayStartDate || '',
+    holidayEndDate: entry?.holidayEndDate || '',
+    resultPublishingDate: entry?.resultPublishingDate || '',
+    nextTermBegins: entry?.nextTermBegins || '',
+    notes: entry?.notes || ''
+  };
+}
+
+function normalizeReportSettingsForm(settings = null) {
+  return {
+    headName: settings?.headName || '',
+    headTitle: settings?.headTitle || 'Head Teacher',
+    signatureImage: settings?.signatureImage || '',
+    parentAcknowledgementText: settings?.parentAcknowledgementText || 'I have received and read this report.',
+    footerNote: settings?.footerNote || ''
+  };
+}
+
+function normalizeOverrideForm(override = null) {
+  return {
+    attendanceSummary: {
+      totalSchoolDays: override?.attendanceSummary?.totalSchoolDays ?? '',
+      daysPresent: override?.attendanceSummary?.daysPresent ?? '',
+      daysAbsent: override?.attendanceSummary?.daysAbsent ?? '',
+      lateComing: override?.attendanceSummary?.lateComing ?? '',
+      attendanceRemark: override?.attendanceSummary?.attendanceRemark || ''
+    },
+    behaviorRatings: {
+      discipline: override?.behaviorRatings?.discipline || '',
+      responsibility: override?.behaviorRatings?.responsibility || '',
+      cooperation: override?.behaviorRatings?.cooperation || '',
+      respect: override?.behaviorRatings?.respect || '',
+      initiative: override?.behaviorRatings?.initiative || ''
+    }
+  };
+}
+
 function AdminResultsPublish() {
-  const { apiJson } = useAuth();
+  const { apiFetch, apiJson } = useAuth();
   const [results, setResults] = useState([]);
   const [classes, setClasses] = useState([]);
   const [institution, setInstitution] = useState(ADMIN_INSTITUTIONS[0]);
@@ -31,6 +118,18 @@ function AdminResultsPublish() {
   const [readiness, setReadiness] = useState(null);
   const [notifyingTeachers, setNotifyingTeachers] = useState(false);
   const [showRowsByInstitution, setShowRowsByInstitution] = useState(() => ({}));
+  const [remarkRows, setRemarkRows] = useState([]);
+  const [remarksSaving, setRemarksSaving] = useState(false);
+  const [remarksGenerating, setRemarksGenerating] = useState(false);
+  const [regeneratingStudentId, setRegeneratingStudentId] = useState('');
+  const [remarksStatus, setRemarksStatus] = useState({ error: '', success: '' });
+  const [academicCalendar, setAcademicCalendar] = useState([]);
+  const [calendarForm, setCalendarForm] = useState(emptyCalendarForm);
+  const [calendarSaving, setCalendarSaving] = useState(false);
+  const [reportSettingsForm, setReportSettingsForm] = useState(emptyReportSettingsForm);
+  const [reportSettingsSaving, setReportSettingsSaving] = useState(false);
+  const [reportSignatureBusy, setReportSignatureBusy] = useState(false);
+  const reportSignatureInputRef = useRef(null);
   const resolveShowRows = (value) => showRowsByInstitution[value] !== false;
   const loadDataSeq = useRef(0);
   const reportCardSeq = useRef(0);
@@ -47,6 +146,11 @@ function AdminResultsPublish() {
     setTermClosures([]);
     setBlockedStudents([]);
     setReadiness(null);
+    setRemarkRows([]);
+    setRemarksStatus({ error: '', success: '' });
+    setAcademicCalendar([]);
+    setCalendarForm(emptyCalendarForm);
+    setReportSettingsForm(emptyReportSettingsForm);
 
     const nextInstitution = next.institution ?? ADMIN_INSTITUTIONS[0];
     const nextTerm = next.term ?? 'First Term';
@@ -54,7 +158,10 @@ function AdminResultsPublish() {
     const nextSessionId = next.sessionId ?? '';
 
     try {
-      const [resultsData, classesData, sessionsData, accessData, closuresData, pendingData] = await Promise.all([
+      const remarksUrl = nextClassId && nextSessionId
+        ? `/results/admin/remarks?classId=${encodeURIComponent(nextClassId)}&term=${encodeURIComponent(nextTerm)}&sessionId=${encodeURIComponent(nextSessionId)}`
+        : null;
+      const [resultsData, classesData, sessionsData, accessData, closuresData, pendingData, remarksData, calendarData, reportSettingsData] = await Promise.all([
         apiJson(
           `/results/admin/overview?term=${encodeURIComponent(nextTerm)}&institution=${encodeURIComponent(nextInstitution)}${nextClassId ? `&classId=${encodeURIComponent(nextClassId)}` : ''}${nextSessionId ? `&sessionId=${encodeURIComponent(nextSessionId)}` : ''}`
         ),
@@ -62,7 +169,12 @@ function AdminResultsPublish() {
         apiJson('/admin/academic-sessions'),
         apiJson('/results/admin/access'),
         apiJson(`/admin/terms/closures${nextSessionId ? `?sessionId=${encodeURIComponent(nextSessionId)}` : ''}`),
-        apiJson(`/results/admin/pending-subject-results?term=${encodeURIComponent(nextTerm)}${nextSessionId ? `&sessionId=${encodeURIComponent(nextSessionId)}` : ''}`)
+        apiJson(`/results/admin/pending-subject-results?term=${encodeURIComponent(nextTerm)}${nextSessionId ? `&sessionId=${encodeURIComponent(nextSessionId)}` : ''}`),
+        remarksUrl ? apiJson(remarksUrl) : Promise.resolve({ remarks: [] }),
+        nextSessionId
+          ? apiJson(`/admin/academic-calendar?sessionId=${encodeURIComponent(nextSessionId)}&term=${encodeURIComponent(nextTerm)}`)
+          : Promise.resolve({ calendar: [], entry: null }),
+        apiJson('/results/admin/report-settings')
       ]);
       if (seq !== loadDataSeq.current) return;
 
@@ -74,6 +186,10 @@ function AdminResultsPublish() {
       const sessionRows = sessionsData.sessions || [];
       setSessions(sessionRows);
       setTermClosures(closuresData.termClosures || []);
+      setRemarkRows((remarksData.remarks || []).map((row) => ({ ...row, override: normalizeOverrideForm(row.override) })));
+      setAcademicCalendar(calendarData.calendar || []);
+      setCalendarForm(normalizeCalendarForm(calendarData.entry));
+      setReportSettingsForm(normalizeReportSettingsForm(reportSettingsData.settings));
       const active = sessionsData.activeSession || sessionRows.find((item) => item.isActive) || sessionRows[0] || null;
       setSessionId((prev) => {
         const candidate = nextSessionId || prev;
@@ -113,6 +229,17 @@ function AdminResultsPublish() {
     setExpandedStudents({});
     setReportCard(null);
   }, [classId, institution, sessionId, term]);
+
+  useEffect(() => {
+    const selected = academicCalendar.find((entry) => entry.sessionId === sessionId && entry.term === term) || null;
+    const nextTerm = getNextTerm(term);
+    const nextEntry = academicCalendar.find((entry) => entry.sessionId === sessionId && entry.term === nextTerm) || null;
+    const nextForm = normalizeCalendarForm(selected);
+    if (!nextForm.nextTermBegins && nextEntry?.termStartDate) {
+      nextForm.nextTermBegins = nextEntry.termStartDate;
+    }
+    setCalendarForm(nextForm);
+  }, [academicCalendar, sessionId, term]);
 
   const groupedResults = useMemo(() => {
     const grouped = new Map();
@@ -344,6 +471,241 @@ function AdminResultsPublish() {
     }
   }
 
+  function updateHeadTeacherRemark(studentId, value) {
+    setRemarkRows((prev) =>
+      prev.map((row) => (row.studentId === studentId ? { ...row, headTeacherRemark: value } : row))
+    );
+  }
+
+  function updateRemarkGuide(studentId, key, value) {
+    setRemarkRows((prev) =>
+      prev.map((row) => (row.studentId === studentId ? { ...row, [key]: value } : row))
+    );
+  }
+
+  function updateOverrideField(studentId, section, key, value) {
+    setRemarkRows((prev) =>
+      prev.map((row) => (
+        row.studentId === studentId
+          ? {
+              ...row,
+              override: {
+                ...normalizeOverrideForm(row.override),
+                [section]: {
+                  ...normalizeOverrideForm(row.override)[section],
+                  [key]: value
+                }
+              }
+            }
+          : row
+      ))
+    );
+  }
+
+  async function saveHeadTeacherRemarks() {
+    if (!classId || !term || !sessionId) return;
+    setRemarksSaving(true);
+    setRemarksStatus({ error: '', success: '' });
+
+    try {
+      const data = await apiJson('/results/admin/remarks', {
+        method: 'POST',
+        body: {
+          classId,
+          term,
+          sessionId,
+          rows: remarkRows
+        }
+      });
+      setRemarkRows((data.remarks || []).map((row) => ({ ...row, override: normalizeOverrideForm(row.override) })));
+      setRemarksStatus({ error: '', success: `${data.savedCount || 0} head teacher remark(s) saved.` });
+    } catch (err) {
+      setRemarksStatus({ error: err.message || 'Unable to save head teacher remarks.', success: '' });
+    } finally {
+      setRemarksSaving(false);
+    }
+  }
+
+  async function generateHeadTeacherRemarks({ preserveExisting = true } = {}) {
+    if (!classId || !term || !sessionId) return;
+    setRemarksGenerating(true);
+    setRemarksStatus({ error: '', success: '' });
+
+    try {
+      const data = await apiJson('/results/admin/remarks/generate', {
+        method: 'POST',
+        body: {
+          classId,
+          term,
+          sessionId,
+          preserveExisting
+        }
+      });
+      setRemarkRows((data.remarks || []).map((row) => ({ ...row, override: normalizeOverrideForm(row.override) })));
+      setRemarksStatus({
+        error: '',
+        success: preserveExisting
+          ? `Blank head teacher drafts filled for ${data.remarks?.length || 0} student(s). Existing remarks were preserved.`
+          : `Draft head teacher remarks generated for ${data.remarks?.length || 0} student(s). Review and edit before saving.`
+      });
+    } catch (err) {
+      setRemarksStatus({ error: err.message || 'Unable to generate head teacher remarks.', success: '' });
+    } finally {
+      setRemarksGenerating(false);
+    }
+  }
+
+  function confirmRegenerateAllHeadTeacherRemarks() {
+    if (typeof window !== 'undefined') {
+      const confirmed = window.confirm(
+        'This will replace all current head teacher draft remarks for this class and term. Continue?'
+      );
+      if (!confirmed) return;
+    }
+    void generateHeadTeacherRemarks({ preserveExisting: false });
+  }
+
+  async function regenerateHeadTeacherRemark(studentId) {
+    if (!classId || !term || !sessionId || !studentId) return;
+    setRegeneratingStudentId(studentId);
+    setRemarksStatus({ error: '', success: '' });
+
+    try {
+      const data = await apiJson('/results/admin/remarks/generate', {
+        method: 'POST',
+        body: {
+          classId,
+          term,
+          sessionId,
+          studentId
+        }
+      });
+      const [generated] = data.remarks || [];
+      if (generated) {
+        setRemarkRows((prev) => prev.map((row) => (
+          row.studentId === studentId
+            ? { ...row, ...generated, override: normalizeOverrideForm(generated.override) }
+            : row
+        )));
+        setRemarksStatus({ error: '', success: `Draft head teacher remark regenerated for ${generated.studentName}.` });
+      }
+    } catch (err) {
+      setRemarksStatus({ error: err.message || 'Unable to regenerate head teacher remark.', success: '' });
+    } finally {
+      setRegeneratingStudentId('');
+    }
+  }
+
+  function updateCalendarField(key, value) {
+    setCalendarForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  function updateReportSettingsField(key, value) {
+    setReportSettingsForm((prev) => ({ ...prev, [key]: value }));
+  }
+
+  async function saveAcademicCalendar() {
+    if (!sessionId || !term) return;
+    setCalendarSaving(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const data = await apiJson('/admin/academic-calendar', {
+        method: 'PUT',
+        body: {
+          sessionId,
+          term,
+          ...calendarForm
+        }
+      });
+      setAcademicCalendar(data.calendar || []);
+      setCalendarForm(normalizeCalendarForm(data.entry));
+      setSuccess(`${term} academic calendar saved for the selected session.`);
+    } catch (err) {
+      setError(err.message || 'Unable to save academic calendar.');
+    } finally {
+      setCalendarSaving(false);
+    }
+  }
+
+  async function saveReportSettings() {
+    setReportSettingsSaving(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const data = await apiJson('/results/admin/report-settings', {
+        method: 'PUT',
+        body: reportSettingsForm
+      });
+      const normalized = normalizeReportSettingsForm(data.settings);
+      setReportSettingsForm(normalized);
+      setReportCard((prev) => (prev ? { ...prev, reportSettings: normalized } : prev));
+      setSuccess('Report settings saved successfully.');
+    } catch (err) {
+      setError(err.message || 'Unable to save report settings.');
+    } finally {
+      setReportSettingsSaving(false);
+    }
+  }
+
+  async function handleReportSignatureChange(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('file', file);
+    setReportSignatureBusy(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const response = await apiFetch('/results/admin/report-settings/signature', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.message || 'Unable to upload report signature.');
+      }
+      const normalized = normalizeReportSettingsForm(data.settings);
+      setReportSettingsForm(normalized);
+      setReportCard((prev) => (prev ? { ...prev, reportSettings: normalized } : prev));
+      setSuccess('Report signature uploaded successfully.');
+    } catch (err) {
+      setError(err.message || 'Unable to upload report signature.');
+    } finally {
+      setReportSignatureBusy(false);
+      if (reportSignatureInputRef.current) {
+        reportSignatureInputRef.current.value = '';
+      }
+    }
+  }
+
+  async function removeReportSignature() {
+    setReportSignatureBusy(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      const data = await apiJson('/results/admin/report-settings/signature', {
+        method: 'DELETE'
+      });
+      const normalized = normalizeReportSettingsForm(data.settings);
+      setReportSettingsForm(normalized);
+      setReportCard((prev) => (prev ? { ...prev, reportSettings: normalized } : prev));
+      setSuccess('Report signature removed successfully.');
+    } catch (err) {
+      setError(err.message || 'Unable to remove report signature.');
+    } finally {
+      setReportSignatureBusy(false);
+      if (reportSignatureInputRef.current) {
+        reportSignatureInputRef.current.value = '';
+      }
+    }
+  }
+
   return (
     <PortalLayout
       role="admin"
@@ -486,7 +848,7 @@ function AdminResultsPublish() {
         <button
           type="submit"
           disabled={loading || actionBusy || !sessionId || !hasPublishableResults || !readiness?.ready}
-          className="rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+          className="interactive-button rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
         >
           {publishing ? 'Publishing...' : 'Publish Approved Results'}
         </button>
@@ -494,7 +856,7 @@ function AdminResultsPublish() {
           type="button"
           onClick={compilePublishedResults}
           disabled={loading || actionBusy || !sessionId}
-          className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
+          className="interactive-button rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {compiling ? 'Compiling...' : 'Compile Final Report Cards'}
         </button>
@@ -502,7 +864,7 @@ function AdminResultsPublish() {
           type="button"
           onClick={toggleClassAccess}
           disabled={loading || actionBusy || !classId}
-          className="rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+          className="interactive-button rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {accessBusy ? 'Updating Access...' : classAccessOpen ? 'Close Results Access' : 'Open Results Access'}
         </button>
@@ -510,11 +872,347 @@ function AdminResultsPublish() {
           type="button"
           onClick={toggleTermClosed}
           disabled={loading || actionBusy || !term || !sessionId}
-          className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800 disabled:cursor-not-allowed disabled:opacity-50"
+          className="interactive-button rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {termBusy ? 'Updating Term...' : termClosed ? 'Reopen Term' : 'Close Term'}
         </button>
       </form>
+
+      <section className="mt-6 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Batch 6</p>
+            <h2 className="mt-2 font-heading text-2xl text-primary">Academic calendar and next term begins</h2>
+            <p className="mt-2 text-sm text-slate-600">
+              Manage the term calendar here so report sheets can show the correct next resumption date instead of the placeholder.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={saveAcademicCalendar}
+            disabled={!sessionId || !term || calendarSaving}
+            className="interactive-button rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {calendarSaving ? 'Saving Calendar...' : 'Save Academic Calendar'}
+          </button>
+        </div>
+        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <label className="grid gap-2 text-sm text-slate-700">
+            <span className="font-semibold text-slate-800">Term starts</span>
+            <input type="date" value={calendarForm.termStartDate} onChange={(e) => updateCalendarField('termStartDate', e.target.value)} className="rounded-2xl border border-slate-300 px-3 py-3" />
+          </label>
+          <label className="grid gap-2 text-sm text-slate-700">
+            <span className="font-semibold text-slate-800">Term ends</span>
+            <input type="date" value={calendarForm.termEndDate} onChange={(e) => updateCalendarField('termEndDate', e.target.value)} className="rounded-2xl border border-slate-300 px-3 py-3" />
+          </label>
+          <label className="grid gap-2 text-sm text-slate-700">
+            <span className="font-semibold text-slate-800">Next term begins</span>
+            <input type="date" value={calendarForm.nextTermBegins} onChange={(e) => updateCalendarField('nextTermBegins', e.target.value)} className="rounded-2xl border border-slate-300 px-3 py-3" />
+          </label>
+          <label className="grid gap-2 text-sm text-slate-700">
+            <span className="font-semibold text-slate-800">Exam starts</span>
+            <input type="date" value={calendarForm.examStartDate} onChange={(e) => updateCalendarField('examStartDate', e.target.value)} className="rounded-2xl border border-slate-300 px-3 py-3" />
+          </label>
+          <label className="grid gap-2 text-sm text-slate-700">
+            <span className="font-semibold text-slate-800">Exam ends</span>
+            <input type="date" value={calendarForm.examEndDate} onChange={(e) => updateCalendarField('examEndDate', e.target.value)} className="rounded-2xl border border-slate-300 px-3 py-3" />
+          </label>
+          <label className="grid gap-2 text-sm text-slate-700">
+            <span className="font-semibold text-slate-800">Publishing date</span>
+            <input type="date" value={calendarForm.resultPublishingDate} onChange={(e) => updateCalendarField('resultPublishingDate', e.target.value)} className="rounded-2xl border border-slate-300 px-3 py-3" />
+          </label>
+          <label className="grid gap-2 text-sm text-slate-700">
+            <span className="font-semibold text-slate-800">Holiday starts</span>
+            <input type="date" value={calendarForm.holidayStartDate} onChange={(e) => updateCalendarField('holidayStartDate', e.target.value)} className="rounded-2xl border border-slate-300 px-3 py-3" />
+          </label>
+          <label className="grid gap-2 text-sm text-slate-700">
+            <span className="font-semibold text-slate-800">Holiday ends</span>
+            <input type="date" value={calendarForm.holidayEndDate} onChange={(e) => updateCalendarField('holidayEndDate', e.target.value)} className="rounded-2xl border border-slate-300 px-3 py-3" />
+          </label>
+        </div>
+        <label className="mt-4 grid gap-2 text-sm text-slate-700">
+          <span className="font-semibold text-slate-800">Notes</span>
+          <textarea
+            value={calendarForm.notes}
+            onChange={(e) => updateCalendarField('notes', e.target.value)}
+            rows={3}
+            className="rounded-2xl border border-slate-300 px-3 py-3"
+            placeholder="Optional term note, for example special closure or exam context."
+          />
+        </label>
+      </section>
+
+      <section className="mt-6 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Report Settings</p>
+            <h2 className="mt-2 font-heading text-2xl text-primary">Head signature and report metadata</h2>
+            <p className="mt-2 text-sm text-slate-600">
+              Keep report approval details here so official report sheets are managed separately from the public website content.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={saveReportSettings}
+            disabled={reportSettingsSaving}
+            className="interactive-button rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {reportSettingsSaving ? 'Saving Settings...' : 'Save Report Settings'}
+          </button>
+        </div>
+
+        <div className="mt-5 grid gap-4 lg:grid-cols-[220px,minmax(0,1fr)]">
+          <div className="space-y-3">
+            <div className="flex h-44 items-center justify-center overflow-hidden rounded-[24px] border border-slate-200 bg-slate-50 p-4 shadow-sm">
+              {reportSettingsForm.signatureImage ? (
+                <img src={reportSettingsForm.signatureImage} alt="Report signature preview" className="max-h-full w-full object-contain" />
+              ) : (
+                <span className="text-center text-sm font-semibold text-slate-500">No head signature uploaded</span>
+              )}
+            </div>
+            <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => reportSignatureInputRef.current?.click()}
+                disabled={reportSignatureBusy}
+                className="interactive-button w-full"
+              >
+                {reportSignatureBusy ? 'Uploading...' : reportSettingsForm.signatureImage ? 'Change Signature' : 'Upload Signature'}
+              </button>
+              <button
+                type="button"
+                onClick={removeReportSignature}
+                disabled={reportSignatureBusy || !reportSettingsForm.signatureImage}
+                className="interactive-button w-full border-red-200 text-red-700"
+              >
+                Remove Signature
+              </button>
+              <input
+                ref={reportSignatureInputRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp"
+                onChange={handleReportSignatureChange}
+                className="hidden"
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="grid gap-2 text-sm text-slate-700">
+              <span className="font-semibold text-slate-800">Head teacher name</span>
+              <input
+                value={reportSettingsForm.headName}
+                onChange={(e) => updateReportSettingsField('headName', e.target.value)}
+                className="rounded-2xl border border-slate-300 px-3 py-3"
+                placeholder="e.g. Mrs. Amina Yusuf"
+              />
+            </label>
+            <label className="grid gap-2 text-sm text-slate-700">
+              <span className="font-semibold text-slate-800">Head teacher title</span>
+              <input
+                value={reportSettingsForm.headTitle}
+                onChange={(e) => updateReportSettingsField('headTitle', e.target.value)}
+                className="rounded-2xl border border-slate-300 px-3 py-3"
+                placeholder="Head Teacher"
+              />
+            </label>
+            <label className="grid gap-2 text-sm text-slate-700 md:col-span-2">
+              <span className="font-semibold text-slate-800">Parent acknowledgement text</span>
+              <textarea
+                value={reportSettingsForm.parentAcknowledgementText}
+                onChange={(e) => updateReportSettingsField('parentAcknowledgementText', e.target.value)}
+                rows={3}
+                className="rounded-2xl border border-slate-300 px-3 py-3"
+              />
+            </label>
+            <label className="grid gap-2 text-sm text-slate-700 md:col-span-2">
+              <span className="font-semibold text-slate-800">Footer note</span>
+              <textarea
+                value={reportSettingsForm.footerNote}
+                onChange={(e) => updateReportSettingsField('footerNote', e.target.value)}
+                rows={2}
+                className="rounded-2xl border border-slate-300 px-3 py-3"
+                placeholder="Optional report footer note for official printouts."
+              />
+            </label>
+          </div>
+        </div>
+      </section>
+
+      {classId && (
+        <section className="mt-6 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">Report Remarks</p>
+              <h2 className="mt-2 font-heading text-2xl text-primary">Head teacher remarks</h2>
+            </div>
+            <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                <button
+                  type="button"
+                  onClick={() => generateHeadTeacherRemarks({ preserveExisting: true })}
+                  disabled={remarksGenerating || !remarkRows.length}
+                  className="interactive-button rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {remarksGenerating ? 'Generating Drafts...' : 'Generate Blank Remarks'}
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmRegenerateAllHeadTeacherRemarks}
+                  disabled={remarksGenerating || !remarkRows.length}
+                  className="interactive-button rounded-2xl border border-slate-300 px-4 py-3 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {remarksGenerating ? 'Generating Drafts...' : 'Regenerate All Drafts'}
+                </button>
+                <button
+                  type="button"
+                  onClick={saveHeadTeacherRemarks}
+                  disabled={remarksSaving || !remarkRows.length}
+                  className="interactive-button rounded-2xl bg-primary px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {remarksSaving ? 'Saving Remarks...' : 'Save Head Remarks'}
+                </button>
+            </div>
+          </div>
+          {remarksStatus.error && <p className="mt-3 text-sm text-red-600">{remarksStatus.error}</p>}
+          {remarksStatus.success && <p className="mt-3 text-sm text-emerald-700">{remarksStatus.success}</p>}
+          <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-200">
+            <table className="min-w-full text-sm">
+              <thead className="bg-slate-50 text-left">
+                <tr>
+                  <th className="px-4 py-3">Student</th>
+                  <th className="px-4 py-3">Insight</th>
+                  <th className="px-4 py-3">Strengths / Weaknesses</th>
+                  <th className="px-4 py-3">Manual Attendance Override</th>
+                  <th className="px-4 py-3">Behaviour Override</th>
+                  <th className="px-4 py-3">Class Teacher&apos;s Remark</th>
+                  <th className="px-4 py-3">Head Teacher&apos;s Remark</th>
+                </tr>
+              </thead>
+              <tbody>
+                {remarkRows.map((row) => (
+                  <tr key={row.studentId} className="border-t border-slate-100">
+                    <td className="px-4 py-3 font-semibold text-slate-800">{row.studentName}</td>
+                    <td className="px-4 py-3 text-xs text-slate-600">
+                      <div className="space-y-1">
+                        <p>Avg: {row.insight?.averageScore || 0} • Grade: {row.insight?.overallGrade || '—'} • Attendance: {row.insight?.attendanceRate || 0}%</p>
+                        <p>
+                          Strong: {row.insight?.strengths?.length ? row.insight.strengths.join(', ') : '—'}
+                          {' '}• Focus: {row.insight?.weaknesses?.length ? row.insight.weaknesses.join(', ') : '—'}
+                        </p>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="grid gap-2">
+                        <input
+                          value={row.strengths || ''}
+                          onChange={(event) => updateRemarkGuide(row.studentId, 'strengths', event.target.value)}
+                          className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                          placeholder="Editable strengths, comma separated"
+                        />
+                        <input
+                          value={row.weaknesses || ''}
+                          onChange={(event) => updateRemarkGuide(row.studentId, 'weaknesses', event.target.value)}
+                          className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                          placeholder="Editable weaknesses, comma separated"
+                        />
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="grid gap-2 md:grid-cols-2">
+                        <input
+                          type="number"
+                          min="0"
+                          value={row.override?.attendanceSummary?.totalSchoolDays ?? ''}
+                          onChange={(event) => updateOverrideField(row.studentId, 'attendanceSummary', 'totalSchoolDays', event.target.value)}
+                          className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm"
+                          placeholder="Total days"
+                        />
+                        <input
+                          type="number"
+                          min="0"
+                          value={row.override?.attendanceSummary?.daysPresent ?? ''}
+                          onChange={(event) => updateOverrideField(row.studentId, 'attendanceSummary', 'daysPresent', event.target.value)}
+                          className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm"
+                          placeholder="Present"
+                        />
+                        <input
+                          type="number"
+                          min="0"
+                          value={row.override?.attendanceSummary?.daysAbsent ?? ''}
+                          onChange={(event) => updateOverrideField(row.studentId, 'attendanceSummary', 'daysAbsent', event.target.value)}
+                          className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm"
+                          placeholder="Absent"
+                        />
+                        <input
+                          type="number"
+                          min="0"
+                          value={row.override?.attendanceSummary?.lateComing ?? ''}
+                          onChange={(event) => updateOverrideField(row.studentId, 'attendanceSummary', 'lateComing', event.target.value)}
+                          className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm"
+                          placeholder="Late"
+                        />
+                        <textarea
+                          value={row.override?.attendanceSummary?.attendanceRemark || ''}
+                          onChange={(event) => updateOverrideField(row.studentId, 'attendanceSummary', 'attendanceRemark', event.target.value)}
+                          rows={2}
+                          className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm md:col-span-2"
+                          placeholder="Optional attendance remark"
+                        />
+                      </div>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="grid gap-2 md:grid-cols-2">
+                        {['discipline', 'responsibility', 'cooperation', 'respect', 'initiative'].map((field) => (
+                          <label key={field} className="grid gap-1 text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-500">
+                            <span>{field}</span>
+                            <select
+                              value={row.override?.behaviorRatings?.[field] || ''}
+                              onChange={(event) => updateOverrideField(row.studentId, 'behaviorRatings', field, event.target.value)}
+                              className="rounded-2xl border border-slate-300 px-3 py-2 text-sm font-medium text-slate-700"
+                            >
+                              <option value="">Auto</option>
+                              {['A', 'B', 'C', 'D'].map((grade) => (
+                                <option key={grade} value={grade}>{grade}</option>
+                              ))}
+                            </select>
+                          </label>
+                        ))}
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-slate-600">{row.classTeacherRemark || '—'}</td>
+                    <td className="px-4 py-3">
+                      <div className="mb-2 flex justify-end">
+                        <button
+                          type="button"
+                          onClick={() => regenerateHeadTeacherRemark(row.studentId)}
+                          disabled={regeneratingStudentId === row.studentId}
+                          className="interactive-button rounded-xl border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          {regeneratingStudentId === row.studentId ? 'Regenerating...' : 'Regenerate'}
+                        </button>
+                      </div>
+                      <textarea
+                        value={row.headTeacherRemark || ''}
+                        onChange={(event) => updateHeadTeacherRemark(row.studentId, event.target.value)}
+                        rows={2}
+                        className="w-full rounded-2xl border border-slate-300 px-3 py-2 text-sm outline-none focus:border-primary focus:ring-2 focus:ring-primary/10"
+                        placeholder="Enter head teacher remark"
+                      />
+                    </td>
+                  </tr>
+                ))}
+                {!remarkRows.length && (
+                  <tr>
+                    <td className="px-4 py-6 text-center text-slate-500" colSpan={7}>
+                      Select a class with students to manage head teacher remarks.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
 
       {loading && <p className="mt-4 text-sm text-slate-600">Loading result review data...</p>}
       {error && <p className="mt-4 text-sm text-red-600">{error}</p>}
@@ -618,6 +1316,8 @@ function AdminResultsPublish() {
                               <thead className="bg-slate-50 text-left">
                                 <tr>
                                   <th className="px-4 py-3">Subject</th>
+                                  <th className="px-4 py-3">Test 1</th>
+                                  <th className="px-4 py-3">Test 2</th>
                                   <th className="px-4 py-3">CA</th>
                                   <th className="px-4 py-3">Exam</th>
                                   <th className="px-4 py-3">Total</th>
@@ -631,6 +1331,8 @@ function AdminResultsPublish() {
                                 {group.rows.map((row) => (
                                   <tr key={row.id} className="border-t border-slate-100">
                                     <td className="px-4 py-3">{row.subjectName}</td>
+                                    <td className="px-4 py-3">{row.test1 ?? '—'}</td>
+                                    <td className="px-4 py-3">{row.test2 ?? '—'}</td>
                                     <td className="px-4 py-3">{row.ca}</td>
                                     <td className="px-4 py-3">{row.exam}</td>
                                     <td className="px-4 py-3 font-semibold text-slate-900">{row.total}</td>

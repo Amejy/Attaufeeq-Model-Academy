@@ -26,7 +26,7 @@ export const defaultSiteContent = {
       {
         title: 'ATTAUFEEQ Model Academy',
         description: 'Western academic education with strong exam preparation and disciplined growth culture.',
-        image: '/images/schoolweb2.png',
+        image: '/images/schoolwebsite/Pasted image (2).png',
         to: '/modern-academy',
         badge: 'Model Track',
         accent: 'from-emerald-950 via-emerald-800 to-amber-500'
@@ -34,7 +34,7 @@ export const defaultSiteContent = {
       {
         title: 'Madrastul ATTAUFEEQ',
         description: "Qur'an memorization, Tajweed, Arabic, and strong Islamic values in a calm learning environment.",
-        image: '/images/gallery5.png',
+        image: '/images/madrasawebsite/main image.png',
         to: '/madrastul-attaufiq',
         badge: 'Madrasa Track',
         accent: 'from-slate-900 via-amber-700 to-yellow-400'
@@ -52,22 +52,22 @@ export const defaultSiteContent = {
       { value: '24/7', title: 'Access', text: 'News, access, records' }
     ],
     heroImages: [
-      { url: '/images/schoolwebsite1.png', alt: 'ATTAUFEEQ school environment' }
+      { url: '/images/Home/main image.png', alt: 'ATTAUFEEQ school environment' }
     ],
     highlightsEyebrow: 'School Highlights',
     highlightsTitle: 'A brighter, stronger public presence',
     highlightsDescription: '',
     highlights: [
-      { title: 'Academic Excellence', text: 'Students perform strongly across core examinations.', image: '/images/schoolweb3.png' },
-      { title: 'Qualified Teachers', text: 'Experienced teachers deliver quality education with care.', image: '/images/schoolweb2.png' },
-      { title: 'Modern Facilities', text: 'Well-equipped classrooms support focused learning.', image: '/images/schoolwebsite1.png' },
-      { title: 'Islamic Education', text: 'Students receive strong Islamic training through Madrastul ATTAUFEEQ.', image: '/images/gallery5.png' }
+      { title: 'Academic Excellence', text: 'Students perform strongly across core examinations.', image: '/images/Home/Pasted image (2).png' },
+      { title: 'Qualified Teachers', text: 'Experienced teachers deliver quality education with care.', image: '/images/schoolwebsite/Pasted image (2).png' },
+      { title: 'Modern Facilities', text: 'Well-equipped classrooms support focused learning.', image: '/images/schoolwebsite/main image (6).png' },
+      { title: 'Islamic Education', text: 'Students receive strong Islamic training through Madrastul ATTAUFEEQ.', image: '/images/madrasawebsite/main image.png' }
     ],
     storyEyebrow: 'School Story',
     storyTitle: 'Education with structure, confidence, and values',
     storyText:
       'ATTAUFEEQ Model Academy was founded with the vision of providing a balanced education that combines academic excellence with strong moral and Islamic values.',
-    storyImage: '/images/schoolwebsite1.png',
+    storyImage: '/images/Home/Pasted image (2).png',
     programsEyebrow: 'Academic Programs',
     programsTitle: 'Two institutions. One polished digital identity.',
     programsDescription:
@@ -77,13 +77,13 @@ export const defaultSiteContent = {
         title: 'ATTAUFEEQ Model Academy',
         description: 'Western academic education using national standards and exam preparation pathways.',
         standards: ['WAEC', 'NECO', 'National Standards'],
-        image: '/images/schoolweb2.png'
+        image: '/images/schoolwebsite/main image (6).png'
       },
       {
         title: 'Madrastul ATTAUFEEQ',
         description: "Islamic education with Qur'an memorization, Tajweed, Arabic language, and foundational studies.",
         standards: ['Quran Memorization', 'Tajweed', 'Arabic Language'],
-        image: '/images/gallery5.png'
+        image: '/images/madrasawebsite/main image.png'
       }
     ],
     ctaEyebrow: 'Ready to join?',
@@ -141,7 +141,7 @@ export const defaultSiteContent = {
     ],
     signLabel: '',
     signatureImage: '',
-    image: '/images/schoolwebsite1.png',
+    image: '/images/schoolwebsite/main image (6).png',
     visionTitle: 'Vision',
     visionText:
       'To become a leading educational institution that develops intellectually capable, morally upright, and socially responsible students.',
@@ -157,7 +157,7 @@ export const defaultSiteContent = {
       'ATTAUFEEQ Model Academy provides structured learning pathways across nursery, primary, secondary, and madrasa programs.',
     levelsTitle: 'Educational Levels',
     levels: ['Nursery School', 'Primary School', 'Secondary School', 'Madrasa Program'],
-    image: '/images/schoolweb3.png',
+    image: '/images/academics/main image (2).png',
     subjectsTitle: 'Subjects Offered',
     subjectsText:
       'Mathematics, English Language, Basic Science, Computer Studies, Social Studies, Arabic Language, and Islamic Studies.',
@@ -174,10 +174,10 @@ export const defaultSiteContent = {
     title: 'Gallery',
     description: 'School life, classes, and student activities.',
     photos: [
-      { url: '/images/schoolwebsite1.png', alt: 'School gallery hero view' },
-      { url: '/images/schoolweb3.png', alt: 'Students learning in class' },
-      { url: '/images/schoolweb2.png', alt: 'Classroom session' },
-      { url: '/images/gallery5.png', alt: 'Islamic learning session' }
+      { url: '/images/gallery/main image (16).png', alt: 'School gallery hero view' },
+      { url: '/images/gallery/Pasted image.png', alt: 'Students learning in class' },
+      { url: '/images/gallery/Pasted image (2).png', alt: 'Classroom session' },
+      { url: '/images/gallery/Pasted image (3).png', alt: 'Islamic learning session' }
     ]
   },
   madrasa: {
@@ -185,7 +185,7 @@ export const defaultSiteContent = {
     title: 'Madrastul ATTAUFEEQ',
     description:
       "A dedicated Islamic learning environment supporting Qur'anic excellence, moral training, and spiritual growth.",
-    image: '/images/gallery5.png',
+    image: '/images/madrasawebsite/main image.png',
     modulesTitle: 'Madrasa Learning Modules',
     modulesSubtitle: 'Core components designed for academic and spiritual depth.',
     modules: [

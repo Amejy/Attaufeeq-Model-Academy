@@ -89,7 +89,7 @@ function AdminAuditLogs() {
         body: { email: resetEmail }
       });
       setResetCredential(data.credential ? [data.credential] : []);
-      setSuccess('Temporary password issued successfully.');
+      setSuccess(data.message || 'Password reset completed successfully.');
       setResetEmail('');
       void loadLogs();
     } catch (err) {
@@ -237,7 +237,7 @@ function AdminAuditLogs() {
       <form onSubmit={resetPassword} className="grid gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 sm:grid-cols-4">
         <div className="sm:col-span-4">
           <p className="text-sm font-semibold text-slate-800">Admin Password Reset</p>
-          <p className="mt-1 text-xs text-slate-600">Enter a portal email to issue a new temporary password and force a password change on next login.</p>
+          <p className="mt-1 text-xs text-slate-600">Enter a portal email to issue a fresh sign-in password and force a password change on the next login.</p>
         </div>
         <input
           type="email"
@@ -258,8 +258,8 @@ function AdminAuditLogs() {
 
       {success && <p className="mt-3 text-sm text-emerald-700">{success}</p>}
       <ProvisioningPanel
-        title="Latest temporary password"
-        description="If SMTP is configured, this password is also sent to the linked recipient email. Otherwise, share it manually."
+        title="Latest password reset action"
+        description="When email delivery is available, the new password is sent through that channel and is not shown again here. Manual display is reserved for accounts that cannot receive the message automatically."
         records={resetCredential}
       />
 

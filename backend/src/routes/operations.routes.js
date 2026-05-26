@@ -13,6 +13,7 @@ import {
 } from '../services/studentRegistrationService.js';
 import { summarizeCredentialDelivery } from '../services/credentialDeliveryService.js';
 import { sendAdminNotificationEmail } from '../utils/mailer.js';
+import { toPublicBulkError, toPublicErrorMessage } from '../utils/publicError.js';
 import {
   createBulkStudentUploadSession,
   getBulkStudentUploadSession,
@@ -390,7 +391,7 @@ operationsRouter.post('/students', async (req, res) => {
     if (isUniqueViolation(error)) {
       return res.status(409).json({ message: 'Student record conflicts with an existing database record.' });
     }
-    return res.status(400).json({ message: error.message || 'Unable to provision student accounts.' });
+    return res.status(400).json({ message: toPublicErrorMessage(error, 'We could not create the student account.') });
   }
 });
 
@@ -429,7 +430,7 @@ operationsRouter.put('/students/:id', async (req, res) => {
     if (isUniqueViolation(error)) {
       return res.status(409).json({ message: 'Student record conflicts with an existing database record.' });
     }
-    return res.status(400).json({ message: error.message || 'Unable to update student accounts.' });
+    return res.status(400).json({ message: toPublicErrorMessage(error, 'We could not update the student account.') });
   }
 });
 
@@ -467,7 +468,7 @@ operationsRouter.post('/students/bulk', async (req, res) => {
         }))
       );
     } catch (error) {
-      errors.push({ index, error: error.message || 'Provisioning failed.', row });
+      errors.push({ index, error: toPublicBulkError(error?.message, 'This student record could not be processed.'), row });
     }
   }
 
@@ -489,7 +490,7 @@ operationsRouter.get('/bulk-uploads/students', async (req, res) => {
     const uploads = await listBulkStudentUploadSessions({ limit, offset });
     return res.json({ uploads });
   } catch (error) {
-    return res.status(500).json({ message: error.message || 'Unable to load upload history.' });
+    return res.status(500).json({ message: toPublicErrorMessage(error, 'We could not load upload history right now.') });
   }
 });
 
@@ -501,7 +502,7 @@ operationsRouter.get('/bulk-uploads/students/:id', async (req, res) => {
     }
     return res.json({ upload });
   } catch (error) {
-    return res.status(500).json({ message: error.message || 'Unable to load upload session.' });
+    return res.status(500).json({ message: toPublicErrorMessage(error, 'We could not load that upload session right now.') });
   }
 });
 
@@ -521,7 +522,7 @@ operationsRouter.post('/bulk-uploads/students', async (req, res) => {
     });
     return res.status(201).json({ upload });
   } catch (error) {
-    return res.status(500).json({ message: error.message || 'Unable to save upload history.' });
+    return res.status(500).json({ message: toPublicErrorMessage(error, 'We could not save upload history right now.') });
   }
 });
 
@@ -530,7 +531,7 @@ operationsRouter.delete('/bulk-uploads/students', async (_req, res) => {
     await clearBulkStudentUploadSessions();
     return res.status(204).send();
   } catch (error) {
-    return res.status(500).json({ message: error.message || 'Unable to clear upload history.' });
+    return res.status(500).json({ message: toPublicErrorMessage(error, 'We could not clear upload history right now.') });
   }
 });
 
@@ -559,7 +560,7 @@ operationsRouter.delete('/students/:id', async (req, res) => {
     removeStoreRecord('students', id);
     return res.status(204).send();
   } catch (error) {
-    return res.status(400).json({ message: error.message || 'Unable to delete student.' });
+    return res.status(400).json({ message: toPublicErrorMessage(error, 'We could not remove the student record.') });
   }
 });
 
@@ -691,7 +692,7 @@ operationsRouter.put('/admissions/:id', async (req, res) => {
       delivery: null
     });
   } catch (error) {
-    return res.status(400).json({ message: error.message || 'Unable to update admission status.' });
+    return res.status(400).json({ message: toPublicErrorMessage(error, 'We could not update the admission status.') });
   }
 });
 
@@ -739,7 +740,7 @@ operationsRouter.put('/admissions/:id/verification', (req, res) => {
         deleted: result.deleted,
         archived: result.archived || null
       }))
-      .catch((error) => res.status(400).json({ message: error.message || 'Unable to provision portal accounts for admission.' }));
+      .catch((error) => res.status(400).json({ message: toPublicErrorMessage(error, 'We could not complete the admission setup right now.') }));
   }
 
   return res.json({ admission: enrichAdmission(updated) });
@@ -789,7 +790,7 @@ operationsRouter.put('/admissions/:id/payment', (req, res) => {
         deleted: result.deleted,
         archived: result.archived || null
       }))
-      .catch((error) => res.status(400).json({ message: error.message || 'Unable to provision portal accounts for admission.' }));
+      .catch((error) => res.status(400).json({ message: toPublicErrorMessage(error, 'We could not complete the admission setup right now.') }));
   }
 
   return res.json({ admission: enrichAdmission(updated) });

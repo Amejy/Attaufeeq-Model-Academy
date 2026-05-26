@@ -11,6 +11,7 @@ function mapDbTeacher(row) {
     institution: row.institution,
     userId: row.user_id || '',
     portalEmail: row.portal_email || '',
+    signatureImage: row.signature_image || '',
     createdAt: row.created_at
   };
 }
@@ -22,7 +23,8 @@ function normalizeTeacherInput(record) {
     email: String(record?.email || '').trim().toLowerCase(),
     institution: String(record?.institution || '').trim(),
     userId: String(record?.userId || '').trim(),
-    portalEmail: String(record?.portalEmail || '').trim().toLowerCase()
+    portalEmail: String(record?.portalEmail || '').trim().toLowerCase(),
+    signatureImage: String(record?.signatureImage || '').trim()
   };
 }
 
@@ -95,6 +97,17 @@ export async function findTeacherByEmail(email) {
   return mapDbTeacher(result.rows[0]);
 }
 
+export async function findTeacherByUserId(userId) {
+  if (!userId) return null;
+
+  if (!env.useDatabase) {
+    return adminStore.teachers.find((item) => item.userId === userId) || null;
+  }
+
+  const result = await query('SELECT * FROM teachers WHERE user_id = $1 LIMIT 1', [userId]);
+  return mapDbTeacher(result.rows[0]);
+}
+
 export async function createTeacher(record) {
   const item = normalizeTeacherInput(record);
 
@@ -104,9 +117,9 @@ export async function createTeacher(record) {
   }
 
   await query(
-    `INSERT INTO teachers (id, full_name, email, institution, user_id, portal_email)
-     VALUES ($1, $2, $3, $4, NULLIF($5, ''), NULLIF($6, ''))`,
-    [item.id, item.fullName, item.email, item.institution, item.userId, item.portalEmail]
+    `INSERT INTO teachers (id, full_name, email, institution, user_id, portal_email, signature_image)
+     VALUES ($1, $2, $3, $4, NULLIF($5, ''), NULLIF($6, ''), NULLIF($7, ''))`,
+    [item.id, item.fullName, item.email, item.institution, item.userId, item.portalEmail, item.signatureImage]
   );
 
   return item;
@@ -118,8 +131,11 @@ export async function updateTeacher(id, record) {
   if (!env.useDatabase) {
     const index = adminStore.teachers.findIndex((teacher) => teacher.id === id);
     if (index === -1) return null;
-    adminStore.teachers[index] = item;
-    return item;
+    adminStore.teachers[index] = {
+      ...item,
+      signatureImage: item.signatureImage || adminStore.teachers[index].signatureImage || ''
+    };
+    return adminStore.teachers[index];
   }
 
   const result = await query(
@@ -128,13 +144,48 @@ export async function updateTeacher(id, record) {
          email = $3,
          institution = $4,
          user_id = NULLIF($5, ''),
-         portal_email = NULLIF($6, '')
+         portal_email = NULLIF($6, ''),
+         signature_image = COALESCE(NULLIF($7, ''), signature_image)
      WHERE id = $1
      RETURNING *`,
-    [id, item.fullName, item.email, item.institution, item.userId, item.portalEmail]
+    [id, item.fullName, item.email, item.institution, item.userId, item.portalEmail, item.signatureImage]
   );
 
   return mapDbTeacher(result.rows[0]);
+}
+
+export async function updateTeacherSignatureImage(id, signatureImage) {
+  if (!id) return null;
+  const nextSignatureImage = String(signatureImage || '').trim();
+
+  if (!env.useDatabase) {
+    const index = adminStore.teachers.findIndex((teacher) => teacher.id === id);
+    if (index === -1) return null;
+    adminStore.teachers[index] = {
+      ...adminStore.teachers[index],
+      signatureImage: nextSignatureImage
+    };
+    return adminStore.teachers[index];
+  }
+
+  const result = await query(
+    `UPDATE teachers
+     SET signature_image = NULLIF($2, '')
+     WHERE id = $1
+     RETURNING *`,
+    [id, nextSignatureImage]
+  );
+
+  const updated = mapDbTeacher(result.rows[0]);
+  const index = adminStore.teachers.findIndex((teacher) => teacher.id === id);
+  if (updated && index >= 0) {
+    adminStore.teachers[index] = {
+      ...adminStore.teachers[index],
+      signatureImage: updated.signatureImage
+    };
+  }
+
+  return updated;
 }
 
 export async function deleteTeacherById(id) {
@@ -160,16 +211,17 @@ export async function upsertManyTeachers(records = []) {
 
   for (const item of normalized) {
     await query(
-      `INSERT INTO teachers (id, full_name, email, institution, user_id, portal_email)
-       VALUES ($1, $2, $3, $4, NULLIF($5, ''), NULLIF($6, ''))
+      `INSERT INTO teachers (id, full_name, email, institution, user_id, portal_email, signature_image)
+       VALUES ($1, $2, $3, $4, NULLIF($5, ''), NULLIF($6, ''), NULLIF($7, ''))
        ON CONFLICT (id)
        DO UPDATE SET
          full_name = EXCLUDED.full_name,
          email = EXCLUDED.email,
          institution = EXCLUDED.institution,
          user_id = EXCLUDED.user_id,
-         portal_email = EXCLUDED.portal_email`,
-      [item.id, item.fullName, item.email, item.institution, item.userId, item.portalEmail]
+         portal_email = EXCLUDED.portal_email,
+         signature_image = COALESCE(EXCLUDED.signature_image, teachers.signature_image)`,
+      [item.id, item.fullName, item.email, item.institution, item.userId, item.portalEmail, item.signatureImage]
     );
   }
 

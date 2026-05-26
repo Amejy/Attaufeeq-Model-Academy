@@ -3,11 +3,17 @@ import { Link, Navigate, useLocation, useNavigate, useSearchParams } from 'react
 import { useAuth } from '../context/AuthContext';
 import { useSiteContent } from '../context/SiteContentContext';
 import { apiJson } from '../utils/publicApi';
+import { sanitizeUserMessage } from '../utils/userMessage';
 import PasswordField from '../components/PasswordField';
 import SmartImage from '../components/SmartImage';
 import ErrorState from '../components/ErrorState';
 
 const ROLE_LABELS = { student: 'Student', teacher: 'Teacher', parent: 'Parent', admin: 'Admin', admissions: 'Admissions' };
+const PORTAL_TABS = [
+  { key: 'student', label: 'Student', route: '/login/student', portal: 'family' },
+  { key: 'parent', label: 'Parent', route: '/login/parent', portal: 'family' },
+  { key: 'staff', label: 'Staff', route: '/staff-access', portal: 'staff' }
+];
 const LOGIN_VARIANTS = {
   family: {
     title: 'Family Portal',
@@ -29,6 +35,78 @@ const LOGIN_VARIANTS = {
   }
 };
 
+function MailIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5">
+      <path
+        d="M4 6h16a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+      <path
+        d="m4 8 8 6 8-6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+function StudentIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5">
+      <circle cx="12" cy="8" r="3.2" fill="none" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M5.5 18.2c1.4-2.8 4-4.2 6.5-4.2s5.1 1.4 6.5 4.2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ParentIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5">
+      <circle cx="9" cy="8.2" r="2.8" fill="none" stroke="currentColor" strokeWidth="1.8" />
+      <circle cx="16.8" cy="9.1" r="2.1" fill="none" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M4.6 18.1c1.1-2.5 3.3-3.9 5.9-3.9 2.1 0 4 1 5.2 2.9" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function StaffIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5">
+      <rect x="4" y="7" width="16" height="11" rx="2" fill="none" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M9 7V5.8A1.8 1.8 0 0 1 10.8 4h2.4A1.8 1.8 0 0 1 15 5.8V7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M4 11.5h16" fill="none" stroke="currentColor" strokeWidth="1.8" />
+    </svg>
+  );
+}
+
+function ShieldIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5">
+      <path d="M12 3.8 18 6v5.3c0 4-2.4 7-6 8.9-3.6-1.9-6-4.9-6-8.9V6l6-2.2Z" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+      <path d="m10.2 11.8 1.3 1.3 2.5-3" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function HeadsetIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5">
+      <path d="M5 12a7 7 0 1 1 14 0" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <rect x="4" y="11.5" width="3.2" height="6" rx="1.2" fill="none" stroke="currentColor" strokeWidth="1.8" />
+      <rect x="16.8" y="11.5" width="3.2" height="6" rx="1.2" fill="none" stroke="currentColor" strokeWidth="1.8" />
+      <path d="M17 19c-.8 1.2-2 1.8-3.6 1.8H12" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function Login({ variant = 'family', defaultRole = '' }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -41,18 +119,13 @@ function Login({ variant = 'family', defaultRole = '' }) {
     ? queryRole || routeRole
     : routeRole || queryRole;
   const roleHint = variantConfig.allowedRoles.includes(preferredRole) ? preferredRole : variantConfig.allowedRoles[0];
-  const roleAccessTitle = `${ROLE_LABELS[roleHint]} Access`;
-  const displayTitle = isGenericPortalRoute ? variantConfig.title : roleAccessTitle;
-  const displaySubtitle = isGenericPortalRoute
-    ? variantConfig.subtitle
-    : `Secure access for ${ROLE_LABELS[roleHint].toLowerCase()} users inside the ${variant === 'family' ? 'family portal' : 'staff operations portal'}.`;
 
   const { isAuthenticated, login, user } = useAuth();
   const { siteContent } = useSiteContent();
   const branding = siteContent.branding || {};
   const brandLogo = branding.logoUrl || '/images/logo.png';
   const schoolName = branding.name || 'School';
-  const [form, setForm] = useState({ email: '', password: '' });
+  const [form, setForm] = useState({ email: '', password: '', rememberMe: false });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [sessionMessage, setSessionMessage] = useState('');
@@ -87,9 +160,13 @@ function Login({ variant = 'family', defaultRole = '' }) {
   }
 
   const onChange = (event) => {
-    const { name, value } = event.target;
-    setForm((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = event.target;
+    setForm((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
   };
+
+  const activePortalTab = variant === 'family'
+    ? (roleHint === 'parent' ? 'parent' : 'student')
+    : 'staff';
 
   const onSubmit = async (event) => {
     event.preventDefault();
@@ -130,9 +207,9 @@ function Login({ variant = 'family', defaultRole = '' }) {
     } catch (err) {
       const message = String(err?.message || '');
       if (message.includes('Failed to fetch') || message.includes('NetworkError')) {
-        setError('Cannot reach backend API. Check VITE_API_BASE_URL (or VITE_API_URL) in your frontend env and confirm the backend is running.');
+        setError('We could not reach the school portal right now. Please check your connection and try again.');
       } else {
-        setError(err.message || 'Unable to login.');
+        setError(sanitizeUserMessage(err.message, 'We could not sign you in right now.'));
       }
     } finally {
       setLoading(false);
@@ -140,9 +217,10 @@ function Login({ variant = 'family', defaultRole = '' }) {
   };
 
   return (
-    <main className="login-shell section-wrap py-8 sm:py-12 lg:py-14">
-      <div className="mx-auto grid max-w-6xl items-start gap-5 lg:grid-cols-[1.05fr,0.95fr] lg:gap-6">
-        <section className="glass-panel min-w-0 overflow-hidden p-5 sm:p-8 lg:p-9">
+    <main className="login-shell section-wrap py-6 sm:py-8 lg:py-10">
+      <div className="login-reference-shell mx-auto max-w-7xl">
+        <div className="login-reference-card">
+        <section className="login-display-panel min-w-0 overflow-hidden p-6 sm:p-8 lg:p-10">
           <div className="login-logo-row">
             <SmartImage
               src={brandLogo}
@@ -155,49 +233,69 @@ function Login({ variant = 'family', defaultRole = '' }) {
               <p className="login-logo__motto text-label-clamp" title={branding.motto}>{branding.motto}</p>
             </div>
           </div>
-          <div className="login-hero-meta">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-slate-500">{variantConfig.heroLabel}</p>
-            <Link
-              to={variantConfig.alternateRoute}
-              className="interactive-link login-hero-meta__switch"
-            >
-              {variant === 'family' ? 'Staff access' : 'Family login'}
-            </Link>
-          </div>
-          <h1 className="mt-3 max-w-[13ch] break-words font-heading text-3xl leading-[0.98] text-primary sm:mt-4 sm:text-[3.75rem]">{displayTitle}</h1>
-          <p className="mt-3 max-w-xl text-sm leading-6 text-slate-700 sm:mt-4">{displaySubtitle}</p>
-
-          <div className="login-compact-info mt-5 sm:mt-6">
-            <div className="login-compact-info__item">
-              <span className="login-compact-info__label">Current URL</span>
-              <p className="text-wrap-safe text-sm font-semibold text-slate-900 sm:text-base">{location.pathname}</p>
-            </div>
-            <div className="login-compact-info__item">
-              <span className="login-compact-info__label">Access Note</span>
-              <p className="text-sm leading-6 text-slate-600">{variantConfig.heroNote}</p>
-            </div>
+          <div className="login-welcome-copy">
+            <h1 className="login-display-title">Welcome Back</h1>
+            <p className="login-display-copy">
+              Sign in to continue your learning journey.
+            </p>
           </div>
 
-          <div className="login-role-grid mt-5 sm:mt-6">
-            {variantConfig.allowedRoles.map((role) => (
-              <Link
-                key={role}
-                to={`${variantConfig.primaryRoute}/${role}`}
-                className={`login-role-tile rounded-[20px] border px-4 py-3 text-left transition sm:rounded-[24px] sm:px-5 sm:py-4 ${
-                  roleHint === role
-                    ? 'border-transparent bg-primary text-white shadow-[0_18px_36px_rgba(15,81,50,0.22)]'
-                    : 'border-white/60 bg-white/68 text-slate-700 hover:bg-white'
-                }`}
-              >
-                <p className="text-xs font-semibold uppercase tracking-[0.18em] opacity-80">Access Role</p>
-                <p className="mt-2 break-words text-base font-semibold sm:text-lg">{ROLE_LABELS[role]}</p>
-              </Link>
-            ))}
+          <div className="login-campus-illustration" aria-hidden="true">
+            <div className="login-cloud login-cloud--one" />
+            <div className="login-cloud login-cloud--two" />
+            <div className="login-cloud login-cloud--three" />
+            <div className="login-campus-illustration__birds">
+              <span />
+              <span />
+              <span />
+            </div>
+            <div className="login-campus-illustration__ground" />
+            <div className="login-campus-illustration__building">
+              <div className="login-campus-illustration__roof" />
+              <div className="login-campus-illustration__tower">
+                <div className="login-campus-illustration__clock" />
+              </div>
+              <div className="login-campus-illustration__body">
+                <span />
+                <span />
+                <span />
+                <span />
+                <span />
+                <span />
+                <span />
+                <span />
+                <span />
+                <span />
+                <span />
+                <span />
+              </div>
+              <div className="login-campus-illustration__door" />
+            </div>
+            <div className="login-tree login-tree--left" />
+            <div className="login-tree login-tree--right" />
+          </div>
+
+          <div className="login-benefit-grid">
+            <article className="login-benefit-card">
+              <span className="login-benefit-card__icon"><StudentIcon /></span>
+              <p className="login-benefit-card__title">Quality Education</p>
+              <p className="login-benefit-card__copy">Excellence in learning</p>
+            </article>
+            <article className="login-benefit-card">
+              <span className="login-benefit-card__icon"><ShieldIcon /></span>
+              <p className="login-benefit-card__title">Secure &amp; Safe</p>
+              <p className="login-benefit-card__copy">Your data is protected</p>
+            </article>
+            <article className="login-benefit-card">
+              <span className="login-benefit-card__icon"><ParentIcon /></span>
+              <p className="login-benefit-card__title">Connected Community</p>
+              <p className="login-benefit-card__copy">Students, parents, staff</p>
+            </article>
           </div>
 
         </section>
 
-        <section className="glass-card login-auth-panel min-w-0 p-5 sm:p-7 lg:p-8">
+        <section className="login-auth-panel login-auth-card min-w-0 p-5 sm:p-7 lg:p-8">
           {sessionMessage && (
             <div className="status-banner status-banner--warning mb-4 text-sm">
               {sessionMessage}
@@ -205,40 +303,55 @@ function Login({ variant = 'family', defaultRole = '' }) {
           )}
           <div className="login-auth-panel__intro">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-500">Sign In</p>
-              <h2 className="mt-2 break-words font-heading text-2xl text-primary sm:text-3xl">
-                Enter Credentials
+              <h2 className="login-auth-title">
+                Sign In
               </h2>
+              <div className="login-auth-divider" aria-hidden="true">
+                <span />
+                <span className="login-auth-divider__badge"><ShieldIcon /></span>
+                <span />
+              </div>
             </div>
-            <p className="text-sm leading-6 text-slate-600">
-              Enter your credentials to continue into the {ROLE_LABELS[roleHint].toLowerCase()} workspace.
+            <p className="login-auth-copy">
+              Choose your portal and sign in to continue.
             </p>
           </div>
 
-          <div className="login-auth-panel__context">
-            <div>
-              <span className="login-auth-panel__context-label">Workspace</span>
-              <p className="login-auth-panel__context-value">{ROLE_LABELS[roleHint]}</p>
-            </div>
-            <div>
-              <span className="login-auth-panel__context-label">Portal</span>
-              <p className="login-auth-panel__context-value">{variant === 'family' ? 'Family Access' : 'Staff Access'}</p>
-            </div>
+          <div className="login-portal-tabs" role="tablist" aria-label="Portal access options">
+            {PORTAL_TABS.map((tab) => {
+              const isActive = activePortalTab === tab.key;
+              const icon = tab.key === 'student' ? <StudentIcon /> : tab.key === 'parent' ? <ParentIcon /> : <StaffIcon />;
+              return (
+                <Link
+                  key={tab.key}
+                  to={tab.route}
+                  role="tab"
+                  aria-selected={isActive}
+                  className={`login-portal-tab ${isActive ? 'login-portal-tab--active' : ''}`}
+                >
+                  {icon}
+                  <span>{tab.label}</span>
+                </Link>
+              );
+            })}
           </div>
 
           <form className="login-auth-panel__form" onSubmit={onSubmit}>
             <label className="field-shell block text-sm">
-              <span className="field-label">Email</span>
-              <input
-                name="email"
-                type="email"
-                required
-                value={form.email}
-                onChange={onChange}
-                className={`form-field ${emailError ? 'form-field--error' : ''}`.trim()}
-                placeholder="you@example.com"
-              />
-              {emailError ? <p className="field-error">{emailError}</p> : <p className="field-help">Use the exact email issued for this portal.</p>}
+              <span className="field-label login-field-label">Email Address</span>
+              <div className="login-field-shell">
+                <span className="login-field-icon"><MailIcon /></span>
+                <input
+                  name="email"
+                  type="email"
+                  required
+                  value={form.email}
+                  onChange={onChange}
+                  className={`form-field login-form-field ${emailError ? 'form-field--error' : ''}`.trim()}
+                  placeholder="Enter your email address"
+                />
+              </div>
+              {emailError ? <p className="field-error">{emailError}</p> : null}
             </label>
             <PasswordField
               label="Password"
@@ -246,11 +359,12 @@ function Login({ variant = 'family', defaultRole = '' }) {
               required
               value={form.password}
               onChange={onChange}
-              placeholder="Enter password"
+              placeholder="Enter your password"
               showPassword={showPassword}
               onToggleVisibility={() => setShowPassword((prev) => !prev)}
               autoComplete="current-password"
-              helperText="Passwords are case-sensitive."
+              className="form-field login-form-field login-form-field--password w-full pr-20 text-sm"
+              helperText=""
             />
 
             {error && (
@@ -262,45 +376,51 @@ function Login({ variant = 'family', defaultRole = '' }) {
               />
             )}
 
+            <div className="login-form-row">
+              <label className="login-remember-toggle">
+                <input
+                  type="checkbox"
+                  name="rememberMe"
+                  checked={Boolean(form.rememberMe)}
+                  onChange={onChange}
+                />
+                <span>Remember me</span>
+              </label>
+              <Link
+                to={`/forgot-password?variant=${encodeURIComponent(variant)}&role=${encodeURIComponent(roleHint)}`}
+                className="interactive-link login-forgot-link"
+              >
+                Forgot Password?
+              </Link>
+            </div>
+
             <button
               type="submit"
               disabled={loading || !canSubmit || Boolean(emailError)}
-              className="interactive-button w-full rounded-full bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-70"
+              className="interactive-button login-submit-button"
             >
-              {loading ? 'Signing in...' : 'Sign In'}
+              <span>{loading ? 'Signing in...' : 'Sign In'}</span>
             </button>
           </form>
 
           <div className="login-auth-panel__meta">
-            <p className="text-sm text-slate-600">
-              Forgot your password?{' '}
-              <Link
-                to={`/forgot-password?variant=${encodeURIComponent(variant)}&role=${encodeURIComponent(roleHint)}`}
-                className="interactive-link font-semibold text-primary hover:underline"
-              >
-                Reset it here
-              </Link>
-            </p>
-
-            <div className="text-sm text-slate-600">
-              {variant === 'family' ? (
-                <>
-                  Internal school operations account?{' '}
-                  <Link to="/staff-access" className="interactive-link font-semibold text-primary hover:underline">
-                    Open staff access
-                  </Link>
-                </>
-              ) : (
-                <>
-                  Student or parent account?{' '}
-                  <Link to="/login" className="interactive-link font-semibold text-primary hover:underline">
-                    Open family login
-                  </Link>
-                </>
-              )}
+            <div className="login-help-divider" aria-hidden="true">
+              <span />
+              <p>Need help?</p>
+              <span />
+            </div>
+            <div className="login-help-card">
+              <span className="login-help-card__icon"><HeadsetIcon /></span>
+              <div>
+                <p className="login-help-card__title">Having trouble signing in?</p>
+                <p className="login-help-card__copy">
+                  Contact the school administrator for assistance.
+                </p>
+              </div>
             </div>
           </div>
         </section>
+        </div>
       </div>
     </main>
   );

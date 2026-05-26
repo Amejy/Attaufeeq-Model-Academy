@@ -2,6 +2,34 @@ function normalizeValue(value) {
   return String(value || '').trim();
 }
 
+function normalizeOrigin(origin) {
+  const normalizedOrigin = normalizeValue(origin);
+  return normalizedOrigin ? normalizedOrigin.replace(/\/+$/, '') : '';
+}
+
+export function resolvePublicAppOrigin() {
+  const envOrigin =
+    import.meta?.env?.VITE_PUBLIC_APP_URL ||
+    import.meta?.env?.VITE_APP_URL ||
+    import.meta?.env?.VITE_SITE_URL;
+
+  if (envOrigin) {
+    return normalizeOrigin(envOrigin);
+  }
+
+  if (typeof window === 'undefined') {
+    return '';
+  }
+
+  const host = normalizeValue(window.location.hostname).toLowerCase();
+  const isLocalhost =
+    host === 'localhost' ||
+    host === '127.0.0.1' ||
+    host === '0.0.0.0';
+
+  return isLocalhost ? '' : normalizeOrigin(window.location.origin);
+}
+
 export function buildResultCheckerUrl({
   studentIdentifier = '',
   term = '',
@@ -21,8 +49,9 @@ export function buildResultCheckerUrl({
   if (normalizedToken) params.set('token', normalizedToken);
 
   const basePath = `/result-checker${params.toString() ? `?${params.toString()}` : ''}`;
-  if (!normalizeValue(origin)) return basePath;
-  return `${String(origin).replace(/\/+$/, '')}${basePath}`;
+  const normalizedOrigin = normalizeOrigin(origin) || resolvePublicAppOrigin();
+  if (!normalizedOrigin) return basePath;
+  return `${normalizedOrigin}${basePath}`;
 }
 
 export function buildVerificationCode({

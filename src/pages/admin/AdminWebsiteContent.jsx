@@ -1,7 +1,10 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import PortalLayout from '../../components/PortalLayout';
+import SmartImage from '../../components/SmartImage';
 import { useAuth } from '../../context/AuthContext';
 import { useSiteContent } from '../../context/SiteContentContext';
+import { DEFAULT_IMAGES } from '../../utils/defaultImages';
+import { getSectionMedia } from '../../utils/publicSectionImages';
 
 const emptyContent = {
   branding: {},
@@ -24,6 +27,34 @@ const emptyHistorySection = { title: '', paragraphs: [], bullets: [] };
 const emptyStaff = { name: '', role: '', image: '', bio: '' };
 const emptyPhoto = { url: '', alt: '' };
 const emptyModule = { title: '', text: '' };
+
+const IMAGE_LIBRARY = {
+  home: getSectionMedia('home').allImages,
+  schoolwebsite: getSectionMedia('schoolwebsite').allImages,
+  madrasawebsite: getSectionMedia('madrasawebsite').allImages,
+  gallery: getSectionMedia('gallery').allImages,
+  academics: getSectionMedia('academics').allImages,
+  contact: getSectionMedia('contact').allImages,
+  admission: getSectionMedia('admission').allImages,
+  result: getSectionMedia('result').allImages
+};
+
+const MIXED_SCHOOL_IMAGES = [
+  ...IMAGE_LIBRARY.home,
+  ...IMAGE_LIBRARY.schoolwebsite,
+  ...IMAGE_LIBRARY.academics,
+  ...IMAGE_LIBRARY.contact
+];
+
+function uniqueImageOptions(images = []) {
+  const seen = new Set();
+  return images.filter((item) => {
+    const key = String(item?.url || '');
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
 
 function normalizeContent(content = {}) {
   return {
@@ -96,6 +127,58 @@ function TextAreaField({ label, value, onChange, placeholder, rows = 4 }) {
   );
 }
 
+function AssetField({ label, value, onChange, placeholder, suggestions = [] }) {
+  const options = uniqueImageOptions(suggestions);
+
+  return (
+    <div className="grid gap-2 text-sm">
+      <span className="font-semibold text-slate-700">{label}</span>
+      <input
+        value={value || ''}
+        placeholder={placeholder}
+        onChange={(event) => onChange(event.target.value)}
+        className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+      />
+      {value ? (
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-slate-50 p-2">
+          <SmartImage
+            src={value}
+            fallbackSrc={DEFAULT_IMAGES.campus}
+            alt={label}
+            className="h-28 w-full rounded-lg object-cover"
+          />
+        </div>
+      ) : null}
+      {options.length ? (
+        <div className="grid gap-2 rounded-xl border border-slate-200 bg-slate-50 p-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Folder Images</p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            {options.map((item) => (
+              <button
+                key={item.url}
+                type="button"
+                onClick={() => onChange(item.url)}
+                className="overflow-hidden rounded-lg border border-slate-200 bg-white text-left hover:border-emerald-300"
+              >
+                <SmartImage
+                  src={item.url}
+                  fallbackSrc={DEFAULT_IMAGES.campus}
+                  alt={item.alt}
+                  className="h-20 w-full object-cover"
+                />
+                <div className="px-2 py-2">
+                  <p className="text-[11px] font-semibold text-slate-700">{item.alt}</p>
+                  <p className="mt-1 break-all text-[10px] text-slate-500">{item.url}</p>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 function ListEditor({ label, items, onChange, placeholder }) {
   const list = Array.isArray(items) ? items : [];
 
@@ -153,14 +236,25 @@ function ObjectListEditor({ label, items, onChange, fields, defaultItem }) {
           <div key={`${label}-${index}`} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
             <div className="grid gap-3 md:grid-cols-2">
               {fields.map((field) => (
-                <TextField
-                  key={field.key}
-                  label={field.label}
-                  value={item?.[field.key]}
-                  onChange={(value) => updateItem(index, field.key, value)}
-                  placeholder={field.placeholder}
-                  type={field.type}
-                />
+                field.type === 'asset' ? (
+                  <AssetField
+                    key={field.key}
+                    label={field.label}
+                    value={item?.[field.key]}
+                    onChange={(value) => updateItem(index, field.key, value)}
+                    placeholder={field.placeholder}
+                    suggestions={field.suggestions}
+                  />
+                ) : (
+                  <TextField
+                    key={field.key}
+                    label={field.label}
+                    value={item?.[field.key]}
+                    onChange={(value) => updateItem(index, field.key, value)}
+                    placeholder={field.placeholder}
+                    type={field.type}
+                  />
+                )
               ))}
             </div>
             <div className="mt-3 flex justify-end">
@@ -276,10 +370,11 @@ function ProgramsEditor({ items, onChange }) {
                 value={program?.title}
                 onChange={(value) => updateItem(index, 'title', value)}
               />
-              <TextField
+              <AssetField
                 label="Image URL"
                 value={program?.image}
                 onChange={(value) => updateItem(index, 'image', value)}
+                suggestions={index === 0 ? IMAGE_LIBRARY.schoolwebsite : IMAGE_LIBRARY.madrasawebsite}
               />
             </div>
             <TextAreaField
@@ -421,6 +516,13 @@ function AdminWebsiteContent() {
 
       <form onSubmit={handleSave} className="grid gap-5">
         <section className="rounded-2xl border border-slate-200 bg-white p-4">
+          <h2 className="font-heading text-2xl text-primary">Public Image Libraries</h2>
+          <p className="mt-2 text-sm leading-7 text-slate-600">
+            These image pickers are wired to the same public folders now used by the live pages. The page header uses the folder&apos;s main image, while the remaining images are used inside the page.
+          </p>
+        </section>
+
+        <section className="rounded-2xl border border-slate-200 bg-white p-4">
           <h2 className="font-heading text-2xl text-primary">Branding</h2>
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             <TextField label="School Name" value={sections.branding.name} onChange={(value) => setSections((prev) => ({
@@ -435,10 +537,10 @@ function AdminWebsiteContent() {
               ...prev,
               branding: { ...prev.branding, domain: value }
             }))} />
-            <TextField label="Logo URL" value={sections.branding.logoUrl} onChange={(value) => setSections((prev) => ({
+            <AssetField label="Logo URL" value={sections.branding.logoUrl} onChange={(value) => setSections((prev) => ({
               ...prev,
               branding: { ...prev.branding, logoUrl: value }
-            }))} />
+            }))} suggestions={[{ url: '/images/logo.png', alt: 'School logo' }]} />
             <TextField label="Address" value={sections.branding.address} onChange={(value) => setSections((prev) => ({
               ...prev,
               branding: { ...prev.branding, address: value }
@@ -525,7 +627,7 @@ function AdminWebsiteContent() {
               fields={[
                 { key: 'title', label: 'Title' },
                 { key: 'description', label: 'Description' },
-                { key: 'image', label: 'Image URL' },
+                { key: 'image', label: 'Image URL', type: 'asset', suggestions: [...IMAGE_LIBRARY.schoolwebsite, ...IMAGE_LIBRARY.madrasawebsite] },
                 { key: 'to', label: 'Route Link' },
                 { key: 'badge', label: 'Badge' },
                 { key: 'accent', label: 'Accent Gradient' }
@@ -592,7 +694,7 @@ function AdminWebsiteContent() {
               }))}
               defaultItem={emptyImage}
               fields={[
-                { key: 'url', label: 'Image URL' },
+                { key: 'url', label: 'Image URL', type: 'asset', suggestions: IMAGE_LIBRARY.home },
                 { key: 'alt', label: 'Alt Text' }
               ]}
             />
@@ -615,7 +717,7 @@ function AdminWebsiteContent() {
               fields={[
                 { key: 'title', label: 'Title' },
                 { key: 'text', label: 'Text' },
-                { key: 'image', label: 'Image URL' }
+                { key: 'image', label: 'Image URL', type: 'asset', suggestions: MIXED_SCHOOL_IMAGES }
               ]}
             />
             <TextAreaField label="Story Title" value={sections.home.storyTitle} onChange={(value) => setSections((prev) => ({
@@ -626,10 +728,10 @@ function AdminWebsiteContent() {
               ...prev,
               home: { ...prev.home, storyText: value }
             }))} />
-            <TextField label="Story Image URL" value={sections.home.storyImage} onChange={(value) => setSections((prev) => ({
+            <AssetField label="Story Image URL" value={sections.home.storyImage} onChange={(value) => setSections((prev) => ({
               ...prev,
               home: { ...prev.home, storyImage: value }
-            }))} />
+            }))} suggestions={IMAGE_LIBRARY.home} />
             <TextAreaField label="Programs Title" value={sections.home.programsTitle} onChange={(value) => setSections((prev) => ({
               ...prev,
               home: { ...prev.home, programsTitle: value }
@@ -671,14 +773,14 @@ function AdminWebsiteContent() {
               ...prev,
               about: { ...prev.about, signLabel: value }
             }))} />
-            <TextField label="Signature Image URL" value={sections.about.signatureImage} onChange={(value) => setSections((prev) => ({
+            <AssetField label="Signature Image URL" value={sections.about.signatureImage} onChange={(value) => setSections((prev) => ({
               ...prev,
               about: { ...prev.about, signatureImage: value }
-            }))} />
-            <TextField label="Main Image URL" value={sections.about.image} onChange={(value) => setSections((prev) => ({
+            }))} suggestions={[{ url: '/images/admin-signature.svg', alt: 'Admin signature' }]} />
+            <AssetField label="Main Image URL" value={sections.about.image} onChange={(value) => setSections((prev) => ({
               ...prev,
               about: { ...prev.about, image: value }
-            }))} />
+            }))} suggestions={IMAGE_LIBRARY.schoolwebsite} />
           </div>
           <div className="mt-4 grid gap-4">
             <TextAreaField label="History Text (fallback if no sections)" value={sections.about.historyText} onChange={(value) => setSections((prev) => ({
@@ -737,10 +839,10 @@ function AdminWebsiteContent() {
               ...prev,
               academics: { ...prev.academics, title: value }
             }))} />
-            <TextField label="Image URL" value={sections.academics.image} onChange={(value) => setSections((prev) => ({
+            <AssetField label="Image URL" value={sections.academics.image} onChange={(value) => setSections((prev) => ({
               ...prev,
               academics: { ...prev.academics, image: value }
-            }))} />
+            }))} suggestions={IMAGE_LIBRARY.academics} />
             <TextField label="Levels Title" value={sections.academics.levelsTitle} onChange={(value) => setSections((prev) => ({
               ...prev,
               academics: { ...prev.academics, levelsTitle: value }
@@ -803,7 +905,7 @@ function AdminWebsiteContent() {
               fields={[
                 { key: 'name', label: 'Name' },
                 { key: 'role', label: 'Role' },
-                { key: 'image', label: 'Image URL' },
+                { key: 'image', label: 'Image URL', type: 'asset', suggestions: MIXED_SCHOOL_IMAGES },
                 { key: 'bio', label: 'Bio' }
               ]}
             />
@@ -830,7 +932,7 @@ function AdminWebsiteContent() {
               }))}
               defaultItem={emptyPhoto}
               fields={[
-                { key: 'url', label: 'Image URL' },
+                { key: 'url', label: 'Image URL', type: 'asset', suggestions: IMAGE_LIBRARY.gallery },
                 { key: 'alt', label: 'Alt Text' }
               ]}
             />
@@ -848,10 +950,10 @@ function AdminWebsiteContent() {
               ...prev,
               madrasa: { ...prev.madrasa, title: value }
             }))} />
-            <TextField label="Image URL" value={sections.madrasa.image} onChange={(value) => setSections((prev) => ({
+            <AssetField label="Image URL" value={sections.madrasa.image} onChange={(value) => setSections((prev) => ({
               ...prev,
               madrasa: { ...prev.madrasa, image: value }
-            }))} />
+            }))} suggestions={IMAGE_LIBRARY.madrasawebsite} />
             <TextField label="Modules Title" value={sections.madrasa.modulesTitle} onChange={(value) => setSections((prev) => ({
               ...prev,
               madrasa: { ...prev.madrasa, modulesTitle: value }

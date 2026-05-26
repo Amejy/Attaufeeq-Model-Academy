@@ -7,12 +7,14 @@ function AdminAttendanceOverview() {
   const { apiJson } = useAuth();
   const [records, setRecords] = useState([]);
   const [classes, setClasses] = useState([]);
+  const [sessions, setSessions] = useState([]);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [showRows, setShowRows] = useState(true);
   const loadSeq = useRef(0);
   const [filters, setFilters] = useState({
+    sessionId: '',
     institution: '',
     date: '',
     classId: '',
@@ -25,18 +27,28 @@ function AdminAttendanceOverview() {
     setLoading(true);
     setRecords([]);
     setClasses([]);
+    setSessions([]);
     setSummary(null);
     try {
-      const classesData = await apiJson(
-        `/admin/classes${filters.institution ? `?institution=${encodeURIComponent(filters.institution)}` : ''}`
-      );
+      const [classesData, sessionsData] = await Promise.all([
+        apiJson(
+          `/admin/classes${filters.institution ? `?institution=${encodeURIComponent(filters.institution)}` : ''}`
+        ),
+        apiJson('/admin/academic-sessions')
+      ]);
       if (seq !== loadSeq.current) return;
       const classRows = classesData.classes || [];
+      const sessionRows = sessionsData.sessions || [];
+      const activeSession = sessionsData.activeSession || sessionRows.find((item) => item.isActive) || sessionRows[0] || null;
+      const effectiveSessionId = filters.sessionId && sessionRows.some((item) => item.id === filters.sessionId)
+        ? filters.sessionId
+        : activeSession?.id || '';
       const effectiveClassId = filters.classId && classRows.some((item) => item.id === filters.classId)
         ? filters.classId
         : '';
 
       const params = new URLSearchParams();
+      if (effectiveSessionId) params.set('sessionId', effectiveSessionId);
       if (filters.institution) params.set('institution', filters.institution);
       if (filters.date) params.set('date', filters.date);
       if (effectiveClassId) params.set('classId', effectiveClassId);
@@ -48,6 +60,10 @@ function AdminAttendanceOverview() {
       setRecords(recordsData.records || []);
       setSummary(recordsData.summary || null);
       setClasses(classRows);
+      setSessions(sessionRows);
+      if (filters.sessionId !== effectiveSessionId) {
+        setFilters((prev) => ({ ...prev, sessionId: effectiveSessionId }));
+      }
       if (filters.classId && !effectiveClassId) {
         setFilters((prev) => ({ ...prev, classId: '' }));
       }
@@ -59,7 +75,7 @@ function AdminAttendanceOverview() {
         setLoading(false);
       }
     }
-  }, [apiJson, filters.classId, filters.date, filters.institution, filters.term]);
+  }, [apiJson, filters.classId, filters.date, filters.institution, filters.sessionId, filters.term]);
 
   useEffect(() => {
     queueMicrotask(() => {
@@ -83,7 +99,11 @@ function AdminAttendanceOverview() {
         </button>
       }
     >
-      <div className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="grid gap-3 rounded-xl border border-slate-200 bg-white p-4 sm:grid-cols-2 xl:grid-cols-6">
+        <select value={filters.sessionId} onChange={(e) => setFilters((p) => ({ ...p, sessionId: e.target.value }))} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
+          {!sessions.length && <option value="">No sessions available</option>}
+          {sessions.map((item) => <option key={item.id} value={item.id}>{item.sessionName} {item.isActive ? '(Active)' : ''}</option>)}
+        </select>
         <select value={filters.institution} onChange={(e) => setFilters((p) => ({ ...p, institution: e.target.value, classId: '' }))} className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm">
           <option value="">All Institutions</option>
           {ADMIN_INSTITUTIONS.map((item) => <option key={item} value={item}>{item}</option>)}

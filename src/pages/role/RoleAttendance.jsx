@@ -8,11 +8,13 @@ import useDebouncedValue from '../../hooks/useDebouncedValue';
 function RoleAttendance({ role }) {
   const { apiJson, user } = useAuth();
   const [records, setRecords] = useState([]);
+  const [sessions, setSessions] = useState([]);
   const [summary, setSummary] = useState(null);
   const [name, setName] = useState('');
   const [children, setChildren] = useState([]);
   const [selectedChildId, setSelectedChildId] = useParentChildSelection(role, user);
   const [term, setTerm] = useState('');
+  const [sessionId, setSessionId] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
@@ -32,21 +34,34 @@ function RoleAttendance({ role }) {
       setLoading(true);
       setError('');
       setRecords([]);
+      setSessions([]);
       setSummary(null);
       setName('');
       setChildren([]);
       try {
+        const sessionsData = await apiJson('/results/sessions');
+        if (!isCurrent) return;
+        const sessionRows = sessionsData.sessions || [];
+        const activeSession = sessionsData.activeSession || sessionRows.find((item) => item.isActive) || sessionRows[0] || null;
+        const effectiveSessionId = sessionId && sessionRows.some((item) => item.id === sessionId)
+          ? sessionId
+          : activeSession?.id || '';
         const params = new URLSearchParams();
         if (role === 'parent' && selectedChildId) params.set('childId', selectedChildId);
+        if (effectiveSessionId) params.set('sessionId', effectiveSessionId);
         if (term) params.set('term', term);
         const query = params.toString() ? `?${params.toString()}` : '';
         const data = await apiJson(`/attendance/${role}${query}`);
         if (!isCurrent) return;
 
         setRecords(data.records || []);
+        setSessions(sessionRows);
         setSummary(data.summary || null);
         setName(data.student?.fullName || data.child?.fullName || '');
         setChildren(data.children || []);
+        if (sessionId !== effectiveSessionId) {
+          setSessionId(effectiveSessionId);
+        }
         if (role === 'parent' && data.child?.id && data.child.id !== selectedChildId) {
           setSelectedChildId(data.child.id);
         }
@@ -64,7 +79,7 @@ function RoleAttendance({ role }) {
     return () => {
       isCurrent = false;
     };
-  }, [role, apiJson, selectedChildId, term, setSelectedChildId]);
+  }, [role, apiJson, selectedChildId, sessionId, term, setSelectedChildId]);
 
   const filteredRecords = useMemo(() => {
     const query = debouncedSearch.toLowerCase();
@@ -95,6 +110,18 @@ function RoleAttendance({ role }) {
       {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
 
       <div className="mt-4 flex flex-wrap gap-2">
+        <select
+          value={sessionId}
+          onChange={(event) => setSessionId(event.target.value)}
+          className="rounded-md border border-slate-300 px-3 py-2 text-sm"
+        >
+          {!sessions.length && <option value="">No sessions available</option>}
+          {sessions.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.sessionName} {item.isActive ? '(Active)' : ''}
+            </option>
+          ))}
+        </select>
         <select
           value={term}
           onChange={(event) => setTerm(event.target.value)}

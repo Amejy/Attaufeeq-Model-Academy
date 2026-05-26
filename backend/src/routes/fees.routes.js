@@ -8,6 +8,8 @@ import { resolveStudentByIdentifier } from '../utils/studentCode.js';
 import { createResultTokens, assignResultToken, getAssignedResultToken } from '../repositories/resultTokenRepository.js';
 
 const feesRouter = Router();
+const SCHOOL_FEE_PAYMENT = 'school_fee';
+const SCRATCH_CARD_PAYMENT = 'scratch_card';
 
 function getActiveSessionId() {
   const sessions = adminStore.academicSessions || [];
@@ -22,6 +24,17 @@ function normalizeSessionId(value = '') {
 function matchesSession(recordSessionId, sessionId) {
   if (!sessionId) return true;
   return String(recordSessionId || '').trim() === sessionId;
+}
+
+const TERM_ORDER = ['First Term', 'Second Term', 'Third Term'];
+
+function resolveLatestTerm(values = []) {
+  return values.reduce((latest, value) => {
+    const normalized = String(value || '').trim();
+    if (!normalized) return latest;
+    if (!latest) return normalized;
+    return TERM_ORDER.indexOf(normalized) > TERM_ORDER.indexOf(latest) ? normalized : latest;
+  }, '');
 }
 
 function resolveEnrollmentClassId(studentId, sessionId = '') {
@@ -41,6 +54,39 @@ function getScratchCardSettings() {
     amountLabel: env.scratchCardAmountLabel,
     guide: env.scratchCardGuide
   };
+}
+
+function resolveCurrentTokenTerm(sessionId = '') {
+  const publishedResultsTerm = resolveLatestTerm(
+    (adminStore.results || [])
+      .filter((item) => item.published && matchesSession(item.sessionId, sessionId))
+      .map((item) => item.term)
+  );
+  if (publishedResultsTerm) return publishedResultsTerm;
+
+  const requestTerm = resolveLatestTerm(
+    (adminStore.paymentRequests || [])
+      .filter((item) => matchesSession(item.sessionId, sessionId))
+      .map((item) => item.term)
+  );
+  if (requestTerm) return requestTerm;
+
+  const paymentTerm = resolveLatestTerm(
+    (adminStore.payments || [])
+      .filter((item) => matchesSession(item.sessionId, sessionId))
+      .map((item) => item.term)
+  );
+  return paymentTerm || 'First Term';
+}
+
+function getTokenSalesControl(sessionId = '', term = '') {
+  return (adminStore.tokenSalesControls || []).find(
+    (item) => matchesSession(item.sessionId, sessionId) && String(item.term || '').trim() === String(term || '').trim()
+  ) || null;
+}
+
+function isTokenSaleEnabled(sessionId = '', term = '') {
+  return Boolean(getTokenSalesControl(sessionId, term)?.enabled);
 }
 
 async function buildReleasedTokenPayload(studentId, term, sessionId) {
@@ -67,10 +113,18 @@ function calculateStudentBalance(studentId, options = {}) {
   const classId = options.classIdOverride || resolveEnrollmentClassId(studentId, sessionId) || student.classId;
 
   const plans = adminStore.feePlans.filter(
-    (plan) => plan.classId === classId && matchesSession(plan.sessionId, sessionId) && (!term || plan.term === term)
+    (plan) =>
+      plan.classId === classId &&
+      matchesSession(plan.sessionId, sessionId) &&
+      plan.published !== false &&
+      (!term || plan.term === term)
   );
   const payments = adminStore.payments.filter(
-    (payment) => payment.studentId === studentId && matchesSession(payment.sessionId, sessionId) && (!term || payment.term === term)
+    (payment) =>
+      payment.studentId === studentId &&
+      matchesSession(payment.sessionId, sessionId) &&
+      (payment.paymentType || SCHOOL_FEE_PAYMENT) === SCHOOL_FEE_PAYMENT &&
+      (!term || payment.term === term)
   );
 
   const totalPlan = plans.reduce((sum, item) => sum + Number(item.amount || 0), 0);
@@ -120,7 +174,22 @@ feesRouter.post('/admin/plans', requireAuth, requireRole('admin', 'admissions'),
     return res.status(400).json({ message: 'A fee plan already exists for this class, term, and session.' });
   }
 
-  const plan = { id: makeId('fee'), classId, term, amount: normalizedAmount, sessionId };
+  const shouldPublish = req.body?.published === undefined
+    ? req.user?.role !== 'admissions'
+    : Boolean(req.body?.published);
+  const timestamp = shouldPublish ? new Date().toISOString() : '';
+
+  const plan = {
+    id: makeId('fee'),
+    classId,
+    term,
+    amount: normalizedAmount,
+    sessionId,
+    published: shouldPublish,
+    publishedAt: timestamp,
+    publishedByUserId: shouldPublish ? String(req.user?.sub || req.user?.id || '') : '',
+    publishedByEmail: shouldPublish ? String(req.user?.email || '') : ''
+  };
   adminStore.feePlans.unshift(plan);
   return res.status(201).json({ plan });
 });
@@ -162,12 +231,38 @@ feesRouter.put('/admin/plans/:id', requireAuth, requireRole('admin', 'admissions
     return res.status(400).json({ message: 'A fee plan already exists for this class, term, and session.' });
   }
 
+  const shouldPublish = req.body?.published === undefined ? current.published !== false : Boolean(req.body?.published);
+  const publishedChanged = shouldPublish !== (current.published !== false);
+
   adminStore.feePlans[index] = {
     ...current,
     classId,
     term,
     amount: normalizedAmount,
-    sessionId
+    sessionId,
+    published: shouldPublish,
+    publishedAt: shouldPublish ? (publishedChanged ? new Date().toISOString() : current.publishedAt || '') : '',
+    publishedByUserId: shouldPublish ? String(req.user?.sub || req.user?.id || current.publishedByUserId || '') : '',
+    publishedByEmail: shouldPublish ? String(req.user?.email || current.publishedByEmail || '') : ''
+  };
+
+  return res.json({ plan: adminStore.feePlans[index] });
+});
+
+feesRouter.put('/admin/plans/:id/publish', requireAuth, requireRole('admin', 'admissions'), (req, res) => {
+  const { id } = req.params;
+  const index = adminStore.feePlans.findIndex((item) => item.id === id);
+  if (index === -1) return res.status(404).json({ message: 'Fee plan not found.' });
+
+  const current = adminStore.feePlans[index];
+  const published = Boolean(req.body?.published);
+
+  adminStore.feePlans[index] = {
+    ...current,
+    published,
+    publishedAt: published ? new Date().toISOString() : '',
+    publishedByUserId: published ? String(req.user?.sub || req.user?.id || '') : '',
+    publishedByEmail: published ? String(req.user?.email || '') : ''
   };
 
   return res.json({ plan: adminStore.feePlans[index] });
@@ -182,6 +277,7 @@ feesRouter.delete('/admin/plans/:id', requireAuth, requireRole('admin', 'admissi
 
 feesRouter.get('/admin/payments', requireAuth, requireRole('admin', 'admissions'), (req, res) => {
   const sessionId = normalizeSessionId(req.query.sessionId);
+  const tokenSalesTerm = resolveCurrentTokenTerm(sessionId);
   const payments = adminStore.payments.filter((item) => matchesSession(item.sessionId, sessionId));
   const paymentRequests = (adminStore.paymentRequests || [])
     .filter((item) => matchesSession(item.sessionId, sessionId))
@@ -195,7 +291,72 @@ feesRouter.get('/admin/payments', requireAuth, requireRole('admin', 'admissions'
         tokenReleasedAt: request.tokenReleasedAt || ''
       };
     });
-  return res.json({ payments, paymentRequests, sessionId });
+  return res.json({
+    payments,
+    paymentRequests,
+    sessionId,
+    tokenSalesControl: {
+      term: tokenSalesTerm,
+      enabled: isTokenSaleEnabled(sessionId, tokenSalesTerm)
+    }
+  });
+});
+
+feesRouter.get('/admin/token-sales-control', requireAuth, requireRole('admin', 'admissions'), (req, res) => {
+  const sessionId = normalizeSessionId(req.query.sessionId);
+  const requestedTerm = String(req.query.term || '').trim();
+  const term = requestedTerm || resolveCurrentTokenTerm(sessionId);
+
+  return res.json({
+    tokenSalesControl: {
+      sessionId,
+      term,
+      enabled: isTokenSaleEnabled(sessionId, term)
+    }
+  });
+});
+
+feesRouter.put('/admin/token-sales-control', requireAuth, requireRole('admin'), (req, res) => {
+  const sessionId = normalizeSessionId(req.body?.sessionId);
+  const requestedTerm = String(req.body?.term || '').trim();
+  const term = requestedTerm || resolveCurrentTokenTerm(sessionId);
+  const enabled = Boolean(req.body?.enabled);
+
+  if (!sessionId) {
+    return res.status(400).json({ message: 'Active academic session is required.' });
+  }
+  if (!term) {
+    return res.status(400).json({ message: 'Term is required for token sale control.' });
+  }
+
+  if (!adminStore.tokenSalesControls) adminStore.tokenSalesControls = [];
+  const existing = adminStore.tokenSalesControls.find(
+    (item) => matchesSession(item.sessionId, sessionId) && String(item.term || '').trim() === term
+  );
+
+  if (existing) {
+    existing.enabled = enabled;
+    existing.enabledAt = new Date().toISOString();
+    existing.enabledByUserId = String(req.user?.sub || req.user?.id || '');
+    existing.enabledByEmail = String(req.user?.email || '');
+  } else {
+    adminStore.tokenSalesControls.unshift({
+      sessionId,
+      term,
+      enabled,
+      enabledAt: new Date().toISOString(),
+      enabledByUserId: String(req.user?.sub || req.user?.id || ''),
+      enabledByEmail: String(req.user?.email || '')
+    });
+  }
+
+  return res.json({
+    tokenSalesControl: {
+      sessionId,
+      term,
+      enabled
+    }
+  });
 });
 
 feesRouter.post('/admin/payments', requireAuth, requireRole('admin', 'admissions'), (req, res) => {
@@ -229,6 +390,7 @@ feesRouter.post('/admin/payments', requireAuth, requireRole('admin', 'admissions
     term,
     amountPaid: normalizedAmountPaid,
     method,
+    paymentType: SCHOOL_FEE_PAYMENT,
     sessionId,
     paidAt: new Date().toISOString()
   };
@@ -264,6 +426,7 @@ feesRouter.put('/admin/payment-requests/:id', requireAuth, requireRole('admin', 
       term: request.term,
       amountPaid: Number(request.amountPaid || 0),
       method: request.method || 'receipt upload',
+      paymentType: SCRATCH_CARD_PAYMENT,
       sessionId: request.sessionId,
       paidAt: request.reviewedAt,
       receiptRequestId: request.id
@@ -279,6 +442,9 @@ feesRouter.post('/admin/payment-requests/:id/release-token', requireAuth, requir
   if (!request) return res.status(404).json({ message: 'Payment request not found.' });
   if (request.status !== 'approved') {
     return res.status(400).json({ message: 'Approve the receipt before releasing a result token.' });
+  }
+  if (!isTokenSaleEnabled(request.sessionId, request.term)) {
+    return res.status(400).json({ message: 'Token sales are closed for this term. Ask the admin to enable token sales first.' });
   }
 
   const student = adminStore.students.find((item) => item.id === request.studentId);
@@ -398,6 +564,7 @@ feesRouter.post('/admin/payments/bulk', requireAuth, requireRole('admin', 'admis
       term,
       amountPaid,
       method,
+      paymentType: SCHOOL_FEE_PAYMENT,
       sessionId,
       paidAt: new Date().toISOString()
     };
@@ -444,7 +611,11 @@ feesRouter.get('/student', requireAuth, requireRole('student'), async (req, res)
     sessionId,
     paymentRequests,
     scratchCard: getScratchCardSettings(),
-    releasedToken: await buildReleasedTokenPayload(student.id, term || 'First Term', sessionId)
+    releasedToken: await buildReleasedTokenPayload(student.id, term || 'First Term', sessionId),
+    tokenSalesControl: {
+      term,
+      enabled: isTokenSaleEnabled(sessionId, term)
+    }
   });
 });
 
@@ -469,7 +640,11 @@ feesRouter.get('/parent', requireAuth, requireRole('parent'), async (req, res) =
     sessionId,
     paymentRequests,
     scratchCard: getScratchCardSettings(),
-    releasedToken: await buildReleasedTokenPayload(child.id, term || 'First Term', sessionId)
+    releasedToken: await buildReleasedTokenPayload(child.id, term || 'First Term', sessionId),
+    tokenSalesControl: {
+      term,
+      enabled: isTokenSaleEnabled(sessionId, term)
+    }
   });
 });
 
@@ -484,6 +659,9 @@ feesRouter.post('/student/payment-requests', requireAuth, requireRole('student')
 
   if (!student) return res.status(400).json({ message: 'No student profile found for this portal account.' });
   if (!term || !sessionId) return res.status(400).json({ message: 'term and active session are required.' });
+  if (!isTokenSaleEnabled(sessionId, term)) {
+    return res.status(400).json({ message: 'Result token sales are not open yet for this term. Wait for the admin to enable token sales after results are out.' });
+  }
   if (!Number.isFinite(amountPaid) || amountPaid <= 0) {
     return res.status(400).json({ message: 'amountPaid must be a positive number.' });
   }
@@ -506,6 +684,7 @@ feesRouter.post('/student/payment-requests', requireAuth, requireRole('student')
     sessionId,
     amountPaid,
     method,
+    requestType: SCRATCH_CARD_PAYMENT,
     receiptName,
     receiptDataUrl,
     status: 'pending',
@@ -537,6 +716,9 @@ feesRouter.post('/parent/payment-requests', requireAuth, requireRole('parent'), 
 
   if (!child) return res.status(400).json({ message: 'No child profile found for this parent.' });
   if (!term || !sessionId) return res.status(400).json({ message: 'term and active session are required.' });
+  if (!isTokenSaleEnabled(sessionId, term)) {
+    return res.status(400).json({ message: 'Result token sales are not open yet for this term. Wait for the admin to enable token sales after results are out.' });
+  }
   if (!Number.isFinite(amountPaid) || amountPaid <= 0) {
     return res.status(400).json({ message: 'amountPaid must be a positive number.' });
   }
@@ -559,6 +741,7 @@ feesRouter.post('/parent/payment-requests', requireAuth, requireRole('parent'), 
     sessionId,
     amountPaid,
     method,
+    requestType: SCRATCH_CARD_PAYMENT,
     receiptName,
     receiptDataUrl,
     status: 'pending',

@@ -413,8 +413,8 @@ function RoleMessages() {
           description="Teacher contacts now follow the active child so you can start the right conversation for each student."
         />
       )}
-      <div className="thread-shell lg:grid-cols-3 lg:[grid-template-columns:minmax(18rem,0.95fr)_minmax(0,1.45fr)]">
-        <section className="thread-panel interactive-card p-4 lg:col-span-1">
+      <div className="thread-shell lg:grid-cols-3 lg:[grid-template-columns:minmax(20rem,0.95fr)_minmax(0,1.45fr)]">
+        <section className="thread-panel min-w-0 p-4 lg:col-span-1">
           <h2 className="text-wrap-safe font-heading text-xl text-primary">Threads</h2>
           <p className="text-wrap-safe mt-1 text-sm text-slate-600">Search, filter, and reopen conversations without losing context.</p>
           <div className="mt-3 grid gap-3">
@@ -649,7 +649,7 @@ function RoleMessages() {
           </div>
         </section>
 
-        <section className="thread-panel p-4 lg:col-span-2">
+        <section className="thread-panel min-w-0 p-4 lg:col-span-2">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="min-w-0">
               <h2 className="text-wrap-safe font-heading text-xl text-primary">{activeThread?.title || 'Select a thread'}</h2>

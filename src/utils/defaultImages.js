@@ -1,13 +1,20 @@
+import { getSectionMedia } from './publicSectionImages';
+
+const schoolWebsiteMedia = getSectionMedia('schoolwebsite');
+const galleryMedia = getSectionMedia('gallery');
+const madrasaMedia = getSectionMedia('madrasawebsite');
+const homeMedia = getSectionMedia('home');
+
 export const DEFAULT_IMAGES = {
-  campus: '/images/schoolwebsite1.png',
-  classroom: '/images/schoolweb2.png',
-  students: '/images/schoolweb3.png',
-  community: '/images/schoolweb4.png',
-  gallery: '/images/gallery1.png',
-  galleryAlt: '/images/gallery2.png',
-  galleryWide: '/images/gallery3.png',
-  galleryEvent: '/images/gallery4.png',
-  madrasa: '/images/gallery5.png',
+  campus: schoolWebsiteMedia.headerImage?.url || '/images/logo.png',
+  classroom: schoolWebsiteMedia.supportingImages[0]?.url || schoolWebsiteMedia.headerImage?.url || '/images/logo.png',
+  students: homeMedia.supportingImages[0]?.url || schoolWebsiteMedia.supportingImages[1]?.url || schoolWebsiteMedia.headerImage?.url || '/images/logo.png',
+  community: schoolWebsiteMedia.supportingImages[2]?.url || schoolWebsiteMedia.supportingImages[0]?.url || schoolWebsiteMedia.headerImage?.url || '/images/logo.png',
+  gallery: galleryMedia.headerImage?.url || schoolWebsiteMedia.headerImage?.url || '/images/logo.png',
+  galleryAlt: galleryMedia.supportingImages[0]?.url || galleryMedia.headerImage?.url || '/images/logo.png',
+  galleryWide: galleryMedia.supportingImages[1]?.url || galleryMedia.headerImage?.url || '/images/logo.png',
+  galleryEvent: galleryMedia.supportingImages[2]?.url || galleryMedia.headerImage?.url || '/images/logo.png',
+  madrasa: madrasaMedia.headerImage?.url || schoolWebsiteMedia.headerImage?.url || '/images/logo.png',
 };
 
 export const DEFAULT_HERO_IMAGES = [

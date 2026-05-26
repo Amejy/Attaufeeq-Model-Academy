@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import request from 'supertest';
 import app from '../src/app.js';
 import { adminStore } from '../src/data/adminStore.js';
-import { ensureActiveAcademicSession } from '../src/repositories/academicSessionRepository.js';
+import { createAcademicSession, ensureActiveAcademicSession } from '../src/repositories/academicSessionRepository.js';
 import { createClass, deleteClassById } from '../src/repositories/classRepository.js';
 import { createSubjectResult, getFinalResult } from '../src/repositories/subjectResultRepository.js';
 import { upsertResult } from '../src/repositories/resultRepository.js';
@@ -179,6 +179,204 @@ test('admin publish is blocked until every assigned subject result is submitted'
     adminStore.students = adminStore.students.filter((item) => item.id !== studentId);
     adminStore.classes = adminStore.classes.filter((item) => item.id !== classId);
     await cleanupUser(studentUser.id);
+    await cleanupUser(user.id);
+  });
+});
+
+test('admin report card preview includes manual overrides and report settings', async () => {
+  await withAdminStoreLock(async () => {
+    const nonce = Date.now();
+    const session = await ensureActiveAcademicSession({ sessionName: '2025/2026' });
+    const term = 'First Term';
+    const classId = `cls-report-${nonce}`;
+    const studentId = `stu-report-${nonce}`;
+    const previousSettings = structuredClone(adminStore.reportSettings || {});
+
+    adminStore.classes.push({ id: classId, name: 'JSS 1', arm: 'A', institution: 'ATTAUFEEQ Model Academy' });
+    adminStore.students.push({
+      id: studentId,
+      fullName: 'Preview Student',
+      classId,
+      level: 'JSS 1',
+      institution: 'ATTAUFEEQ Model Academy',
+      accountStatus: 'active'
+    });
+    adminStore.studentEnrollments = [
+      ...(adminStore.studentEnrollments || []),
+      { id: `enr-report-${nonce}`, studentId, classId, sessionId: session.id }
+    ];
+    adminStore.reportSettings = {
+      headName: 'Mrs. Stable Head',
+      headTitle: 'Head Teacher',
+      signatureImage: '/api/uploads/public/head-signature-test',
+      parentAcknowledgementText: 'Parent has reviewed the official report.',
+      footerNote: 'Official report preview'
+    };
+    adminStore.reportRemarks.unshift({
+      id: `rrm-report-${nonce}`,
+      studentId,
+      classId,
+      sessionId: session.id,
+      term,
+      strengths: '',
+      weaknesses: '',
+      classTeacherRemark: 'Steady effort.',
+      headTeacherRemark: 'Approved for promotion.',
+      override: {
+        attendanceSummary: {
+          totalSchoolDays: 80,
+          daysPresent: 76,
+          daysAbsent: 4,
+          lateComing: 2,
+          attendanceRate: 95,
+          attendanceRemark: 'Manual attendance summary'
+        },
+        behaviorRatings: {
+          discipline: 'A',
+          responsibility: 'B',
+          cooperation: 'A',
+          respect: 'A',
+          initiative: 'B'
+        }
+      },
+      updatedAt: new Date().toISOString()
+    });
+
+    const credentials = buildAdminCredentials();
+    const user = await createAdminAccount(credentials);
+    const login = await loginAs(credentials);
+    assert.equal(login.status, 200);
+
+    const response = await request(app)
+      .get(`/api/results/admin/report-card/${studentId}?term=${encodeURIComponent(term)}&sessionId=${encodeURIComponent(session.id)}`)
+      .set(authHeader(login.body.token));
+
+    assert.equal(response.status, 200, JSON.stringify(response.body));
+    assert.equal(response.body.reportCard?.attendanceSummary?.totalSchoolDays, 80);
+    assert.equal(response.body.reportCard?.attendanceSummary?.daysPresent, 76);
+    assert.equal(response.body.reportCard?.behaviorRatings?.discipline, 'A');
+    assert.equal(response.body.reportCard?.reportSettings?.headName, 'Mrs. Stable Head');
+    assert.equal(response.body.reportCard?.reportSettings?.footerNote, 'Official report preview');
+
+    adminStore.reportSettings = previousSettings;
+    adminStore.reportRemarks = (adminStore.reportRemarks || []).filter((item) => item.id !== `rrm-report-${nonce}`);
+    adminStore.studentEnrollments = (adminStore.studentEnrollments || []).filter((item) => item.studentId !== studentId);
+    adminStore.students = adminStore.students.filter((item) => item.id !== studentId);
+    adminStore.classes = adminStore.classes.filter((item) => item.id !== classId);
+    await cleanupUser(user.id);
+  });
+});
+
+test('report card attendance summary stays scoped to the requested academic session', async () => {
+  await withAdminStoreLock(async () => {
+    const nonce = Date.now();
+    const currentSession = await ensureActiveAcademicSession({ sessionName: '2025/2026' });
+    const nextSession = await createAcademicSession({
+      id: `ses-att-${nonce}`,
+      sessionName: '2026/2027',
+      isActive: false
+    });
+    const term = 'First Term';
+    const classId = `cls-att-${nonce}`;
+    const studentId = `stu-att-${nonce}`;
+
+    adminStore.classes.push({ id: classId, name: 'JSS 2', arm: 'B', institution: 'ATTAUFEEQ Model Academy' });
+    adminStore.students.push({
+      id: studentId,
+      fullName: 'Scoped Attendance Student',
+      classId,
+      level: 'JSS 2',
+      institution: 'ATTAUFEEQ Model Academy',
+      accountStatus: 'active'
+    });
+    adminStore.studentEnrollments = [
+      ...(adminStore.studentEnrollments || []),
+      { id: `enr-att-${nonce}-1`, studentId, classId, sessionId: currentSession.id },
+      { id: `enr-att-${nonce}-2`, studentId, classId, sessionId: nextSession.id }
+    ];
+    adminStore.attendanceRecords = [
+      {
+        id: `att-${nonce}-old-1`,
+        studentId,
+        classId,
+        teacherId: 'teacher-old',
+        subjectId: 'class-attendance',
+        sessionId: currentSession.id,
+        term,
+        date: '2025-09-10',
+        status: 'present',
+        present: true,
+        late: false,
+        behavior: { discipline: 'A', responsibility: 'A', cooperation: 'A', respect: 'A', initiative: 'A' },
+        remark: 'present'
+      },
+      {
+        id: `att-${nonce}-old-2`,
+        studentId,
+        classId,
+        teacherId: 'teacher-old',
+        subjectId: 'class-attendance',
+        sessionId: currentSession.id,
+        term,
+        date: '2025-09-11',
+        status: 'absent',
+        present: false,
+        late: false,
+        behavior: { discipline: 'C', responsibility: 'C', cooperation: 'C', respect: 'C', initiative: 'C' },
+        remark: 'absent'
+      },
+      {
+        id: `att-${nonce}-new-1`,
+        studentId,
+        classId,
+        teacherId: 'teacher-new',
+        subjectId: 'class-attendance',
+        sessionId: nextSession.id,
+        term,
+        date: '2026-09-10',
+        status: 'present',
+        present: true,
+        late: false,
+        behavior: { discipline: 'A', responsibility: 'A', cooperation: 'A', respect: 'A', initiative: 'A' },
+        remark: 'present'
+      },
+      {
+        id: `att-${nonce}-new-2`,
+        studentId,
+        classId,
+        teacherId: 'teacher-new',
+        subjectId: 'class-attendance',
+        sessionId: nextSession.id,
+        term,
+        date: '2026-09-11',
+        status: 'present',
+        present: true,
+        late: false,
+        behavior: { discipline: 'A', responsibility: 'A', cooperation: 'A', respect: 'A', initiative: 'A' },
+        remark: 'excellent'
+      }
+    ];
+
+    const credentials = buildAdminCredentials();
+    const user = await createAdminAccount(credentials);
+    const login = await loginAs(credentials);
+    assert.equal(login.status, 200);
+
+    const response = await request(app)
+      .get(`/api/results/admin/report-card/${studentId}?term=${encodeURIComponent(term)}&sessionId=${encodeURIComponent(nextSession.id)}`)
+      .set(authHeader(login.body.token));
+
+    assert.equal(response.status, 200, JSON.stringify(response.body));
+    assert.equal(response.body.reportCard?.attendanceSummary?.totalSchoolDays, 2);
+    assert.equal(response.body.reportCard?.attendanceSummary?.daysPresent, 2);
+    assert.equal(response.body.reportCard?.attendanceSummary?.daysAbsent, 0);
+    assert.equal(response.body.reportCard?.attendance, '100%');
+    assert.equal(response.body.reportCard?.behaviorRatings?.discipline, 'A');
+
+    adminStore.attendanceRecords = (adminStore.attendanceRecords || []).filter((item) => item.studentId !== studentId);
+    adminStore.studentEnrollments = (adminStore.studentEnrollments || []).filter((item) => item.studentId !== studentId);
+    adminStore.students = adminStore.students.filter((item) => item.id !== studentId);
+    adminStore.classes = adminStore.classes.filter((item) => item.id !== classId);
     await cleanupUser(user.id);
   });
 });

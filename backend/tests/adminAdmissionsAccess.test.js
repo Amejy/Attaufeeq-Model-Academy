@@ -13,7 +13,7 @@ import {
   withAdminStoreLock
 } from './testUtils.js';
 
-test('admin admissions period rejects multiple active program windows', async () => {
+test('admin admissions period allows multiple active program windows', async () => {
   await withAdminStoreLock(async () => {
     const credentials = buildAdminCredentials();
     const user = await createAdminAccount(credentials);
@@ -35,12 +35,11 @@ test('admin admissions period rejects multiple active program windows', async ()
           }
         });
 
-      assert.equal(response.status, 400, JSON.stringify(response.body));
-      assert.match(
-        response.body.message || '',
-        /Only one admission window can stay active at a time/i
-      );
-      assert.deepEqual(adminStore.admissionPeriod, originalPeriod);
+      assert.equal(response.status, 200, JSON.stringify(response.body));
+      assert.equal(response.body.admissionPeriod?.programs?.modern?.enabled, true);
+      assert.equal(response.body.admissionPeriod?.programs?.madrasa?.enabled, true);
+      assert.equal(response.body.admissionPeriod?.programs?.memorization?.enabled, false);
+      assert.notDeepEqual(adminStore.admissionPeriod, originalPeriod);
     } finally {
       await cleanupUser(user.id);
     }

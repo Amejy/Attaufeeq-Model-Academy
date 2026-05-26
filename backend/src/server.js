@@ -13,7 +13,13 @@ import {
   verifyRequiredAuthTables
 } from './services/authBootstrapService.js';
 import { syncCoreAcademicStore } from './utils/coreAcademicSync.js';
+import { logger } from './utils/logger.js';
 import { normalizeAndPersistSiteContent } from './services/siteContentService.js';
+import {
+  markStartupFailed,
+  markStartupInitializing,
+  markStartupReady
+} from './services/startupState.js';
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -30,7 +36,7 @@ async function retryWithBackoff(label, work, { attempts, baseMs }) {
       if (attempt >= attempts) break;
 
       const waitMs = baseMs * (2 ** (attempt - 1));
-      console.warn(`${label} failed (attempt ${attempt}/${attempts}). Retrying in ${waitMs}ms.`);
+      logger.warn(`${label} failed (attempt ${attempt}/${attempts}). Retrying in ${waitMs}ms.`, { error });
       await sleep(waitMs);
     }
   }
@@ -44,30 +50,30 @@ let stopUptimePinger = () => {};
 let shuttingDown = false;
 
 process.on('uncaughtException', (error) => {
-  console.error('Uncaught exception:', error);
+  logger.error('Uncaught exception.', { error });
 });
 
 process.on('unhandledRejection', (reason) => {
-  console.error('Unhandled rejection:', reason);
+  logger.error('Unhandled rejection.', { reason });
 });
 
 async function shutdown(signal = 'shutdown', exitCode = 0) {
   if (shuttingDown) return;
   shuttingDown = true;
 
-  console.log(`Received ${signal}. Shutting down gracefully...`);
+  logger.info(`Received ${signal}. Shutting down gracefully...`);
 
   if (!server) {
     stopMailWorker();
     stopUptimePinger();
     await shutdownAdminStore().catch((error) => {
-      console.error('Admin store shutdown error:', error.message || error);
+      logger.error('Admin store shutdown error.', { error });
     });
     await closeRedisClient().catch((error) => {
-      console.error('Redis shutdown error:', error.message || error);
+      logger.error('Redis shutdown error.', { error });
     });
     await closeDbPool().catch((error) => {
-      console.error('Database shutdown error:', error.message || error);
+      logger.error('Database shutdown error.', { error });
     });
     process.exit(exitCode);
     return;
@@ -88,19 +94,19 @@ async function shutdown(signal = 'shutdown', exitCode = 0) {
       });
     });
   } catch (error) {
-    console.error('HTTP server shutdown error:', error.message || error);
+    logger.error('HTTP server shutdown error.', { error });
     process.exit(1);
     return;
   }
 
   await shutdownAdminStore().catch((error) => {
-    console.error('Admin store shutdown error:', error.message || error);
+    logger.error('Admin store shutdown error.', { error });
   });
   await closeRedisClient().catch((error) => {
-    console.error('Redis shutdown error:', error.message || error);
+    logger.error('Redis shutdown error.', { error });
   });
   await closeDbPool().catch((error) => {
-    console.error('Database shutdown error:', error.message || error);
+    logger.error('Database shutdown error.', { error });
   });
 
   process.exit(exitCode);
@@ -108,6 +114,7 @@ async function shutdown(signal = 'shutdown', exitCode = 0) {
 
 async function start() {
   validateRuntimeConfig();
+  markStartupInitializing();
 
   let currentPort = env.port;
   let retryCount = 0;
@@ -116,25 +123,23 @@ async function start() {
 
   const startServer = () => {
     server = app.listen(currentPort, bindHost, () => {
-      console.log(`ATTAUFEEQ backend running on http://${bindHost}:${currentPort}`);
+      logger.info(`ATTAUFEEQ backend running on http://${bindHost}:${currentPort}`);
       if (currentPort !== env.port) {
-        console.warn(`Auto-selected port ${currentPort} (requested ${env.port} was busy).`);
+        logger.warn(`Auto-selected port ${currentPort} (requested ${env.port} was busy).`);
       }
     });
 
     server.on('error', (error) => {
       if (error.code === 'EADDRINUSE') {
         server?.close?.();
-        console.error(
+        logger.error(
           `Backend port ${currentPort} is already in use on ${bindHost}. Stop the old process or change PORT in backend/.env.`
         );
-        console.error(
-          `Find the process with: lsof -nP -iTCP:${currentPort} -sTCP:LISTEN`
-        );
+        logger.error(`Find the process with: lsof -nP -iTCP:${currentPort} -sTCP:LISTEN`);
         if (env.isDevelopment && retryCount < maxRetries) {
           retryCount += 1;
           currentPort += 1;
-          console.warn(`Retrying on port ${currentPort}...`);
+          logger.warn(`Retrying on port ${currentPort}...`);
           startServer();
           return;
         }
@@ -144,14 +149,14 @@ async function start() {
 
       if (error.code === 'EACCES' || error.code === 'EPERM') {
         server?.close?.();
-        console.error(
+        logger.error(
           `Backend cannot bind to ${bindHost}:${currentPort}. Check permissions/host settings in backend/.env.`
         );
         process.exit(1);
         return;
       }
 
-      console.error('Backend startup error:', error);
+      logger.error('Backend startup error.', { error });
       process.exit(1);
     });
   };
@@ -159,7 +164,7 @@ async function start() {
   startServer();
 
   try {
-    await retryWithBackoff('Database migrations', () => runMigrations({ logger: console }), {
+    await retryWithBackoff('Database migrations', () => runMigrations({ logger }), {
       attempts: env.startupDbRetryAttempts,
       baseMs: env.startupDbRetryBaseMs
     });
@@ -172,7 +177,7 @@ async function start() {
     await verifyRequiredAuthTables();
     await initializeAdminStore();
     await normalizeAndPersistSiteContent().catch((error) => {
-      console.error('Site content normalization error:', error.message || error);
+      logger.error('Site content normalization error.', { error });
     });
     await ensureBootstrapAdmin();
     await verifyLegacyDemoUsers();
@@ -186,14 +191,18 @@ async function start() {
     stopMailWorker = startMailOutboxWorker();
     stopUptimePinger = startUptimePinger();
 
-    console.log(`PostgreSQL connected at ${connection.host}:${connection.port}/${connection.database}`);
+    logger.info(`PostgreSQL connected at ${connection.host}:${connection.port}/${connection.database}`);
     if (redis.enabled) {
-      console.log('Redis-backed rate limiting enabled.');
+      logger.info('Redis-backed rate limiting enabled.');
     } else {
-      console.warn('Redis-backed rate limiting is disabled for this environment.');
+      logger.warn('Redis-backed rate limiting is disabled for this environment.');
     }
+    markStartupReady();
   } catch (error) {
-    console.error('Startup initialization failed:', error.message || error);
+    markStartupFailed('Backend services could not start.');
+    logger.error('Startup initialization failed.', { error });
+    await shutdown('startup-initialization-failure', 1);
+    return;
   }
 
   process.on('SIGINT', () => {
@@ -205,6 +214,6 @@ async function start() {
 }
 
 start().catch(async (error) => {
-  console.error('Failed to start backend:', error.message || error);
+  logger.error('Failed to start backend.', { error });
   await shutdown('startup-failure', 1);
 });

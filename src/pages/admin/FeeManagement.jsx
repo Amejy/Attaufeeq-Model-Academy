@@ -8,6 +8,10 @@ function normalizeStatus(value) {
   return String(value || '').trim().toLowerCase();
 }
 
+function normalizePaymentType(value) {
+  return String(value || 'school_fee').trim().toLowerCase();
+}
+
 function isCountableActiveStudent(item) {
   const status = normalizeStatus(item?.accountStatus);
   return Boolean(item?.userId && item?.portalEmail && ['pending', 'provisioned', 'active'].includes(status));
@@ -42,7 +46,7 @@ function FeeManagement({ role = '', section = 'all' }) {
   const { apiJson, user } = useAuth();
   const resolvedRole = role || user?.role || 'admin';
   const isReceiptDeskOnly = resolvedRole === 'admissions' && section === 'receipt-desk';
-  const showReceiptDesk = resolvedRole !== 'admissions' || isReceiptDeskOnly;
+  const showReceiptDesk = resolvedRole === 'admissions';
   const managementBase = resolvedRole === 'admissions' ? '/operations' : '/admin';
   const defaultInstitution = ADMIN_INSTITUTIONS[0];
   const [classes, setClasses] = useState([]);
@@ -54,12 +58,14 @@ function FeeManagement({ role = '', section = 'all' }) {
   const [sessions, setSessions] = useState([]);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [tokenSalesControl, setTokenSalesControl] = useState({ term: 'First Term', enabled: false });
   const [creatingPlan, setCreatingPlan] = useState(false);
   const [editingPlanId, setEditingPlanId] = useState('');
   const [deletingPlanId, setDeletingPlanId] = useState('');
   const [recordingPayment, setRecordingPayment] = useState(false);
   const [deletingPaymentId, setDeletingPaymentId] = useState('');
   const [reviewingRequestId, setReviewingRequestId] = useState('');
+  const [publishingPlanId, setPublishingPlanId] = useState('');
   const [showPlans, setShowPlans] = useState(true);
   const [showPayments, setShowPayments] = useState(true);
   const [showDefaulters, setShowDefaulters] = useState(true);
@@ -69,7 +75,12 @@ function FeeManagement({ role = '', section = 'all' }) {
   const [termFilter, setTermFilter] = useState('First Term');
   const [receiptPreview, setReceiptPreview] = useState(null);
 
-  const [planForm, setPlanForm] = useState({ classId: '', term: 'First Term', amount: '' });
+  const [planForm, setPlanForm] = useState({
+    classId: '',
+    term: 'First Term',
+    amount: '',
+    published: resolvedRole !== 'admissions'
+  });
   const [paymentForm, setPaymentForm] = useState({
     classId: '',
     studentId: '',
@@ -82,6 +93,7 @@ function FeeManagement({ role = '', section = 'all' }) {
   });
   const [studentSearch, setStudentSearch] = useState('');
   const loadDataSeq = useRef(0);
+  const planFormRef = useRef(null);
 
   const loadData = useCallback(async (options = {}) => {
     const requestId = loadDataSeq.current + 1;
@@ -94,9 +106,10 @@ function FeeManagement({ role = '', section = 'all' }) {
     setClasses([]);
     setStudents([]);
     setPlans([]);
-    setPayments([]);
-    setPaymentRequests([]);
-    setDefaulters([]);
+      setPayments([]);
+      setPaymentRequests([]);
+      setDefaulters([]);
+      setTokenSalesControl({ term: termFilter, enabled: false });
 
     try {
       const sessionQuery = sessionId ? `?sessionId=${encodeURIComponent(sessionId)}` : '';
@@ -125,6 +138,7 @@ function FeeManagement({ role = '', section = 'all' }) {
       setPlans(plansData.plans || []);
       setPayments(paymentsData.payments || []);
       setPaymentRequests(paymentsData.paymentRequests || []);
+      setTokenSalesControl(paymentsData.tokenSalesControl || { term: termFilter, enabled: false });
       setDefaulters(defaultersData.defaulters || []);
     } catch (err) {
       if (loadDataSeq.current !== requestId) return;
@@ -158,12 +172,13 @@ function FeeManagement({ role = '', section = 'all' }) {
   useEffect(() => {
     setPlanForm((prev) => ({
       ...prev,
-      classId: scopedClasses.some((item) => item.id === prev.classId) ? prev.classId : scopedClasses[0]?.id || ''
+      classId: scopedClasses.some((item) => item.id === prev.classId) ? prev.classId : scopedClasses[0]?.id || '',
+      published: resolvedRole === 'admissions' ? prev.published : true
     }));
     if (classFilter && !scopedClasses.some((item) => item.id === classFilter)) {
       setClassFilter('');
     }
-  }, [classFilter, scopedClasses]);
+  }, [classFilter, resolvedRole, scopedClasses]);
 
   useEffect(() => {
     setPaymentForm((prev) => ({
@@ -285,6 +300,7 @@ function FeeManagement({ role = '', section = 'all' }) {
   );
   const filteredPayments = useMemo(
     () => payments
+      .filter((item) => normalizePaymentType(item.paymentType) === 'school_fee')
       .filter((item) => scopedStudents.some((student) => student.id === item.studentId))
       .filter((item) => item.term === termFilter),
     [payments, scopedStudents, termFilter]
@@ -294,6 +310,18 @@ function FeeManagement({ role = '', section = 'all' }) {
       .filter((item) => scopedStudents.some((student) => student.id === item.studentId))
       .filter((item) => item.term === termFilter),
     [paymentRequests, scopedStudents, termFilter]
+  );
+  const pendingReceiptCount = useMemo(
+    () => filteredPaymentRequests.filter((item) => normalizeStatus(item.status) === 'pending').length,
+    [filteredPaymentRequests]
+  );
+  const approvedReceiptCount = useMemo(
+    () => filteredPaymentRequests.filter((item) => normalizeStatus(item.status) === 'approved').length,
+    [filteredPaymentRequests]
+  );
+  const releasedReceiptCount = useMemo(
+    () => filteredPaymentRequests.filter((item) => Boolean(item.releasedTokenId)).length,
+    [filteredPaymentRequests]
   );
   const filteredDefaulters = useMemo(
     () => defaulters
@@ -307,7 +335,8 @@ function FeeManagement({ role = '', section = 'all' }) {
     setPlanForm({
       classId: nextClassId || scopedClasses[0]?.id || '',
       term: 'First Term',
-      amount: ''
+      amount: '',
+      published: resolvedRole !== 'admissions'
     });
   }
 
@@ -342,11 +371,22 @@ function FeeManagement({ role = '', section = 'all' }) {
   function startEditPlan(plan) {
     setError('');
     setSuccess('');
+    const classItem = classes.find((item) => item.id === plan.classId);
+    if (classItem?.institution) {
+      setInstitutionFilter(classItem.institution);
+    }
+    setClassFilter(plan.classId || '');
+    setTermFilter(plan.term || 'First Term');
+    setShowPlans(true);
     setEditingPlanId(plan.id);
     setPlanForm({
       classId: plan.classId || '',
       term: plan.term || 'First Term',
-      amount: String(plan.amount ?? '')
+      amount: String(plan.amount ?? ''),
+      published: plan.published !== false
+    });
+    window.requestAnimationFrame(() => {
+      planFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   }
 
@@ -462,6 +502,24 @@ function FeeManagement({ role = '', section = 'all' }) {
     }
   }
 
+  async function updatePlanPublication(planId, published) {
+    setError('');
+    setSuccess('');
+    setPublishingPlanId(planId);
+    try {
+      await apiJson(`/fees/admin/plans/${planId}/publish`, {
+        method: 'PUT',
+        body: { published }
+      });
+      setSuccess(published ? 'Fee plan approved and pushed to the portal.' : 'Fee plan removed from the portal.');
+      void loadData({ preserveSuccess: true });
+    } catch (err) {
+      setError(err.message || 'Unable to update fee plan approval.');
+    } finally {
+      setPublishingPlanId('');
+    }
+  }
+
   async function releaseResultToken(requestId) {
     setError('');
     setSuccess('');
@@ -563,8 +621,13 @@ function FeeManagement({ role = '', section = 'all' }) {
 
       {!isReceiptDeskOnly && (
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <section className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
+        <section ref={planFormRef} className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">
           <h2 className="font-heading text-2xl text-primary">{editingPlanId ? 'Edit Fee Plan' : 'Create Fee Plan'}</h2>
+          {editingPlanId && (
+            <p className="mt-2 text-sm text-emerald-700">
+              You are editing this fee plan now. Update the values below and save changes.
+            </p>
+          )}
           <form onSubmit={createPlan} className="mt-3 grid gap-3 sm:grid-cols-3">
             {scopedClasses.length ? (
               <select value={planForm.classId} onChange={(e) => setPlanForm((prev) => ({ ...prev, classId: e.target.value }))} className="w-full rounded-2xl border border-slate-300 px-3 py-3 text-sm">
@@ -579,6 +642,14 @@ function FeeManagement({ role = '', section = 'all' }) {
               {['First Term', 'Second Term', 'Third Term'].map((term) => <option key={term}>{term}</option>)}
             </select>
             <input type="number" min="0.01" step="0.01" value={planForm.amount} onChange={(e) => setPlanForm((prev) => ({ ...prev, amount: e.target.value }))} placeholder="Amount" className="w-full rounded-2xl border border-slate-300 px-3 py-3 text-sm" />
+            <label className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-700 sm:col-span-3">
+              <input
+                type="checkbox"
+                checked={planForm.published !== false}
+                onChange={(e) => setPlanForm((prev) => ({ ...prev, published: e.target.checked }))}
+              />
+              Approve once and publish this class fee to student and parent portals
+            </label>
             <button
               type="submit"
               disabled={creatingPlan || !canCreatePlan}
@@ -747,6 +818,9 @@ function FeeManagement({ role = '', section = 'all' }) {
                   <p className="text-wrap-safe pr-1">
                     {classItem?.label || `${classItem?.name || plan.classId} ${classItem?.arm || ''}`} | {plan.term} | NGN {plan.amount}
                   </p>
+                  <p className="mt-2 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                    {plan.published === false ? 'Pending approval' : 'Approved on portal'}
+                  </p>
                   <div className="mt-3 flex flex-wrap gap-2">
                     <button
                       type="button"
@@ -763,6 +837,14 @@ function FeeManagement({ role = '', section = 'all' }) {
                       className="rounded-md border border-red-300 px-2 py-1 text-xs text-red-600 disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {deletingPlanId === plan.id ? 'Deleting...' : 'Delete'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => updatePlanPublication(plan.id, plan.published === false)}
+                      disabled={publishingPlanId === plan.id || creatingPlan || deletingPlanId === plan.id}
+                      className="rounded-md border border-emerald-300 px-2 py-1 text-xs text-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      {publishingPlanId === plan.id ? 'Saving...' : plan.published === false ? 'Approve Once' : 'Unapprove'}
                     </button>
                   </div>
                 </li>
@@ -821,6 +903,27 @@ function FeeManagement({ role = '', section = 'all' }) {
           <p className="mt-2 text-sm text-slate-600">
             Parent and student receipt uploads wait here for admissions confirmation before payment records and result-token release.
           </p>
+          <div className="mt-4 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Sales Control</p>
+              <p className={`mt-2 text-sm font-semibold ${tokenSalesControl.enabled ? 'text-emerald-700' : 'text-amber-800'}`}>
+                {tokenSalesControl.enabled ? `Open for ${tokenSalesControl.term || termFilter}` : `Closed for ${tokenSalesControl.term || termFilter}`}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Pending Receipts</p>
+              <p className="mt-2 text-sm font-semibold text-slate-900">{pendingReceiptCount}</p>
+            </div>
+            <div className="rounded-2xl border border-slate-200 bg-slate-50 px-3 py-3">
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">Approved / Released</p>
+              <p className="mt-2 text-sm font-semibold text-slate-900">{approvedReceiptCount} / {releasedReceiptCount}</p>
+            </div>
+          </div>
+          {!tokenSalesControl.enabled && (
+            <div className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 px-3 py-3 text-sm text-amber-900">
+              Token sales are currently closed for {tokenSalesControl.term || termFilter}. Admissions can review receipts, but token release stays locked until the admin opens token sales on the admin dashboard.
+            </div>
+          )}
           {receiptPreview && (
             <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
               <div className="flex flex-wrap items-center justify-between gap-2">
@@ -899,7 +1002,7 @@ function FeeManagement({ role = '', section = 'all' }) {
                     <button
                       type="button"
                       onClick={() => releaseResultToken(request.id)}
-                      disabled={request.status !== 'approved' || Boolean(request.releasedTokenId) || reviewingRequestId === request.id}
+                      disabled={!tokenSalesControl.enabled || request.status !== 'approved' || Boolean(request.releasedTokenId) || reviewingRequestId === request.id}
                       className="rounded-md border border-primary/25 bg-primary/10 px-2 py-1 font-semibold text-primary disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {request.releasedTokenId ? 'Token Released' : 'Release Token'}

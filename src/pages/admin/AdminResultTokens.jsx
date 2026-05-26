@@ -41,14 +41,18 @@ function AdminResultTokens() {
   const { apiJson, apiFetch } = useAuth();
   const [tokens, setTokens] = useState([]);
   const [stats, setStats] = useState({ total: 0, used: 0, active: 0, expired: 0 });
+  const [sessions, setSessions] = useState([]);
+  const [sessionId, setSessionId] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
   const [quantity, setQuantity] = useState('10');
   const [tokenLength, setTokenLength] = useState('10');
   const [term, setTerm] = useState('First Term');
   const [expiresAt, setExpiresAt] = useState('');
+  const [tokenSalesControl, setTokenSalesControl] = useState({ term: 'First Term', enabled: false });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [updatingTokenSales, setUpdatingTokenSales] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [showRows, setShowRows] = useState(true);
@@ -60,19 +64,55 @@ function AdminResultTokens() {
       const query = new URLSearchParams();
       if (statusFilter) query.set('status', statusFilter);
       if (search.trim()) query.set('search', search.trim());
-      const data = await apiJson(`/result-tokens/admin?${query.toString()}`);
-      setTokens(data.tokens || []);
-      setStats(data.stats || { total: 0, used: 0, active: 0, expired: 0 });
+      const sessionQuery = sessionId ? `?sessionId=${encodeURIComponent(sessionId)}&term=${encodeURIComponent(term)}` : `?term=${encodeURIComponent(term)}`;
+      const [tokenData, sessionData, controlData] = await Promise.all([
+        apiJson(`/result-tokens/admin?${query.toString()}`),
+        apiJson('/results/sessions'),
+        apiJson(`/fees/admin/token-sales-control${sessionQuery}`)
+      ]);
+      setTokens(tokenData.tokens || []);
+      setStats(tokenData.stats || { total: 0, used: 0, active: 0, expired: 0 });
+      const sessionRows = sessionData.sessions || [];
+      const activeSession = sessionData.activeSession || sessionRows.find((item) => item.isActive) || sessionRows[0] || null;
+      setSessions(sessionRows);
+      setSessionId((prev) =>
+        prev && sessionRows.some((session) => session.id === prev)
+          ? prev
+          : activeSession?.id || ''
+      );
+      setTokenSalesControl(controlData.tokenSalesControl || { term, enabled: false });
     } catch (err) {
       setError(err.message || 'Unable to load result tokens.');
     } finally {
       setLoading(false);
     }
-  }, [apiJson, search, statusFilter]);
+  }, [apiJson, search, sessionId, statusFilter, term]);
 
   useEffect(() => {
     loadTokens();
   }, [loadTokens]);
+
+  async function updateTokenSalesControl(enabled) {
+    setUpdatingTokenSales(true);
+    setError('');
+    setSuccess('');
+    try {
+      const data = await apiJson('/fees/admin/token-sales-control', {
+        method: 'PUT',
+        body: {
+          sessionId,
+          term,
+          enabled
+        }
+      });
+      setTokenSalesControl(data.tokenSalesControl || { term, enabled });
+      setSuccess(enabled ? 'Token sales opened for this term.' : 'Token sales closed for this term.');
+    } catch (err) {
+      setError(err.message || 'Unable to update token sales control.');
+    } finally {
+      setUpdatingTokenSales(false);
+    }
+  }
 
   async function generateTokens(event) {
     event.preventDefault();
@@ -145,10 +185,30 @@ function AdminResultTokens() {
 
     const cards = printableTokens.map((token) => `
       <article class="card">
-        <p class="school">ATTAUFEEQ Result Token</p>
-        <p class="token">${token.token || token.tokenPreview || 'Token'}</p>
-        <p class="meta">Term: ${token.term || 'Any term'}</p>
-        <p class="meta">Status: ${token.status}</p>
+        <div class="card__top">
+          <div class="card__brand">
+            <img src="/images/logo.png" alt="ATTAUFEEQ Model Academy logo" class="card__logo" />
+            <div>
+            <p class="card__title">ATTAUFEEQ RESULT TOKEN</p>
+            <p class="card__school">ATTAUFEEQ MODEL ACADEMY</p>
+            </div>
+          </div>
+          <div class="card__secure">
+            <p class="card__secure-title">Secure Token</p>
+            <p class="card__secure-note">Keep this card safe</p>
+          </div>
+        </div>
+        <div class="card__body">
+          <p class="card__meta"><strong>Term:</strong> ${token.term || 'Any term'}</p>
+          <p class="card__meta"><strong>Status:</strong> ${token.status}</p>
+        </div>
+        <div class="card__token-shell">
+          <p class="card__hint">Scratch gently to reveal code</p>
+          <p class="card__token">${token.token || token.tokenPreview || 'Token'}</p>
+        </div>
+        <div class="card__footer">
+          <span>This is a secure token. Do not share it with anyone.</span>
+        </div>
       </article>
     `).join('');
 
@@ -157,12 +217,122 @@ function AdminResultTokens() {
         <head>
           <title>Result Tokens</title>
           <style>
-            body { font-family: Arial, sans-serif; margin: 24px; color: #0f172a; }
-            .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-            .card { border: 1px solid #cbd5e1; border-radius: 12px; padding: 16px; }
-            .school { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; letter-spacing: 0.12em; color: #475569; }
-            .token { margin: 0 0 10px; font-size: 24px; font-weight: 700; letter-spacing: 0.18em; }
-            .meta { margin: 4px 0 0; font-size: 12px; color: #475569; }
+            * { box-sizing: border-box; }
+            body { font-family: Arial, sans-serif; margin: 24px; color: #0f172a; background: #ffffff; }
+            .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; }
+            .card {
+              overflow: hidden;
+              border-radius: 24px;
+              border: 1px solid rgba(37, 99, 235, 0.18);
+              background:
+                radial-gradient(circle at 86% 26%, rgba(191, 219, 254, 0.24), transparent 25%),
+                radial-gradient(circle at 18% 72%, rgba(226, 232, 240, 0.46), transparent 31%),
+                linear-gradient(135deg, rgba(255, 255, 255, 0.98), rgba(248, 250, 252, 0.96));
+              box-shadow: 0 20px 40px rgba(15, 23, 42, 0.12);
+            }
+            .card__top,
+            .card__body,
+            .card__token-shell,
+            .card__footer {
+              position: relative;
+              z-index: 1;
+            }
+            .card__top {
+              display: flex;
+              justify-content: space-between;
+              align-items: flex-start;
+              gap: 12px;
+              padding: 18px 18px 0;
+            }
+            .card__brand {
+              display: flex;
+              align-items: center;
+              gap: 14px;
+              min-width: 0;
+            }
+            .card__logo {
+              width: 56px;
+              height: 56px;
+              object-fit: contain;
+              flex-shrink: 0;
+            }
+            .card__title {
+              margin: 0;
+              color: #0f2b5b;
+              font-size: 24px;
+              font-weight: 800;
+              line-height: 1.05;
+            }
+            .card__school {
+              margin: 8px 0 0;
+              color: #5a7fb8;
+              font-size: 12px;
+              letter-spacing: 0.24em;
+              text-transform: uppercase;
+            }
+            .card__secure {
+              min-width: 165px;
+              border-radius: 0 0 0 18px;
+              background: linear-gradient(135deg, #08275b, #071a44);
+              padding: 12px 14px;
+              color: #fff;
+            }
+            .card__secure-title {
+              margin: 0;
+              font-size: 12px;
+              font-weight: 800;
+              text-transform: uppercase;
+            }
+            .card__secure-note {
+              margin: 4px 0 0;
+              font-size: 11px;
+              color: rgba(255,255,255,0.86);
+            }
+            .card__body {
+              padding: 16px 18px 0;
+            }
+            .card__meta {
+              margin: 0 0 8px;
+              font-size: 13px;
+              color: #1f2937;
+            }
+            .card__hint {
+              margin: 0 0 10px;
+              color: #1d4f9c;
+              font-size: 12px;
+              font-weight: 700;
+              text-transform: uppercase;
+              letter-spacing: 0.12em;
+            }
+            .card__token-shell {
+              margin: 18px;
+              border: 2px solid rgba(37, 99, 235, 0.78);
+              border-radius: 18px;
+              padding: 14px;
+              background: linear-gradient(180deg, rgba(255,255,255,0.78), rgba(248,250,252,0.94));
+            }
+            .card__token {
+              margin: 0;
+              border-radius: 16px;
+              border: 1px solid rgba(148, 163, 184, 0.62);
+              background:
+                linear-gradient(180deg, rgba(208, 214, 224, 0.96), rgba(156, 163, 175, 0.94)),
+                repeating-linear-gradient(0deg, rgba(255,255,255,0.09) 0 2px, rgba(148,163,184,0.08) 2px 4px),
+                repeating-linear-gradient(135deg, rgba(255,255,255,0.08) 0 14px, rgba(148,163,184,0.08) 14px 28px);
+              padding: 18px 16px;
+              color: #08275b;
+              font-family: Georgia, serif;
+              font-size: 28px;
+              font-weight: 800;
+              letter-spacing: 0.22em;
+              text-align: center;
+            }
+            .card__footer {
+              background: linear-gradient(135deg, #08275b, #071a44);
+              padding: 14px 18px;
+              color: rgba(255,255,255,0.95);
+              font-size: 12px;
+            }
           </style>
         </head>
         <body>
@@ -216,6 +386,62 @@ function AdminResultTokens() {
             <p className="mt-2 text-2xl font-bold text-slate-900">{card.value}</p>
           </article>
         ))}
+      </section>
+
+      <section className="mt-6 rounded-[28px] border border-amber-200 bg-amber-50 p-5 shadow-sm">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-800">Token Sales Control</p>
+            <h2 className="mt-2 font-heading text-2xl text-amber-950">Scratch Card Sales</h2>
+            <p className="mt-2 text-sm text-amber-900">
+              Open or close result-token sales here. Admissions will handle receipt review and token release from their own desk.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-3">
+            <select
+              value={sessionId}
+              onChange={(e) => setSessionId(e.target.value)}
+              className="rounded-2xl border border-amber-300 bg-white px-4 py-3 text-sm text-amber-950"
+            >
+              {!sessions.length && <option value="">No sessions available</option>}
+              {sessions.map((session) => (
+                <option key={session.id} value={session.id}>
+                  {session.sessionName} {session.isActive ? '(Active)' : ''}
+                </option>
+              ))}
+            </select>
+            <select
+              value={term}
+              onChange={(e) => setTerm(e.target.value)}
+              className="rounded-2xl border border-amber-300 bg-white px-4 py-3 text-sm text-amber-950"
+            >
+              {['First Term', 'Second Term', 'Third Term'].map((item) => (
+                <option key={item} value={item}>{item}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <span className={`rounded-full border px-3 py-2 text-xs font-semibold ${tokenSalesControl.enabled ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-amber-300 bg-white text-amber-900'}`}>
+            {tokenSalesControl.enabled ? `Open for ${tokenSalesControl.term || term}` : `Closed for ${tokenSalesControl.term || term}`}
+          </span>
+          <button
+            type="button"
+            onClick={() => updateTokenSalesControl(true)}
+            disabled={updatingTokenSales || !sessionId}
+            className="rounded-2xl border border-emerald-300 bg-white px-4 py-2 text-sm font-semibold text-emerald-700 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {updatingTokenSales && tokenSalesControl.enabled ? 'Saving...' : 'Open Sales'}
+          </button>
+          <button
+            type="button"
+            onClick={() => updateTokenSalesControl(false)}
+            disabled={updatingTokenSales || !sessionId}
+            className="rounded-2xl border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-900 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {updatingTokenSales && !tokenSalesControl.enabled ? 'Saving...' : 'Close Sales'}
+          </button>
+        </div>
       </section>
 
       <section className="mt-6 rounded-[28px] border border-slate-200 bg-white p-5 shadow-sm">

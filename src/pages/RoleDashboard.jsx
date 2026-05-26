@@ -9,6 +9,8 @@ import { InsightBars, OrbitChart } from '../components/InsightChart';
 import { DashboardSkeleton } from '../components/Skeleton';
 import useParentChildSelection from '../hooks/useParentChildSelection';
 import SmartSearchPanel from '../components/dashboard/SmartSearchPanel';
+import SmartImage from '../components/SmartImage';
+import { buildQrCodeUrl, resolvePublicAppOrigin } from '../utils/resultVerification';
 
 function filterActions(actions, scopeFeatures = [], role = '') {
   if (role === 'admin' || scopeFeatures.includes('all')) return actions;
@@ -29,6 +31,11 @@ function normalizeBadge(value) {
     .replace(/(^|\\s)class\\s+lead(\\s|$)/i, 'Class Lead')
     .replace(/\\bassigned\\b/i, 'Assigned')
     .trim();
+}
+
+function formatCurrency(value) {
+  const amount = Number(value || 0);
+  return `N${amount.toLocaleString()}`;
 }
 
 function renderLeadRole(classLead) {
@@ -60,6 +67,148 @@ function Panel({ title, eyebrow, children }) {
       {eyebrow && <p className="text-wrap-safe text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500 sm:tracking-[0.24em]">{eyebrow}</p>}
       <h2 className="text-wrap-safe mt-2 font-heading text-[clamp(1.2rem,3.8vw,1.7rem)] leading-tight text-primary">{title}</h2>
       <div className="mt-5 sm:mt-6">{children}</div>
+    </section>
+  );
+}
+
+function normalizeOrigin(value) {
+  const normalized = String(value || '').trim();
+  return normalized ? normalized.replace(/\/+$/, '') : '';
+}
+
+function resolvePortalHomepageUrl() {
+  const publicOrigin = normalizeOrigin(resolvePublicAppOrigin());
+  if (publicOrigin) return `${publicOrigin}/`;
+
+  if (typeof window === 'undefined') return '';
+
+  return `${normalizeOrigin(window.location.origin)}/`;
+}
+
+function PortalQrPanel() {
+  const [portalUrl] = useState(() => (typeof window !== 'undefined' ? resolvePortalHomepageUrl() : ''));
+  const normalizedPortalUrl = String(portalUrl || '');
+  const qrCodeUrl = useMemo(() => buildQrCodeUrl(normalizedPortalUrl, 260), [normalizedPortalUrl]);
+  const isLocalPortalUrl =
+    normalizedPortalUrl.startsWith('http://localhost') ||
+    normalizedPortalUrl.startsWith('http://127.0.0.1') ||
+    normalizedPortalUrl.startsWith('http://0.0.0.0');
+
+  async function handleCopyLink() {
+    if (!normalizedPortalUrl) return;
+
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(normalizedPortalUrl);
+        if (typeof window !== 'undefined') {
+          window.alert('Website link copied.');
+        }
+        return;
+      }
+    } catch {
+      // Fall through to the prompt fallback below.
+    }
+
+    if (typeof window !== 'undefined') {
+      window.prompt('Copy website link:', normalizedPortalUrl);
+    }
+  }
+
+  return (
+    <section className="relative overflow-hidden rounded-[30px] border border-emerald-100 bg-[linear-gradient(135deg,rgba(255,255,255,0.98),rgba(236,253,245,0.92))] p-5 shadow-[0_22px_55px_rgba(15,23,42,0.08)] sm:p-6">
+      <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-emerald-200/35 blur-3xl" aria-hidden="true" />
+      <div className="absolute -bottom-16 left-8 h-36 w-36 rounded-full bg-amber-200/35 blur-3xl" aria-hidden="true" />
+      <div className="relative grid gap-5 xl:grid-cols-[1.2fr,0.8fr] xl:items-center">
+        <div className="min-w-0">
+          <div className="inline-flex rounded-full border border-emerald-200 bg-white/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.22em] text-emerald-800">
+            Portal QR Access
+          </div>
+          <h3 className="mt-4 font-heading text-2xl text-primary sm:text-[2rem]">Scan once and open the ATTAUFEEQ website instantly</h3>
+          <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600">
+            This QR code opens the public school portal homepage directly, so parents, students, and visitors can get into the website even when they do not have the link saved.
+          </p>
+          {isLocalPortalUrl && (
+            <p className="mt-3 rounded-[20px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm leading-6 text-amber-900">
+              This QR is currently using your local address `{portalUrl}`. It will open on this computer, but phones outside this machine will need a real deployed URL set in `VITE_PUBLIC_APP_URL`.
+            </p>
+          )}
+
+          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+            <div className="rounded-[24px] border border-white/70 bg-white/85 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Destination</p>
+              <p className="mt-2 break-all text-sm font-semibold text-slate-900">
+                {normalizedPortalUrl || 'Public website URL is not available.'}
+              </p>
+            </div>
+            <div className="rounded-[24px] border border-white/70 bg-white/85 p-4">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Best Use</p>
+              <p className="mt-2 text-sm leading-7 text-slate-600">
+                Share it at the front desk, on printed materials, or inside school offices for quick portal access.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-5 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={() => {
+                if (normalizedPortalUrl) window.open(normalizedPortalUrl, '_blank', 'noopener,noreferrer');
+              }}
+              disabled={!normalizedPortalUrl}
+              className="interactive-button rounded-full border border-emerald-200 bg-emerald-600 px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Open Website
+            </button>
+            <button
+              type="button"
+              onClick={() => void handleCopyLink()}
+              disabled={!normalizedPortalUrl}
+              className="interactive-button rounded-full border border-slate-300 bg-white/85 px-5 py-3 text-sm font-semibold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Copy Link
+            </button>
+            <a
+              href={qrCodeUrl || undefined}
+              target="_blank"
+              rel="noreferrer"
+              className={`interactive-button rounded-full border px-5 py-3 text-sm font-semibold ${
+                qrCodeUrl ? 'border-amber-200 bg-amber-50 text-amber-900' : 'pointer-events-none border-slate-200 bg-slate-100 text-slate-400'
+              }`}
+            >
+              Open QR Image
+            </a>
+            <a
+              href={qrCodeUrl || undefined}
+              download="attaufeeq-school-portal-qr.png"
+              className={`interactive-button rounded-full border px-5 py-3 text-sm font-semibold ${
+                qrCodeUrl ? 'border-sky-200 bg-sky-50 text-sky-900' : 'pointer-events-none border-slate-200 bg-slate-100 text-slate-400'
+              }`}
+            >
+              Download PNG
+            </a>
+          </div>
+        </div>
+
+        <div className="justify-self-center">
+          <div className="rounded-[32px] border border-slate-200 bg-white p-4 shadow-[0_18px_40px_rgba(15,23,42,0.08)] sm:p-5">
+            {qrCodeUrl ? (
+              <SmartImage
+                src={qrCodeUrl}
+                alt="QR code for the ATTAUFEEQ public website"
+                className="h-[220px] w-[220px] rounded-[24px] bg-white object-contain sm:h-[250px] sm:w-[250px]"
+              />
+            ) : (
+              <div className="flex h-[220px] w-[220px] items-center justify-center rounded-[24px] bg-slate-100 px-6 text-center text-sm leading-6 text-slate-500 sm:h-[250px] sm:w-[250px]">
+                Public website URL not available yet.
+              </div>
+            )}
+            <div className="mt-4 rounded-[22px] bg-slate-50 px-4 py-3 text-center">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">Scan Result</p>
+              <p className="mt-2 text-sm font-semibold text-slate-900">Opens the ATTAUFEEQ public portal homepage</p>
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
   );
 }
@@ -114,8 +263,19 @@ function DetailListItem({ item }) {
   );
 }
 
-function AdminView({ data }) {
+function AdminView({ data, onToggleTokenSales, tokenSalesBusy = false }) {
   const metrics = data?.metrics || {};
+  const tokenSalesTerm = metrics.tokenSalesTerm || 'Active Term';
+  const tokenSalesControls = useMemo(
+    () => (Array.isArray(metrics.tokenSalesControls) ? metrics.tokenSalesControls : []),
+    [metrics.tokenSalesControls]
+  );
+  const [selectedTokenSalesTerm, setSelectedTokenSalesTerm] = useState(tokenSalesTerm);
+  const resolvedTokenSalesTerm = tokenSalesControls.some((item) => item.term === selectedTokenSalesTerm)
+    ? selectedTokenSalesTerm
+    : tokenSalesTerm;
+  const selectedControl = tokenSalesControls.find((item) => item.term === resolvedTokenSalesTerm) || null;
+  const tokenSalesEnabled = selectedControl ? Boolean(selectedControl.enabled) : Boolean(metrics.tokenSalesEnabled);
   const balanceItems = [
     { label: 'Model Enrolled', value: metrics.modernEnrolled ?? 0, color: 'linear-gradient(90deg, #0f766e, #14b8a6)' },
     { label: 'Madrasa Enrolled', value: metrics.madrasaEnrolled ?? 0, color: 'linear-gradient(90deg, #a16207, #f59e0b)' },
@@ -139,6 +299,9 @@ function AdminView({ data }) {
         <MetricCard label="Total Students" value={metrics.totalStudents ?? 0} note="Whole-school active count across both institutions." accent="linear-gradient(135deg, #0f172a, #475569)" />
         <MetricCard label="Pending Receipts" value={metrics.pendingReceiptUploads ?? 0} note="Receipt uploads waiting for admissions confirmation." accent="linear-gradient(135deg, #92400e, #f59e0b)" />
         <MetricCard label="Tokens Released" value={metrics.releasedTokens ?? 0} note="Scratch-card tokens already pushed to dashboard holders." accent="linear-gradient(135deg, #0f766e, #14b8a6)" />
+        <MetricCard label={`${tokenSalesTerm} Tokens Sold`} value={metrics.tokenSalesCount ?? 0} note="Approved scratch-card purchases recorded in the active session for the current term." accent="linear-gradient(135deg, #7c3aed, #c084fc)" />
+        <MetricCard label={`${tokenSalesTerm} Token Revenue`} value={formatCurrency(metrics.tokenSalesRevenue ?? 0)} note="Total amount collected from approved token purchases in the active term." accent="linear-gradient(135deg, #0f766e, #34d399)" />
+        <MetricCard label={`${tokenSalesTerm} Pending Token Receipts`} value={metrics.tokenSalesPendingCount ?? 0} note="Uploads still waiting before they can count as sold token purchases." accent="linear-gradient(135deg, #9a3412, #fb923c)" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.15fr,0.85fr]">
@@ -182,6 +345,44 @@ function AdminView({ data }) {
         />
       </Panel>
 
+      <Panel title="Public Website QR" eyebrow="Access Point">
+        <PortalQrPanel />
+      </Panel>
+
+      <Panel title="Result Token Sales Control" eyebrow="Revenue">
+        <div className="flex flex-col gap-4 rounded-[22px] border border-slate-200 bg-white/75 p-4 lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <p className="text-wrap-safe text-sm font-semibold text-slate-900">
+              {tokenSalesEnabled ? `${selectedTokenSalesTerm} token sales are open.` : `${selectedTokenSalesTerm} token sales are closed.`}
+            </p>
+            <p className="text-wrap-safe mt-2 text-sm text-slate-600">
+              When this is enabled, students and parents can upload scratch-card receipts and the admissions desk can release approved result tokens for {selectedTokenSalesTerm}.
+            </p>
+          </div>
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:min-w-[14rem]">
+            <select
+              value={selectedTokenSalesTerm}
+              onChange={(event) => setSelectedTokenSalesTerm(event.target.value)}
+              className="rounded-2xl border border-slate-300 px-3 py-3 text-sm"
+            >
+              {['First Term', 'Second Term', 'Third Term'].map((term) => (
+                <option key={term} value={term}>{term}</option>
+              ))}
+            </select>
+            <button
+              type="button"
+              onClick={() => onToggleTokenSales?.(resolvedTokenSalesTerm, !tokenSalesEnabled)}
+              disabled={tokenSalesBusy}
+              className={`interactive-button w-full ${
+                tokenSalesEnabled ? 'border-red-200 text-red-700' : 'border-emerald-200 text-emerald-800'
+              }`}
+            >
+              {tokenSalesBusy ? 'Saving...' : tokenSalesEnabled ? 'Close Token Sales' : 'Open Token Sales'}
+            </button>
+          </div>
+        </div>
+      </Panel>
+
     </div>
   );
 }
@@ -202,6 +403,7 @@ function AdmissionsView({ data, scopeFeatures = [] }) {
   );
 
   const metrics = data?.metrics || {};
+  const tokenSalesTerm = metrics.tokenSalesTerm || 'Active Term';
   const workflowItems = [
     { label: 'Model Pending', value: metrics.modernPending ?? 0, color: 'linear-gradient(90deg, #155e75, #38bdf8)' },
     { label: 'Madrasa Pending', value: metrics.madrasaPending ?? 0, color: 'linear-gradient(90deg, #92400e, #f59e0b)' },
@@ -225,6 +427,9 @@ function AdmissionsView({ data, scopeFeatures = [] }) {
         <MetricCard label="Total Admitted" value={totalAdmitted} note="Students fully admitted with completed desk processing." accent="linear-gradient(135deg, #0f172a, #475569)" />
         <MetricCard label="Pending Receipts" value={metrics.pendingReceiptUploads ?? 0} note="Uploads waiting in the receipt desk queue." accent="linear-gradient(135deg, #92400e, #f59e0b)" />
         <MetricCard label="Token Ready" value={metrics.tokenReadyCount ?? 0} note="Approved payments that already have released result tokens." accent="linear-gradient(135deg, #0f766e, #14b8a6)" />
+        <MetricCard label={`${tokenSalesTerm} Tokens Sold`} value={metrics.tokenSalesCount ?? 0} note="Approved token purchases for the active session and current term." accent="linear-gradient(135deg, #7c3aed, #c084fc)" />
+        <MetricCard label={`${tokenSalesTerm} Token Revenue`} value={formatCurrency(metrics.tokenSalesRevenue ?? 0)} note="How much the school has made from token sales in the active term." accent="linear-gradient(135deg, #0f766e, #34d399)" />
+        <MetricCard label={`${tokenSalesTerm} Tokens Released`} value={metrics.tokenSalesReleasedCount ?? 0} note="Sold token purchases that have already been delivered to students or parents." accent="linear-gradient(135deg, #155e75, #38bdf8)" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.15fr,0.85fr]">
@@ -335,7 +540,7 @@ function TeacherView({ data, scopeFeatures = [] }) {
   );
 }
 
-function StudentView({ data, scopeFeatures = [] }) {
+function StudentView({ data, onSessionChange, selectedSessionId, sessions = [], scopeFeatures = [] }) {
   const actions = filterActions(
     [
       { label: 'My Results', to: '/portal/student/results', feature: 'results' },
@@ -366,9 +571,28 @@ function StudentView({ data, scopeFeatures = [] }) {
 
   return (
     <div className="space-y-6">
+      <div className="flex flex-wrap gap-2">
+        <select
+          value={selectedSessionId}
+          onChange={(event) => onSessionChange(event.target.value)}
+          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm sm:w-auto"
+        >
+          {!sessions.length && <option value="">No sessions available</option>}
+          {sessions.map((session) => (
+            <option key={session.id} value={session.id}>
+              {session.sessionName} {session.isActive ? '(Active)' : ''}
+            </option>
+          ))}
+        </select>
+      </div>
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <MetricCard label="Upcoming Items" value={normalizedUpcoming.length} note="Tests, submissions, or school tasks waiting ahead." accent="linear-gradient(135deg, #0f766e, #14b8a6)" />
-        <MetricCard label="Attendance" value={data?.attendance || 'N/A'} note="Current attendance reading from the school ledger." accent="linear-gradient(135deg, #92400e, #f59e0b)" />
+        <MetricCard
+          label={`Attendance${data?.attendanceTerm ? ` (${data.attendanceTerm})` : ''}${data?.sessionName ? ` • ${data.sessionName}` : ''}`}
+          value={data?.attendance || 'N/A'}
+          note="Current attendance reading from the school ledger."
+          accent="linear-gradient(135deg, #92400e, #f59e0b)"
+        />
         <MetricCard
           label="Class"
           value={data?.student?.classLabel || data?.student?.level || 'Pending'}
@@ -445,7 +669,7 @@ function StudentView({ data, scopeFeatures = [] }) {
   );
 }
 
-function ParentView({ data, onChildChange, onTermChange, selectedTerm, scopeFeatures = [] }) {
+function ParentView({ data, onChildChange, onTermChange, onSessionChange, selectedTerm, selectedSessionId, sessions = [], scopeFeatures = [] }) {
   const children = data?.children || [];
   const child = data?.child || null;
   const actions = filterActions(
@@ -477,6 +701,18 @@ function ParentView({ data, onChildChange, onTermChange, selectedTerm, scopeFeat
       />
       <div className="flex flex-wrap gap-2">
         <select
+          value={selectedSessionId}
+          onChange={(event) => onSessionChange(event.target.value)}
+          className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm sm:w-auto"
+        >
+          {!sessions.length && <option value="">No sessions available</option>}
+          {sessions.map((session) => (
+            <option key={session.id} value={session.id}>
+              {session.sessionName} {session.isActive ? '(Active)' : ''}
+            </option>
+          ))}
+        </select>
+        <select
           value={selectedTerm}
           onChange={(event) => onTermChange(event.target.value)}
           className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm sm:w-auto"
@@ -492,12 +728,17 @@ function ParentView({ data, onChildChange, onTermChange, selectedTerm, scopeFeat
         <MetricCard label="Linked Children" value={data?.linkedChildrenCount ?? children.length ?? 0} note="Total students connected to this parent account." />
         <MetricCard label="Active Child" value={child?.fullName || 'N/A'} note="The current child in focus across the portal." accent="linear-gradient(135deg, #0f766e, #14b8a6)" />
         <MetricCard
-          label={`Attendance${data?.attendanceTerm ? ` (${data.attendanceTerm})` : ''}`}
+          label={`Attendance${data?.attendanceTerm ? ` (${data.attendanceTerm})` : ''}${data?.sessionName ? ` • ${data.sessionName}` : ''}`}
           value={data?.attendance || 'N/A'}
           note="Attendance readout for the selected child."
           accent="linear-gradient(135deg, #92400e, #f59e0b)"
         />
-        <MetricCard label="Payment Status" value={data?.paymentStatus || 'N/A'} note="Fee position for the active child." accent="linear-gradient(135deg, #0f172a, #475569)" />
+        <MetricCard
+          label={`Payment Status${selectedTerm ? ` (${selectedTerm})` : ''}${data?.sessionName ? ` • ${data.sessionName}` : ''}`}
+          value={data?.paymentStatus || 'N/A'}
+          note="Fee position for the active child in the selected scope."
+          accent="linear-gradient(135deg, #0f172a, #475569)"
+        />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[1.15fr,0.85fr]">
@@ -562,17 +803,24 @@ function ParentView({ data, onChildChange, onTermChange, selectedTerm, scopeFeat
 }
 
 function renderRoleContent(role, data, options = {}) {
-  if (role === 'admin') return <AdminView data={data} />;
+  if (role === 'admin') {
+    return <AdminView data={data} onToggleTokenSales={options.onToggleTokenSales} tokenSalesBusy={options.tokenSalesBusy} />;
+  }
   if (role === 'admissions') return <AdmissionsView data={data} scopeFeatures={options.scopeFeatures} />;
   if (role === 'teacher') return <TeacherView data={data} scopeFeatures={options.scopeFeatures} />;
-  if (role === 'student') return <StudentView data={data} scopeFeatures={options.scopeFeatures} />;
+  if (role === 'student') {
+    return <StudentView data={data} onSessionChange={options.onSessionChange} selectedSessionId={options.selectedSessionId} sessions={options.sessions} scopeFeatures={options.scopeFeatures} />;
+  }
   if (role === 'parent') {
     return (
       <ParentView
         data={data}
         onChildChange={options.onChildChange}
         onTermChange={options.onTermChange}
+        onSessionChange={options.onSessionChange}
         selectedTerm={options.selectedTerm}
+        selectedSessionId={options.selectedSessionId}
+        sessions={options.sessions}
         scopeFeatures={options.scopeFeatures}
       />
     );
@@ -586,8 +834,11 @@ function RoleDashboard({ role }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [tokenSalesBusy, setTokenSalesBusy] = useState(false);
   const [selectedChildId, setSelectedChildId] = useParentChildSelection(role, user);
   const [selectedTerm, setSelectedTerm] = useState('');
+  const [sessions, setSessions] = useState([]);
+  const [selectedSessionId, setSelectedSessionId] = useState('');
 
   useEffect(() => {
     if (role !== 'parent') return;
@@ -600,9 +851,23 @@ function RoleDashboard({ role }) {
       setError('');
 
       try {
+        let effectiveSessionId = selectedSessionId;
+        if (role === 'student' || role === 'parent') {
+          const sessionsPayload = await apiJson('/results/sessions');
+          const sessionRows = sessionsPayload.sessions || [];
+          const activeSession = sessionsPayload.activeSession || sessionRows.find((item) => item.isActive) || sessionRows[0] || null;
+          effectiveSessionId = selectedSessionId && sessionRows.some((item) => item.id === selectedSessionId)
+            ? selectedSessionId
+            : activeSession?.id || '';
+          setSessions(sessionRows);
+          if (selectedSessionId !== effectiveSessionId) {
+            setSelectedSessionId(effectiveSessionId);
+          }
+        }
         const params = new URLSearchParams();
         if (role === 'parent' && selectedChildId) params.set('childId', selectedChildId);
         if (role === 'parent' && selectedTerm) params.set('term', selectedTerm);
+        if ((role === 'student' || role === 'parent') && effectiveSessionId) params.set('sessionId', effectiveSessionId);
         const query = params.toString() ? `?${params.toString()}` : '';
         const payload = await apiJson(`/dashboard/${role}${query}`);
 
@@ -618,7 +883,30 @@ function RoleDashboard({ role }) {
     }
 
     loadDashboard();
-  }, [role, apiJson, logout, navigate, selectedChildId, selectedTerm, setSelectedChildId]);
+  }, [role, apiJson, logout, navigate, selectedChildId, selectedSessionId, selectedTerm, setSelectedChildId]);
+
+  async function handleToggleTokenSales(term, nextEnabled) {
+    if (role !== 'admin' || !term) return;
+    setTokenSalesBusy(true);
+    setError('');
+
+    try {
+      await apiJson('/fees/admin/token-sales-control', {
+        method: 'PUT',
+        body: {
+          term,
+          enabled: nextEnabled
+        }
+      });
+
+      const payload = await apiJson('/dashboard/admin');
+      setData(payload);
+    } catch (err) {
+      setError(err.message || 'Unable to update token sales control.');
+    } finally {
+      setTokenSalesBusy(false);
+    }
+  }
 
   const subtitle = useMemo(() => {
     if (role === 'admin') return 'High-level school operations, admissions access control, and institution health in one view.';
@@ -640,9 +928,14 @@ function RoleDashboard({ role }) {
       {!loading && !error && data && (
         <div className="space-y-6">
           {renderRoleContent(role, data, {
+            onToggleTokenSales: handleToggleTokenSales,
+            tokenSalesBusy,
             onChildChange: setSelectedChildId,
+            onSessionChange: setSelectedSessionId,
             onTermChange: setSelectedTerm,
+            selectedSessionId,
             selectedTerm,
+            sessions,
             scopeFeatures: user?.scope?.features || []
           })}
           <SmartSearchPanel role={role} apiJson={apiJson} classes={data?.classes || []} />

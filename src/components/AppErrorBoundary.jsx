@@ -1,22 +1,27 @@
 import React from 'react';
 import ErrorState from './ErrorState';
+import { sanitizeUserMessage } from '../utils/userMessage';
 
 class AppErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false };
+    this.state = { hasError: false, errorMessage: '' };
   }
 
-  static getDerivedStateFromError() {
-    return { hasError: true };
+  static getDerivedStateFromError(error) {
+    return {
+      hasError: true,
+      errorMessage: sanitizeUserMessage(
+        error?.message,
+        'The page ran into a problem. Please reload and try again.'
+      )
+    };
   }
 
-  componentDidCatch(error, errorInfo) {
-    console.error('Frontend render error:', error, errorInfo);
-  }
+  componentDidCatch() {}
 
   handleRetry = () => {
-    this.setState({ hasError: false });
+    this.setState({ hasError: false, errorMessage: '' });
     if (typeof window !== 'undefined') {
       window.location.reload();
     }
@@ -28,7 +33,7 @@ class AppErrorBoundary extends React.Component {
         <main className="section-wrap min-h-screen py-16">
           <ErrorState
             title="Something went wrong"
-            message="The page hit an unexpected problem. Reload and try again."
+            message={this.state.errorMessage || 'The page hit an unexpected problem. Reload and try again.'}
             onRetry={this.handleRetry}
           />
         </main>

@@ -4,6 +4,7 @@ import { env } from '../config/env.js';
 import { adminStore, makeId } from '../data/adminStore.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { withCache } from '../services/cacheService.js';
+import { toPublicErrorMessage } from '../utils/publicError.js';
 import { buildAdmissionPeriodResponse, isProgramOpen } from '../utils/admissionPeriod.js';
 import { privateUpload, saveUploadedFile } from './upload.js';
 
@@ -102,7 +103,7 @@ admissionsRouter.post('/upload', privateUpload.array('files', 10), async (req, r
       });
     }
   } catch (error) {
-    return res.status(400).json({ message: error.message || 'Upload failed.' });
+    return res.status(400).json({ message: toPublicErrorMessage(error, 'We could not upload the selected file.') });
   }
 
   return res.status(201).json({

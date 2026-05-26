@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { Link, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import PageHeader from './PageHeader';
@@ -16,6 +16,7 @@ const roleNav = {
     { label: 'Assignments', to: '/portal/admin/teacher-assignments', feature: 'assignments' },
     { label: 'Results', to: '/portal/admin/results', feature: 'results' },
     { label: 'Result Tokens', to: '/portal/admin/result-tokens', feature: 'results' },
+    { label: 'Fees', to: '/portal/admin/fees', feature: 'fees' },
     { label: 'Promotion', to: '/portal/admin/promotions', feature: 'promotions' },
     { label: 'Admissions Access', to: '/portal/admin/admissions-access', feature: 'admissions' },
     { label: 'Library', to: '/portal/admin/library', feature: 'library' },
@@ -117,6 +118,33 @@ function PortalLayout({ role, title, subtitle, children, actions = null }) {
     };
   }, [open]);
 
+  useLayoutEffect(() => {
+    if (typeof window === 'undefined') return;
+    const scrollingElement = document.scrollingElement || document.documentElement;
+    const htmlElement = document.documentElement;
+    const previousScrollBehavior = htmlElement.style.scrollBehavior;
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration = 'manual';
+    }
+    const resetScroll = () => {
+      htmlElement.style.scrollBehavior = 'auto';
+      window.scrollTo(0, 0);
+      scrollingElement.scrollTop = 0;
+      document.documentElement.scrollTop = 0;
+      document.body.scrollTop = 0;
+    };
+
+    resetScroll();
+    const rafId = window.requestAnimationFrame(resetScroll);
+    const timeoutId = window.setTimeout(resetScroll, 80);
+
+    return () => {
+      htmlElement.style.scrollBehavior = previousScrollBehavior;
+      window.cancelAnimationFrame(rafId);
+      window.clearTimeout(timeoutId);
+    };
+  }, [routeKey]);
+
   function toggleMobileMenu() {
     setMobileMenuState((prev) => ({
       open: !(prev.open && prev.routeKey === routeKey),
@@ -129,11 +157,15 @@ function PortalLayout({ role, title, subtitle, children, actions = null }) {
   }
 
   return (
-    <main className="min-h-screen overflow-x-clip bg-[radial-gradient(circle_at_top,rgba(13,148,136,0.1),transparent_42%),radial-gradient(circle_at_bottom,rgba(245,158,11,0.12),transparent_40%)]">
-      <div className="mx-auto flex w-full max-w-[1600px] gap-4 px-3 py-3 sm:gap-6 sm:px-5 sm:py-5 lg:px-8">
-        <aside className="gradient-shell hidden w-[21.5rem] shrink-0 overflow-hidden rounded-[34px] p-5 text-white shadow-[0_24px_56px_rgba(8,37,26,0.18),0_8px_20px_rgba(8,37,26,0.12)] lg:block">
-          <div className="flex items-center gap-3">
-            <div className="flex min-w-0 flex-1 items-center gap-3 rounded-[26px] border border-white/12 bg-white/10 p-4 backdrop-blur-md">
+    <main className="min-h-screen min-h-[100dvh] overflow-x-clip bg-[radial-gradient(circle_at_top,rgba(13,148,136,0.1),transparent_42%),radial-gradient(circle_at_bottom,rgba(245,158,11,0.12),transparent_40%)]">
+      <div className="portal-shell mx-auto flex w-full max-w-[1600px] gap-4 px-3 py-3 sm:gap-6 sm:px-5 sm:py-5 lg:gap-0 lg:px-0 lg:py-0">
+        <aside className="portal-sidebar gradient-shell hidden w-[21.5rem] shrink-0 overflow-hidden rounded-[34px] p-5 pt-20 text-white shadow-[0_24px_56px_rgba(8,37,26,0.18),0_8px_20px_rgba(8,37,26,0.12)] lg:block">
+          <div className="portal-sidebar__theme-toggle">
+            <ThemeToggle />
+          </div>
+
+          <div className="flex items-center">
+            <div className="portal-sidebar__profile-card flex min-w-0 flex-1 items-center gap-3 rounded-[26px] border border-white/12 bg-white/10 p-4 backdrop-blur-md">
               <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/18 text-sm font-bold">
                 {avatarUrl ? (
                   <SmartImage src={avatarUrl} alt="Profile avatar" className="h-full w-full object-cover" />
@@ -143,17 +175,16 @@ function PortalLayout({ role, title, subtitle, children, actions = null }) {
               </div>
               <div className="min-w-0 flex-1">
                 <Tooltip text={user?.fullName || 'User'} className="block min-w-0">
-                  <p className="text-truncate-2 text-lg font-bold leading-tight">{user?.fullName || 'User'}</p>
+                  <p className="text-truncate-1 text-lg font-bold leading-tight">{user?.fullName || 'User'}</p>
                 </Tooltip>
-                <p className="text-wrap-safe mt-1 text-[11px] uppercase tracking-[0.2em] text-white/70">{role} portal</p>
+                <p className="text-truncate-1 mt-1 text-[11px] uppercase tracking-[0.2em] text-white/70">{role} portal</p>
               </div>
             </div>
-            <ThemeToggle />
           </div>
 
           {institutionLabel && (
             <Tooltip text={institutionLabel} className="mt-4 inline-flex max-w-full">
-              <p className="text-wrap-safe inline-flex max-w-full rounded-full border border-white/18 bg-white/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/80">
+              <p className="text-truncate-1 inline-flex max-w-full rounded-full border border-white/18 bg-white/10 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-white/80 sm:max-w-[17rem]">
                 {institutionLabel}
               </p>
             </Tooltip>
@@ -171,7 +202,7 @@ function PortalLayout({ role, title, subtitle, children, actions = null }) {
                   }`
                 }
               >
-                <span className="text-label-clamp block leading-tight">{item.label}</span>
+                <span className="text-truncate-1 block leading-tight">{item.label}</span>
               </NavLink>
             ))}
           </nav>
@@ -185,7 +216,7 @@ function PortalLayout({ role, title, subtitle, children, actions = null }) {
           </div>
         </aside>
 
-        <div className="min-w-0 flex-1">
+        <div className="portal-main min-w-0 flex-1">
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3 rounded-[24px] border border-white/50 bg-white/74 p-3 shadow-[0_16px_34px_rgba(15,23,42,0.08)] backdrop-blur-xl sm:items-center sm:rounded-[28px] sm:p-4 lg:hidden">
             <div className="min-w-0 flex-1">
               <p className="text-xs uppercase tracking-[0.22em] text-slate-500">{role} portal</p>
@@ -194,7 +225,7 @@ function PortalLayout({ role, title, subtitle, children, actions = null }) {
               </Tooltip>
               {institutionLabel && (
                 <Tooltip text={institutionLabel} className="mt-1 block min-w-0">
-                  <p className="text-label-clamp text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">{institutionLabel}</p>
+                  <p className="text-truncate-1 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">{institutionLabel}</p>
                 </Tooltip>
               )}
             </div>
@@ -237,7 +268,7 @@ function PortalLayout({ role, title, subtitle, children, actions = null }) {
                       }`
                     }
                   >
-                    <span className="text-label-clamp block">{item.label}</span>
+                    <span className="text-truncate-1 block">{item.label}</span>
                   </NavLink>
                 ))}
               </nav>
@@ -251,7 +282,7 @@ function PortalLayout({ role, title, subtitle, children, actions = null }) {
             </div>
           )}
 
-          <section className="glass-panel relative overflow-hidden p-4 sm:p-6 lg:p-7">
+          <section className="portal-page-shell glass-panel relative overflow-hidden p-4 sm:p-6 lg:p-7">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(15,81,50,0.08),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(217,179,84,0.12),transparent_30%)]" />
             <div className="relative">
               <PageHeader role={role} title={title} subtitle={subtitle} actions={actions} />

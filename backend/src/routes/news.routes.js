@@ -3,6 +3,7 @@ import { adminStore, makeId } from '../data/adminStore.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { deleteCacheByPrefix, withCache } from '../services/cacheService.js';
 import { publicUpload, saveUploadedFile } from './upload.js';
+import { toPublicErrorMessage } from '../utils/publicError.js';
 
 const newsRouter = Router();
 const NEWS_CACHE_TTL_SECONDS = 60;
@@ -121,7 +122,7 @@ newsRouter.post('/admin/upload', requireAuth, requireRole('admin', 'admissions')
     const url = `/api/uploads/public/${saved.id}`;
     return res.status(201).json({ url, filename: saved.id });
   } catch (error) {
-    return res.status(400).json({ message: error.message || 'Upload failed.' });
+    return res.status(400).json({ message: toPublicErrorMessage(error, 'We could not upload the selected image.') });
   }
 });
 

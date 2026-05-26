@@ -2,6 +2,9 @@ import crypto from 'node:crypto';
 import { loadAppState, getAppStateMetadata, saveAppState } from '../repositories/appStateRepository.js';
 import { persistActivityLog } from '../repositories/activityLogRepository.js';
 import { normalizeAdmissionPeriod } from '../utils/admissionPeriod.js';
+import { normalizeAcademicCalendarEntry } from '../utils/academicCalendar.js';
+import { logger } from '../utils/logger.js';
+import { normalizeReportOverride, normalizeReportSettings } from '../utils/reportConfig.js';
 
 const APP_STATE_KEY = 'admin_store';
 const SAVE_DEBOUNCE_MS = 750;
@@ -31,21 +34,31 @@ const initialStore = {
   upcomingItems: [],
   resultsAccess: [],
   results: [],
+  reportRemarks: [],
   feePlans: [],
   payments: [],
   paymentRequests: [],
+  tokenSalesControls: [],
   notifications: [],
   madrasaRecords: [],
   messageThreads: [],
   messages: [],
   activityLogs: [],
+  reportSettings: {
+    headName: '',
+    headTitle: 'Head Teacher',
+    signatureImage: '',
+    parentAcknowledgementText: 'I have received and read this report.',
+    footerNote: ''
+  },
   libraryBooks: [],
   libraryIssues: [],
   timetableEntries: [],
   attendanceRecords: [],
   promotionBatches: [],
   promotionRecommendations: [],
-  termClosures: []
+  termClosures: [],
+  academicCalendar: []
 };
 
 const adminStore = structuredClone(initialStore);
@@ -65,9 +78,28 @@ function normalizeStore(store) {
     '';
   normalized.admissionPeriod = normalizeAdmissionPeriod(normalized.admissionPeriod);
   normalized.resultsAccess = Array.isArray(normalized.resultsAccess) ? normalized.resultsAccess : [];
+  normalized.reportRemarks = Array.isArray(normalized.reportRemarks)
+      ? normalized.reportRemarks.map((remark) => ({
+        id: remark.id || '',
+        studentId: remark.studentId || '',
+        classId: remark.classId || '',
+        sessionId: remark.sessionId || activeSessionId,
+        term: remark.term || 'First Term',
+        strengths: remark.strengths || '',
+        weaknesses: remark.weaknesses || '',
+        classTeacherRemark: remark.classTeacherRemark || '',
+        headTeacherRemark: remark.headTeacherRemark || '',
+        override: normalizeReportOverride(remark.override || {}),
+        updatedAt: remark.updatedAt || ''
+      }))
+    : [];
+  normalized.reportSettings = normalizeReportSettings(normalized.reportSettings);
   normalized.promotionBatches = Array.isArray(normalized.promotionBatches) ? normalized.promotionBatches : [];
   normalized.promotionRecommendations = Array.isArray(normalized.promotionRecommendations) ? normalized.promotionRecommendations : [];
   normalized.termClosures = Array.isArray(normalized.termClosures) ? normalized.termClosures : [];
+  normalized.academicCalendar = Array.isArray(normalized.academicCalendar)
+    ? normalized.academicCalendar.map((entry) => normalizeAcademicCalendarEntry(entry))
+    : [];
 
   normalized.admissions = (normalized.admissions || []).map((admission) => ({
     ...admission,
@@ -81,22 +113,61 @@ function normalizeStore(store) {
 
   normalized.feePlans = (normalized.feePlans || []).map((plan) => ({
     ...plan,
-    sessionId: plan.sessionId || activeSessionId
+    sessionId: plan.sessionId || activeSessionId,
+    published: plan.published !== false,
+    publishedAt: plan.publishedAt || '',
+    publishedByUserId: plan.publishedByUserId || '',
+    publishedByEmail: plan.publishedByEmail || ''
   }));
 
   normalized.payments = (normalized.payments || []).map((payment) => ({
     ...payment,
-    sessionId: payment.sessionId || activeSessionId
+    sessionId: payment.sessionId || activeSessionId,
+    paymentType: payment.paymentType || 'school_fee'
   }));
 
   normalized.paymentRequests = (normalized.paymentRequests || []).map((request) => ({
     ...request,
     sessionId: request.sessionId || activeSessionId,
-    status: request.status || 'pending'
+    status: request.status || 'pending',
+    requestType: request.requestType || 'scratch_card'
+  }));
+
+  normalized.tokenSalesControls = Array.isArray(normalized.tokenSalesControls)
+    ? normalized.tokenSalesControls.map((control) => ({
+        sessionId: control?.sessionId || activeSessionId,
+        term: control?.term || 'First Term',
+        enabled: Boolean(control?.enabled),
+        enabledAt: control?.enabledAt || '',
+        enabledByUserId: control?.enabledByUserId || '',
+        enabledByEmail: control?.enabledByEmail || ''
+      }))
+    : [];
+
+  normalized.teachers = (normalized.teachers || []).map((teacher) => ({
+    ...teacher,
+    signatureImage: teacher.signatureImage || ''
   }));
 
   normalized.attendanceRecords = (normalized.attendanceRecords || []).map((record) => ({
     ...record,
+    sessionId: record.sessionId || activeSessionId,
+    term: record.term || 'First Term',
+    status: record.status || (record.present ? 'present' : 'absent'),
+    present: record.present !== undefined ? Boolean(record.present) : record.status !== 'absent',
+    late: Boolean(record.late || record.status === 'late'),
+    behavior: {
+      discipline: record.behavior?.discipline || '',
+      responsibility: record.behavior?.responsibility || '',
+      cooperation: record.behavior?.cooperation || '',
+      respect: record.behavior?.respect || '',
+      initiative: record.behavior?.initiative || ''
+    }
+  }));
+
+  normalized.madrasaRecords = (normalized.madrasaRecords || []).map((record) => ({
+    ...record,
+    sessionId: record.sessionId || activeSessionId,
     term: record.term || 'First Term'
   }));
 
@@ -151,7 +222,7 @@ function schedulePersist() {
   saveTimer = setTimeout(() => {
     saveTimer = null;
     void persistSnapshot().catch((error) => {
-      console.error('Failed to persist admin store:', error.message || error);
+      logger.error('Failed to persist admin store.', { error });
     });
   }, SAVE_DEBOUNCE_MS);
   saveTimer.unref?.();
@@ -181,7 +252,7 @@ function startRefreshLoop() {
       : refreshFromDatabase();
 
     void work.catch((error) => {
-      console.error('Failed to refresh admin store:', error.message || error);
+      logger.error('Failed to refresh admin store.', { error });
     });
   }, REMOTE_REFRESH_MS);
   refreshTimer.unref?.();

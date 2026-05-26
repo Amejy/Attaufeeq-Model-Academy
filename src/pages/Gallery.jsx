@@ -2,6 +2,7 @@ import SmartImage from '../components/SmartImage';
 import { PremiumHero, SectionIntro } from '../components/public/PremiumPublic';
 import { useSiteContent } from '../context/SiteContentContext';
 import { DEFAULT_GALLERY_PHOTOS, DEFAULT_IMAGES } from '../utils/defaultImages';
+import { getSectionMedia } from '../utils/publicSectionImages';
 
 function captionFromPhoto(photo, index) {
   const alt = String(photo?.alt || '').trim();
@@ -11,7 +12,8 @@ function captionFromPhoto(photo, index) {
 function Gallery() {
   const { siteContent } = useSiteContent();
   const gallery = siteContent.gallery || {};
-  const photos = [...(gallery.photos || [])];
+  const galleryMedia = getSectionMedia('gallery');
+  const photos = galleryMedia.supportingImages.length ? galleryMedia.supportingImages : [...(gallery.photos || [])];
   const galleryPhotos = photos.length >= 15 ? photos : [...photos, ...DEFAULT_GALLERY_PHOTOS].slice(0, 15);
 
   return (
@@ -22,8 +24,8 @@ function Gallery() {
         title={gallery.title}
         kicker="Campus Moments"
         description={gallery.description}
-        image={galleryPhotos[0]?.url || DEFAULT_IMAGES.gallery}
-        imageAlt={galleryPhotos[0]?.alt || 'School gallery'}
+        image={galleryMedia.headerImage?.url || galleryPhotos[0]?.url || DEFAULT_IMAGES.gallery}
+        imageAlt={galleryMedia.headerImage?.alt || galleryPhotos[0]?.alt || 'School gallery'}
       />
 
       <section className="section-wrap premium-band">
