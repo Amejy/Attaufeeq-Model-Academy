@@ -22,6 +22,16 @@ This command now starts backend first, waits for health check, then starts Vite.
 - `npm run dev:backend` -> start backend only
 - `npm run build` -> build frontend
 
+## QR Code Result Links
+
+Set `VITE_PUBLIC_APP_URL` in the frontend environment to your public site URL, for example:
+
+```bash
+VITE_PUBLIC_APP_URL=https://your-frontend-domain.com
+```
+
+This is important for printed or shared QR codes. Without it, locally generated QR codes may point to `localhost`, which phones cannot open.
+
 ## Fixing `ECONNREFUSED 127.0.0.1:4000`
 
 If Vite shows proxy errors for `/api/*`, backend is not reachable.
