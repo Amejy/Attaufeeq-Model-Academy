@@ -55,7 +55,7 @@ export async function getReadinessStatus() {
     }
   }
 
-  const ready = checks.application.ready && checks.database.ready && checks.redis.ready;
+  const ready = checks.application.ready && checks.database.ready;
 
   return {
     status: ready ? 'ok' : 'degraded',

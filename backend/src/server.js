@@ -183,10 +183,15 @@ async function start() {
     await verifyLegacyDemoUsers();
     await syncCoreAcademicStore();
 
-    const redis = await retryWithBackoff('Redis connection', () => testRedisConnection(), {
-      attempts: env.startupRedisRetryAttempts,
-      baseMs: env.startupRedisRetryBaseMs
-    });
+    let redis = { enabled: false };
+    try {
+      redis = await retryWithBackoff('Redis connection', () => testRedisConnection(), {
+        attempts: env.startupRedisRetryAttempts,
+        baseMs: env.startupRedisRetryBaseMs
+      });
+    } catch (error) {
+      logger.warn('Redis unavailable during startup; continuing without Redis-backed rate limiting and cache.', { error });
+    }
 
     stopMailWorker = startMailOutboxWorker();
     stopUptimePinger = startUptimePinger();

@@ -6,6 +6,7 @@ import { logger } from '../utils/logger.js';
 
 const NOOP_RESULT = { enabled: false };
 let client = null;
+let redisUnavailable = false;
 let warningLogged = false;
 
 function shouldUseRedis() {
@@ -179,6 +180,10 @@ class SimpleRedisClient {
       this.socket = null;
     }
 
+    if (error?.message !== 'Redis client closed.') {
+      redisUnavailable = true;
+    }
+
     while (this.pending.length) {
       const pending = this.pending.shift();
       pending?.reject(error);
@@ -236,19 +241,25 @@ function logDevWarning(message) {
 
 export async function getRedisClient() {
   if (!shouldUseRedis()) return null;
+  if (redisUnavailable) return null;
   if (client) return client;
 
   client = new SimpleRedisClient(buildConfig());
   try {
     await client.connect();
+    redisUnavailable = false;
     return client;
   } catch (error) {
     client = null;
+    redisUnavailable = true;
+    const message = `Redis unavailable; distributed rate limiting and cache will fall back. ${error.message || error}`;
     if (!env.isProduction) {
-      logDevWarning(`Redis unavailable; distributed rate limiting disabled in development. ${error.message || error}`);
-      return null;
+      logDevWarning(message);
+    } else if (!warningLogged) {
+      warningLogged = true;
+      logger.warn(message);
     }
-    throw error;
+    return null;
   }
 }
 
@@ -277,5 +288,6 @@ export async function closeRedisClient() {
   if (!client) return;
   const active = client;
   client = null;
+  redisUnavailable = false;
   await active.close();
 }
