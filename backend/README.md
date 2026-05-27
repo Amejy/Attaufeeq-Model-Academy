@@ -150,7 +150,7 @@ Required setup:
 - Validate empty-database bootstrap behavior with `npm run db:validate-bootstrap`.
 - Clean legacy demo users with `npm run db:cleanup:legacy-users`.
 - Replace the final legacy admin safely with `npm run db:replace:legacy-admin` after setting `BOOTSTRAP_ADMIN_EMAIL` and `BOOTSTRAP_ADMIN_PASSWORD`.
-- Security hardening enabled: Redis-backed distributed rate limiting, login throttling, graceful Redis fallback, strict startup validation, and request audit logs.
+- Security hardening enabled: Redis-backed distributed rate limiting, login throttling, graceful Redis fallback, strict startup validation, automatic public-schema RLS lockdown, and request audit logs.
 
 ## Security Operations
 
