@@ -20,6 +20,7 @@ import {
 import { env } from '../config/env.js';
 import { queuePasswordResetCodeDelivery } from '../services/credentialDeliveryService.js';
 import { resolvePortalAccessState } from '../utils/authAccessPolicy.js';
+import { resolveAbsoluteAssetUrl } from '../utils/assetUrl.js';
 import { logger } from '../utils/logger.js';
 import { hashPassword, verifyPassword } from '../utils/passwords.js';
 import { createAccessToken, createRefreshToken, verifyRefreshToken } from '../utils/tokens.js';
@@ -109,14 +110,14 @@ async function issueSession(user) {
   return { token, refreshToken, expiresAt };
 }
 
-function serializeUser(user) {
+function serializeUser(user, req = null) {
   return {
     id: user.id,
     fullName: user.fullName,
     email: user.email,
     role: user.role,
     mustChangePassword: Boolean(user.mustChangePassword),
-    avatarUrl: user.avatarUrl || ''
+    avatarUrl: resolveAbsoluteAssetUrl(user.avatarUrl || '', req)
   };
 }
 
@@ -252,7 +253,7 @@ authRouter.post('/reset-password', async (req, res) => {
 
     return res.json({
       message: 'Password reset successfully. You can log in now.',
-      user: serializeUser(updatedUser || { ...user, mustChangePassword: false })
+      user: serializeUser(updatedUser || { ...user, mustChangePassword: false }, req)
     });
   } catch (error) {
     logger.error('Password reset failed.', { error });
@@ -316,7 +317,7 @@ authRouter.post('/login', async (req, res) => {
 
     return res.json({
       token,
-      user: serializeUser(user)
+      user: serializeUser(user, req)
     });
   } catch (error) {
     logger.error('Login failed.', { error });
@@ -371,7 +372,7 @@ authRouter.post('/refresh', async (req, res) => {
 
     return res.json({
       token: next.token,
-      user: serializeUser(user)
+      user: serializeUser(user, req)
     });
   } catch {
     clearRefreshCookie(res);
@@ -434,7 +435,7 @@ authRouter.post('/change-password', requireAuth, async (req, res) => {
     return res.json({
       message: 'Password changed successfully.',
       token: next.token,
-      user: serializeUser(nextSessionUser)
+      user: serializeUser(nextSessionUser, req)
     });
   } catch (error) {
     logger.error('Password change failed.', { error });

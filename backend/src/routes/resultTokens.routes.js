@@ -16,6 +16,7 @@ import {
   recordResultTokenAttempt
 } from '../repositories/resultTokenRepository.js';
 import { resolveNextTermBegins } from '../utils/academicCalendar.js';
+import { resolveAbsoluteAssetUrl } from '../utils/assetUrl.js';
 import { findClassLead } from '../utils/portalScope.js';
 import { toPublicErrorMessage } from '../utils/publicError.js';
 import { hasAttendanceOverride, hasBehaviorOverride, normalizeReportOverride, normalizeReportSettings } from '../utils/reportConfig.js';
@@ -364,8 +365,9 @@ function gradeFromTotal(total) {
   return { grade: 'F', remark: 'Fail' };
 }
 
-function buildReportCard(student, term = '', sessionId = '') {
+function buildReportCard(student, term = '', sessionId = '', options = {}) {
   if (!student) return null;
+  const req = options.req || null;
   const filtered = adminStore.results.filter(
     (item) =>
       item.studentId === student.id &&
@@ -416,6 +418,8 @@ function buildReportCard(student, term = '', sessionId = '') {
     classRank = self ? self.position : null;
   }
 
+  const reportSettings = normalizeReportSettings(adminStore.reportSettings || {});
+
   return {
     student,
     classInfo,
@@ -437,7 +441,10 @@ function buildReportCard(student, term = '', sessionId = '') {
     nextTermBegins: resolveNextTermBegins(adminStore, sessionId, term),
     classTeacherRemark: reportRemark?.classTeacherRemark || '',
     headTeacherRemark: reportRemark?.headTeacherRemark || '',
-    reportSettings: normalizeReportSettings(adminStore.reportSettings || {}),
+    reportSettings: {
+      ...reportSettings,
+      signatureImage: resolveAbsoluteAssetUrl(reportSettings.signatureImage, req)
+    },
     publishState: 'Published',
     rows
   };
@@ -588,7 +595,7 @@ resultTokenRouter.get('/admissions/report-card/:studentId', requireAuth, require
   const term = req.query.term ? String(req.query.term) : '';
   const activeSession = await ensureActiveAcademicSession();
   const sessionId = req.query.sessionId ? String(req.query.sessionId) : activeSession?.id || '';
-  return res.json({ reportCard: buildReportCard(student, term, sessionId) });
+  return res.json({ reportCard: buildReportCard(student, term, sessionId, { req }) });
 });
 
 resultTokenRouter.post('/check', tokenCheckLimiter, async (req, res) => {
@@ -645,7 +652,7 @@ resultTokenRouter.post('/check', tokenCheckLimiter, async (req, res) => {
   const userProfile = student.userId ? await findUserById(student.userId) : null;
   const studentPayload = {
     ...student,
-    avatarUrl: student.avatarUrl || userProfile?.avatarUrl || '',
+    avatarUrl: resolveAbsoluteAssetUrl(student.avatarUrl || userProfile?.avatarUrl || '', req),
     classLabel: classItem ? `${classItem.name} ${classItem.arm}` : student.classLabel || ''
   };
 
@@ -681,7 +688,7 @@ resultTokenRouter.post('/check', tokenCheckLimiter, async (req, res) => {
       sessionId: resolvedSessionId,
       results: results.map(enrichResult),
       subjects,
-      reportCard: buildReportCard(studentPayload, term, resolvedSessionId),
+      reportCard: buildReportCard(studentPayload, term, resolvedSessionId, { req }),
       holdStatus: results.length ? 'ready' : 'empty',
       remainingUses: 0
     });
@@ -876,7 +883,7 @@ resultTokenRouter.post('/check', tokenCheckLimiter, async (req, res) => {
     sessionId: resolvedSessionId,
     results: results.map(enrichResult),
     subjects,
-    reportCard: buildReportCard(studentPayload, term, resolvedSessionId),
+    reportCard: buildReportCard(studentPayload, term, resolvedSessionId, { req }),
     holdStatus: 'ready',
     remainingUses: 0
   });

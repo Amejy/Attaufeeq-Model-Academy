@@ -3,6 +3,7 @@ import { requireAuth } from '../middleware/auth.js';
 import { updateTeacherSignatureImage } from '../repositories/teacherRepository.js';
 import { updateUserAvatar } from '../repositories/userRepository.js';
 import { findTeacherByUser } from '../utils/portalScope.js';
+import { resolveAbsoluteAssetUrl } from '../utils/assetUrl.js';
 import { publicUpload, saveUploadedFile } from './upload.js';
 import { toPublicErrorMessage } from '../utils/publicError.js';
 
@@ -10,24 +11,24 @@ const profileRouter = Router();
 const MAX_AVATAR_BYTES = 4 * 1024 * 1024;
 const MAX_SIGNATURE_BYTES = 2 * 1024 * 1024;
 
-function buildProfilePayload(user, fallback = {}) {
+function buildProfilePayload(user, fallback = {}, req = null) {
   return {
     id: user?.id || fallback?.sub || '',
     fullName: user?.fullName || fallback?.fullName || '',
     email: user?.email || fallback?.email || '',
     role: user?.role || fallback?.role || '',
     mustChangePassword: Boolean(user?.mustChangePassword ?? fallback?.mustChangePassword),
-    avatarUrl: user?.avatarUrl || ''
+    avatarUrl: resolveAbsoluteAssetUrl(user?.avatarUrl || '', req)
   };
 }
 
-function buildTeacherPayload(teacher) {
+function buildTeacherPayload(teacher, req = null) {
   return {
     id: teacher?.id || '',
     fullName: teacher?.fullName || '',
     email: teacher?.email || teacher?.portalEmail || '',
     institution: teacher?.institution || '',
-    signatureImage: teacher?.signatureImage || ''
+    signatureImage: resolveAbsoluteAssetUrl(teacher?.signatureImage || '', req)
   };
 }
 
@@ -50,7 +51,7 @@ profileRouter.post('/avatar', requireAuth, publicUpload.single('file'), async (r
 
     return res.status(200).json({
       avatarUrl,
-      user: buildProfilePayload(updatedUser, req.user)
+      user: buildProfilePayload(updatedUser, req.user, req)
     });
   } catch (error) {
     return res.status(400).json({ message: toPublicErrorMessage(error, 'We could not upload the profile image.') });
@@ -62,7 +63,7 @@ profileRouter.delete('/avatar', requireAuth, async (req, res) => {
     const updatedUser = await updateUserAvatar(String(req.user?.sub || ''), null);
     return res.status(200).json({
       avatarUrl: '',
-      user: buildProfilePayload(updatedUser, req.user)
+      user: buildProfilePayload(updatedUser, req.user, req)
     });
   } catch (error) {
     return res.status(400).json({ message: toPublicErrorMessage(error, 'We could not remove the profile image.') });
@@ -97,7 +98,7 @@ profileRouter.post('/teacher-signature', requireAuth, publicUpload.single('file'
 
     return res.status(200).json({
       signatureImage,
-      teacher: buildTeacherPayload(updatedTeacher || { ...teacher, signatureImage })
+      teacher: buildTeacherPayload(updatedTeacher || { ...teacher, signatureImage }, req)
     });
   } catch (error) {
     return res.status(400).json({ message: toPublicErrorMessage(error, 'We could not upload the signature image.') });
@@ -118,7 +119,7 @@ profileRouter.delete('/teacher-signature', requireAuth, async (req, res) => {
     const updatedTeacher = await updateTeacherSignatureImage(teacher.id, '');
     return res.status(200).json({
       signatureImage: '',
-      teacher: buildTeacherPayload(updatedTeacher || { ...teacher, signatureImage: '' })
+      teacher: buildTeacherPayload(updatedTeacher || { ...teacher, signatureImage: '' }, req)
     });
   } catch (error) {
     return res.status(400).json({ message: toPublicErrorMessage(error, 'We could not remove the signature image.') });

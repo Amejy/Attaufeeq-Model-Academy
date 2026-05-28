@@ -14,6 +14,7 @@ import { resolveStudentByIdentifier } from '../utils/studentCode.js';
 import { filterCountableActiveStudents } from '../utils/studentLifecycle.js';
 import { sendAdminNotificationEmail } from '../utils/mailer.js';
 import { toPublicErrorMessage } from '../utils/publicError.js';
+import { resolveAbsoluteAssetUrl } from '../utils/assetUrl.js';
 import { hasAttendanceOverride, hasBehaviorOverride, normalizeReportOverride, normalizeReportSettings } from '../utils/reportConfig.js';
 import { publicUpload, saveUploadedFile } from './upload.js';
 import {
@@ -115,13 +116,18 @@ async function getAvailableReleasedToken(studentId, term, sessionId) {
 
 async function enrichStudentProfile(student) {
   if (!student) return null;
-  if (student.avatarUrl) return student;
+  if (student.avatarUrl) {
+    return {
+      ...student,
+      avatarUrl: resolveAbsoluteAssetUrl(student.avatarUrl)
+    };
+  }
   if (!student.userId) return student;
   const userProfile = await findUserById(student.userId);
   if (!userProfile?.avatarUrl) return student;
   return {
     ...student,
-    avatarUrl: userProfile.avatarUrl
+    avatarUrl: resolveAbsoluteAssetUrl(userProfile.avatarUrl)
   };
 }
 
@@ -401,8 +407,12 @@ function mergeBehaviorRatings(base = {}, override = {}) {
   };
 }
 
-function getReportSettings() {
-  return normalizeReportSettings(adminStore.reportSettings || {});
+function getReportSettings(req = null) {
+  const settings = normalizeReportSettings(adminStore.reportSettings || {});
+  return {
+    ...settings,
+    signatureImage: resolveAbsoluteAssetUrl(settings.signatureImage, req)
+  };
 }
 
 function upsertReportRemark({ studentId = '', classId = '', sessionId = '', term = '', strengths, weaknesses, classTeacherRemark, headTeacherRemark, override } = {}) {
@@ -586,11 +596,11 @@ function composeHeadTeacherDraftRemark(reportCard, classTeacherRemark = '', guid
   return [opener, academicLine, supportLine, attendanceLine, teacherLine].join(' ');
 }
 
-function buildGeneratedRemarkRows({ classId = '', term = '', sessionId = '', role = 'teacher', studentId = '', preserveExisting = false } = {}) {
+function buildGeneratedRemarkRows({ classId = '', term = '', sessionId = '', role = 'teacher', studentId = '', preserveExisting = false, req = null } = {}) {
   const students = resolveClassStudents(classId, sessionId)
     .filter((student) => !studentId || student.id === studentId);
   return students.map((student) => {
-    const reportCard = buildReportCard(student, term, { includeUnpublished: true, sessionId });
+    const reportCard = buildReportCard(student, term, { includeUnpublished: true, sessionId, req });
     const remark = findReportRemark({ studentId: student.id, classId, sessionId, term });
     const guidedStrengths = String(remark?.strengths || '').trim();
     const guidedWeaknesses = String(remark?.weaknesses || '').trim();
@@ -635,6 +645,7 @@ function buildReportCard(student, term = '', options = {}) {
   if (!student) return null;
   const includeUnpublished = Boolean(options.includeUnpublished);
   const sessionId = String(options.sessionId || '');
+  const req = options.req || null;
 
   const filtered = adminStore.results.filter(
     (item) =>
@@ -703,7 +714,7 @@ function buildReportCard(student, term = '', options = {}) {
     nextTermBegins: resolveNextTermBegins(adminStore, sessionId, term),
     classTeacherRemark: reportRemark?.classTeacherRemark || '',
     headTeacherRemark: reportRemark?.headTeacherRemark || '',
-    reportSettings: getReportSettings(),
+    reportSettings: getReportSettings(req),
     publishState: includeUnpublished
       ? rows.every((item) => item.published)
         ? 'Published'
@@ -1049,7 +1060,7 @@ resultsRouter.post('/teacher/remarks/generate', requireAuth, requireRole('teache
     return res.status(403).json({ message: 'Only the class lead teacher can generate class teacher remarks.' });
   }
 
-  const remarks = buildGeneratedRemarkRows({ classId, term, sessionId, role: 'teacher', studentId, preserveExisting });
+  const remarks = buildGeneratedRemarkRows({ classId, term, sessionId, role: 'teacher', studentId, preserveExisting, req });
   return res.json({ remarks });
 });
 
@@ -1105,7 +1116,7 @@ resultsRouter.post('/admin/remarks', requireAuth, requireRole('admin'), async (r
 });
 
 resultsRouter.get('/admin/report-settings', requireAuth, requireRole('admin'), async (_req, res) => {
-  return res.json({ settings: getReportSettings() });
+  return res.json({ settings: getReportSettings(_req) });
 });
 
 resultsRouter.put('/admin/report-settings', requireAuth, requireRole('admin'), async (req, res) => {
@@ -1113,7 +1124,7 @@ resultsRouter.put('/admin/report-settings', requireAuth, requireRole('admin'), a
     ...(adminStore.reportSettings || {}),
     ...req.body
   });
-  return res.json({ settings: getReportSettings() });
+  return res.json({ settings: getReportSettings(req) });
 });
 
 resultsRouter.post('/admin/report-settings/signature', requireAuth, requireRole('admin'), publicUpload.single('file'), async (req, res) => {
@@ -1132,7 +1143,7 @@ resultsRouter.post('/admin/report-settings/signature', requireAuth, requireRole(
       ...(adminStore.reportSettings || {}),
       signatureImage
     });
-    return res.status(200).json({ signatureImage, settings: getReportSettings() });
+    return res.status(200).json({ signatureImage: resolveAbsoluteAssetUrl(signatureImage, req), settings: getReportSettings(req) });
   } catch (error) {
     return res.status(400).json({ message: toPublicErrorMessage(error, 'We could not upload the report signature image.') });
   }
@@ -1143,7 +1154,7 @@ resultsRouter.delete('/admin/report-settings/signature', requireAuth, requireRol
     ...(adminStore.reportSettings || {}),
     signatureImage: ''
   });
-  return res.status(200).json({ signatureImage: '', settings: getReportSettings() });
+  return res.status(200).json({ signatureImage: '', settings: getReportSettings(_req) });
 });
 
 resultsRouter.post('/admin/remarks/generate', requireAuth, requireRole('admin'), async (req, res) => {
@@ -1156,7 +1167,7 @@ resultsRouter.post('/admin/remarks/generate', requireAuth, requireRole('admin'),
 
   if (!classId || !term || !sessionId) return res.status(400).json({ message: 'classId, term, and sessionId are required.' });
 
-  const remarks = buildGeneratedRemarkRows({ classId, term, sessionId, role: 'admin', studentId, preserveExisting });
+  const remarks = buildGeneratedRemarkRows({ classId, term, sessionId, role: 'admin', studentId, preserveExisting, req });
   return res.json({ remarks });
 });
 
@@ -1930,7 +1941,7 @@ resultsRouter.get('/student/report-card', requireAuth, requireRole('student'), a
     });
   }
 
-  return res.json({ reportCard: buildReportCard(enrichedStudent, term, { sessionId }) });
+  return res.json({ reportCard: buildReportCard(enrichedStudent, term, { sessionId, req }) });
 });
 
 resultsRouter.get('/parent', requireAuth, requireRole('parent'), async (req, res) => {
@@ -2031,7 +2042,7 @@ resultsRouter.get('/parent/report-card', requireAuth, requireRole('parent'), asy
     });
   }
 
-  return res.json({ reportCard: buildReportCard(enrichedChild, term, { sessionId }), children });
+  return res.json({ reportCard: buildReportCard(enrichedChild, term, { sessionId, req }), children });
 });
 
 resultsRouter.get('/admin/access', requireAuth, requireRole('admin'), (_req, res) => {
@@ -2081,7 +2092,7 @@ resultsRouter.get('/admin/report-card/:studentId', requireAuth, requireRole('adm
   const term = req.query.term ? String(req.query.term) : '';
   const activeSession = await ensureActiveAcademicSession();
   const sessionId = req.query.sessionId ? String(req.query.sessionId) : activeSession?.id || '';
-  return res.json({ reportCard: buildReportCard(student, term, { includeUnpublished: true, sessionId }) });
+  return res.json({ reportCard: buildReportCard(student, term, { includeUnpublished: true, sessionId, req }) });
 });
 
 resultsRouter.post('/admin/compile-final-results', requireAuth, requireRole('admin'), async (req, res) => {
