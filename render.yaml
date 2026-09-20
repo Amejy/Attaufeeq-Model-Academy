@@ -3,7 +3,7 @@ services:
     name: attaufiqschools-api
     runtime: node
     rootDir: backend
-    plan: starter
+    plan: free
     buildCommand: npm install
     preDeployCommand: npm run db:migrate
     startCommand: npm run start
@@ -78,6 +78,6 @@ services:
         sync: false
   - type: keyvalue
     name: attaufiqschools-redis
-    plan: starter
+    plan: free
     # The API uses Render's private connection string; Redis needs no public access.
     ipAllowList: []
