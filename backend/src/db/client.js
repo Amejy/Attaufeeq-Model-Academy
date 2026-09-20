@@ -17,9 +17,15 @@ function createPoolConfig() {
   };
 
   if (env.databaseUrl) {
+    // `pg` lets sslmode in a connection string override the explicit ssl
+    // option above. Supabase pooler certificates require our configured
+    // `rejectUnauthorized: false` setting, so keep SSL configuration in env.
+    const connectionUrl = new URL(env.databaseUrl);
+    connectionUrl.searchParams.delete('sslmode');
+
     return {
       ...baseConfig,
-      connectionString: env.databaseUrl
+      connectionString: connectionUrl.toString()
     };
   }
 
