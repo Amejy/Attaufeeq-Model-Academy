@@ -5,7 +5,6 @@ services:
     rootDir: backend
     plan: free
     buildCommand: npm install
-    preDeployCommand: npm run db:migrate
     startCommand: npm run start
     healthCheckPath: /api/health/ready
     autoDeployTrigger: commit
