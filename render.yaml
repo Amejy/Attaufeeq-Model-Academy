@@ -79,3 +79,5 @@ services:
   - type: keyvalue
     name: attaufiqschools-redis
     plan: starter
+    # The API uses Render's private connection string; Redis needs no public access.
+    ipAllowList: []
